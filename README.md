@@ -23,13 +23,16 @@ Developed as split files and re-inlined into a standalone distributable:
 - `hyperion.html` — markup
 - `hyperion.css` — styles
 - `hyperion.js` — the engine (RNG, mission/drama FSMs, overlay system, live btop)
-- `build.sh` — inlines CSS + JS into `hyperion.dist.html`
-- `hyperion.dist.html` — the generated single-file artifact you deploy
+- `build.sh` — inlines CSS + JS into `index.html`
+- `index.html` — the generated single-file artifact you deploy (also the GitHub Pages root)
 
 ## Build
 
 ```sh
-./build.sh   # → hyperion.dist.html
+./build.sh   # → index.html
 ```
 
-Target home: cheatsheets.davidveksler.com
+## Live
+
+- GitHub Pages: https://davidveksler.github.io/potemkin-pipeline/
+- Target home: cheatsheets.davidveksler.com

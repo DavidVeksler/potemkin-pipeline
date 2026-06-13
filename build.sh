@@ -1,6 +1,6 @@
 #!/bin/sh
 # Re-inline hyperion.css + hyperion.js into a standalone single-file build.
-# Output: hyperion.dist.html (no external requests, drop-in deployable).
+# Output: index.html (no external requests, drop-in deployable / GitHub Pages root).
 set -e
 cd "$(dirname "$0")"
 
@@ -20,6 +20,6 @@ awk '
     next
   }
   { print }
-' hyperion.html > hyperion.dist.html
+' hyperion.html > index.html
 
-echo "built hyperion.dist.html ($(wc -c < hyperion.dist.html) bytes)"
+echo "built index.html ($(wc -c < index.html) bytes)"
