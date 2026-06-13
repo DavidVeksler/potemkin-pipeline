@@ -43,6 +43,11 @@ body{
 #hdr .ctxbar{color:var(--accent); letter-spacing:-1px}
 #hdr .ctxpct{color:var(--fg)}
 #hdr .h-tok{color:var(--dim)}
+#hdr .h-cost{color:var(--fg); font-variant-numeric:tabular-nums}
+#hdr .h-budget{color:var(--warn); font-weight:600; white-space:nowrap}
+#hdr .h-budget.pulse{animation:budgetpulse 1.1s ease-in-out infinite}
+@keyframes budgetpulse{0%,100%{opacity:1}50%{opacity:.32}}
+@media (prefers-reduced-motion: reduce){#hdr .h-budget.pulse{animation:none}}
 #hdr .h-time{color:var(--fg); margin-left:auto; font-variant-numeric:tabular-nums}
 .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--ok);
   box-shadow:0 0 6px var(--ok); margin-right:.4ch; vertical-align:middle}

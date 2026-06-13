@@ -262,7 +262,7 @@ const $=s=>document.querySelector(s);
 const logEl=$('#log'), caret=$('#caret'), railTasks=$('#tasktree'), fileTreeEl=$('#filetree');
 const overlay=$('#overlay'), ovback=overlay.querySelector('.backdrop');
 const bossEl=$('#boss'), settingsEl=$('#settings'), helpEl=$('#help'), toastEl=$('#toast'), liveBtn=$('#livebtn'), cfgbtn=$('#cfgbtn'), dramaEl=$('#dramapick');
-const hAgent=$('.h-agent'),hProj=$('.h-proj'),hModel=$('.h-model'),ctxbar=$('.ctxbar'),ctxpct=$('.ctxpct'),hTok=$('.h-tok'),hTime=$('.h-time'),modeind=$('#modeind');
+const hAgent=$('.h-agent'),hProj=$('.h-proj'),hModel=$('.h-model'),ctxbar=$('.ctxbar'),ctxpct=$('.ctxpct'),hTok=$('.h-tok'),hCost=$('.h-cost'),hBudget=$('.h-budget'),hTime=$('.h-time'),modeind=$('#modeind');
 const cFiles=$('#c-files'),cLines=$('#c-lines'),cTests=$('#c-tests'),cCves=$('#c-cves'),cDeploys=$('#c-deploys');
 
 /* ====================================================================== */
@@ -277,6 +277,7 @@ let activeThinker=null, lastEmit=0, lastVisible='';
 let bossActive=false, bossFrame=0, settingsOpen=false, helpOpen=false, dramaOpen=false;
 let idleActive=false, idleThreshold=cfg.idle, lastActivityTs=0;   // deep-work "away" mode
 let tok=82, ctx=58, ctxAnim=null;
+let cost=0, burnPct=14, burnWarn=false, burnEase=null;   // cost/burn meter
 let mxActive=false, mx={cols:[],fs:14}, accentCache='#ff9d2f';
 let btopActive=false, btopState=null, btopLast=0;
 let liveState=null;   // generic per-frame ticker for live boss scenes (gpu/heatmap)
@@ -341,7 +342,7 @@ function render(ev){
       d.appendChild(document.createTextNode('('));
       d.appendChild(spn('targ',ev.arg));
       d.appendChild(document.createTextNode(')'));
-      appendLine(d); ctxBump(1.3); break;
+      appendLine(d); ctxBump(1.3); burnTick(); break;
     }
     case 'output':{
       const d=el('ln out tone-'+(ev.tone||'dim'));
@@ -1586,7 +1587,7 @@ function updateHeader(ts,dt){
     const p=clamp((ts-ctxAnim.t0)/ctxAnim.dur,0,1); const e=1-Math.pow(1-p,3);
     ctx=ctxAnim.from+(ctxAnim.to-ctxAnim.from)*e; if(p>=1)ctxAnim=null;
   }
-  if(ts-lastHeaderTs>120){ lastHeaderTs=ts; renderCtx(); }
+  if(ts-lastHeaderTs>120){ lastHeaderTs=ts; renderCtx(); renderBurn(ts); }
   // tok/s random walk
   if(ts-lastTokTs>160){
     lastTokTs=ts;
@@ -1603,6 +1604,42 @@ function renderCtx(){
   ctxpct.textContent=pct+'%';
 }
 function ctxBump(x){ if(!ctxAnim) ctx=clamp(ctx+x,0,98); }
+
+/* ---- cost / burn meter ---- */
+const BURN_LINES=[
+  'budget guard: switching to terser reasoning to conserve tokens',
+  'pruning low-signal context to stay under the cap…',
+  'batching the remaining tool calls to cut overhead',
+  'dropping scratchpad history — keeping only the load-bearing bits',
+  'summarizing earlier steps to reclaim budget',
+  'note to self: fewer, bigger edits from here',
+];
+function fmtCost(n){ return '$'+(n<1000?n.toFixed(2):compactNum(Math.round(n))); }
+function burnTick(){            // every tool call nudges spend + budget pressure
+  cost+=U(0.008,0.055);
+  if(!burnWarn && !burnEase) burnPct=clamp(burnPct+U(0.6,1.9),0,99);
+}
+function renderBurn(ts){
+  // trip the 80% warning, then "nervously work around it" — ease the budget back down
+  if(burnPct>=80 && !burnWarn && !burnEase){
+    burnWarn=true; hBudget.hidden=false; hBudget.classList.toggle('pulse',!reduceMotion);
+    hBudget.textContent='⚠ token budget '+Math.round(burnPct)+'%';
+    injectBurnLine();
+    burnEase={from:burnPct,to:U(42,56),t0:ts,dur:reduceMotion?700:3200,hideAt:ts+(reduceMotion?900:2600)};
+  }
+  if(burnEase){
+    const p=clamp((ts-burnEase.t0)/burnEase.dur,0,1), e=1-Math.pow(1-p,3);
+    burnPct=burnEase.from+(burnEase.to-burnEase.from)*e;
+    if(burnWarn && ts>=burnEase.hideAt){ burnWarn=false; hBudget.hidden=true; hBudget.classList.remove('pulse'); }
+    if(p>=1) burnEase=null;
+  }
+  hCost.textContent=fmtCost(cost);
+}
+function injectBurnLine(){
+  const d=el('ln out tone-warn');
+  d.appendChild(spn('br','⎿ ')); d.appendChild(document.createTextNode(pick(BURN_LINES)));
+  appendLine(d);
+}
 
 /* ====================================================================== */
 /* INPUT / HOTKEYS                                                         */
