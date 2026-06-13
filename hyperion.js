@@ -24,6 +24,7 @@ const cfg={
   theme: THEMES.includes(QS.get('theme'))?QS.get('theme'):'amber',
   speed: qfloat('speed',0.25,4,1),
   intensity: qint('intensity',0,3,2),
+  freq: qfloat('freq',0.25,4,1),            // drama cadence multiplier (higher = more often)
   mode: QS.get('mode')==='performer'?'performer':'auto',
   audio: QS.get('audio')==='on'?'on':'off',
   crt: QS.get('crt')==='on'?'on':'off',
@@ -270,9 +271,9 @@ const cFiles=$('#c-files'),cLines=$('#c-lines'),cTests=$('#c-tests'),cCves=$('#c
 /* ====================================================================== */
 const MAX_LINES=500, REL_CAP=10, MAX_PER_FRAME=8;
 let logicalNow=0, nextAt=320, pending=null, lastTs=0, rafId=0, hidden=false;
-let paused=false, mode=cfg.mode, speed=cfg.speed, intensity=cfg.intensity;
+let paused=false, mode=cfg.mode, speed=cfg.speed, intensity=cfg.intensity, dramaFreq=cfg.freq;
 let releaseTokens=0, lastRelease=0;
-let overlayActive=false, dramaQ=[], nextDramaAt=U(45000,75000), firstDrama=true, lastCompact=-99999;
+let overlayActive=false, dramaQ=[], nextDramaAt=U(45000,75000)/cfg.freq, firstDrama=true, lastCompact=-99999;
 let activeThinker=null, lastEmit=0, lastVisible='';
 let bossActive=false, bossFrame=0, settingsOpen=false, helpOpen=false, dramaOpen=false;
 let idleActive=false, idleThreshold=cfg.idle, lastActivityTs=0;   // deep-work "away" mode
@@ -1099,7 +1100,7 @@ function* missionStream(){
 function* dAnomaly(){
   const m=pick(['p99 latency','error rate','5xx rate','saturation','queue depth']);
   const v=pick(['1,920ms','7.4%','0.91','12,400 msg','3.2× baseline']);
-  const region=pick(['us-east-1','eu-west-2','ap-south-1','us-west-2']);
+  const region=pick(['us-east-1','us-east-2','us-west-1','us-west-2','eu-west-1','eu-west-2','eu-central-1','eu-north-1','ap-south-1','ap-southeast-1','ap-southeast-2','ap-northeast-1','sa-east-1','ca-central-1','af-south-1','me-central-1']);
   yield OV('open',{type:'anomaly'});
   yield OV('banner',{cls:'err pulse',text:'⚠ ANOMALY DETECTED — '+m+' '+v+' ('+region+')',wait:U(300,600)});
   beep('alert');
@@ -1545,7 +1546,7 @@ function checkDrama(){
     if(firstDrama && en.indexOf('anomaly')>=0){ type='anomaly'; firstDrama=false; }
     else { type=pick(en); firstDrama=false; }
     if(type&&DRAMAS[type]) dramaQ.push(DRAMAS[type]);
-    nextDramaAt=logicalNow+U(60000,110000)/Math.max(1,intensity);
+    nextDramaAt=logicalNow+U(60000,110000)/Math.max(1,intensity)/dramaFreq;
   }
 }
 
@@ -1706,7 +1707,7 @@ function enterIdle(){
 function exitIdle(){
   if(!idleActive) return;
   idleActive=false; document.body.classList.remove('deepwork'); updateMode();
-  nextDramaAt=logicalNow+U(60000,110000)/Math.max(1,intensity);   // don't fire a drama the instant we resume
+  nextDramaAt=logicalNow+U(60000,110000)/Math.max(1,intensity)/dramaFreq;   // don't fire a drama the instant we resume
 }
 function markActivity(){ lastActivityTs=performance.now(); if(idleActive) exitIdle(); }
 function tickIdle(ts){
@@ -1806,6 +1807,7 @@ function buildConfig(){
   g=sec('Pacing');
   fld(g,'speed',rng_(0.25,4,0.05,speed,v=>{speed=v;syncURL();},v=>v.toFixed(2)+'×'));
   fld(g,'drama intensity',rng_(0,3,1,intensity,v=>{intensity=v|0;syncURL();},v=>INTENSITY_LABEL[v|0]||String(v)));
+  fld(g,'drama frequency',rng_(0.25,4,0.25,dramaFreq,v=>{dramaFreq=v;cfg.freq=v;nextDramaAt=logicalNow+U(60000,110000)/Math.max(1,intensity)/dramaFreq;syncURL();},v=>v.toFixed(2)+'×'),true);
 
   g=sec('Behavior');
   fld(g,'mode',sel(['auto','performer'],mode,v=>{mode=v;updateMode();syncURL();}));
@@ -1842,6 +1844,7 @@ function urlParams(forceSeed){
   if(cfg.theme!=='amber')p.set('theme',cfg.theme);
   if(speed!==1)p.set('speed',speed.toFixed(2));
   if(intensity!==2)p.set('intensity',String(intensity));
+  if(dramaFreq!==1)p.set('freq',dramaFreq.toFixed(2));
   if(mode!=='auto')p.set('mode',mode);
   if(cfg.audio!=='off')p.set('audio',cfg.audio);
   if(cfg.crt!=='off')p.set('crt',cfg.crt);
@@ -1860,7 +1863,7 @@ function copyLink(){
 function resetConfig(){
   cfg.model='mythos-5-preview'; cfg.audio='off'; cfg.crt='off'; cfg.reduceFlash=null;
   cfg.idle=90; idleThreshold=90; exitIdle();
-  speed=1; intensity=2; mode='auto'; cfg.project=PROJECTS[(rng()*PROJECTS.length)|0];
+  speed=1; intensity=2; dramaFreq=1; cfg.freq=1; mode='auto'; cfg.project=PROJECTS[(rng()*PROJECTS.length)|0];
   cfg.seed=(Math.random()*4294967296)>>>0; _seed=cfg.seed; seedExplicit=false;
   cfg.agent=pickCodename(cfg.seed); agentExplicit=false;
   reduceFlash=prefersRM; reduceMotion=prefersRM;
