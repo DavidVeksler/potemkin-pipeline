@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{width:1200px;height:630px;overflow:hidden}
+  body{
+    --bg:#0c0a08; --fg:#e8c79a; --dim:#8a6f4a; --accent:#ff9d2f;
+    --ok:#6bd97a; --err:#ff5f56;
+    background:var(--bg); color:var(--fg);
+    font-family:ui-monospace,"SF Mono","JetBrains Mono",Menlo,Consolas,monospace;
+    position:relative;
+  }
+  /* subtle scanline + vignette */
+  body::after{content:"";position:absolute;inset:0;pointer-events:none;
+    background:
+      radial-gradient(120% 90% at 78% 18%, rgba(255,157,47,.10), transparent 60%),
+      repeating-linear-gradient(transparent 0 3px, rgba(0,0,0,.18) 3px 4px);
+    mix-blend-mode:screen}
+  .wrap{position:absolute;inset:0;display:flex;flex-direction:column}
+  /* header bar */
+  .hdr{display:flex;align-items:center;gap:14px;padding:26px 44px;
+    font-size:21px;border-bottom:1px solid color-mix(in srgb,var(--dim) 40%,transparent)}
+  .dot{width:13px;height:13px;border-radius:50%;background:var(--ok);
+    box-shadow:0 0 12px var(--ok)}
+  .agent{color:var(--accent);font-weight:700;letter-spacing:1px}
+  .sep{color:var(--dim)}
+  .proj{color:var(--fg)}
+  .model{color:var(--dim)}
+  .ctxbar{letter-spacing:-1px;margin-left:8px;font-size:18px}
+  .ctxbar .on{color:var(--accent)} .ctxbar .off{color:color-mix(in srgb,var(--dim) 55%,transparent)}
+  .tok{color:var(--dim);margin-left:auto}
+  /* body */
+  .main{flex:1;display:flex;padding:54px 44px 0}
+  .left{flex:1;display:flex;flex-direction:column;justify-content:center}
+  .title{font-size:118px;font-weight:800;letter-spacing:4px;color:var(--accent);
+    line-height:.95;text-shadow:0 0 32px rgba(255,157,47,.35)}
+  .tag{font-size:30px;color:var(--fg);margin-top:24px;line-height:1.4;max-width:680px}
+  .tag b{color:var(--accent)}
+  .sub{font-size:20px;color:var(--dim);margin-top:30px;line-height:1.7}
+  .sub .tdot{color:var(--accent)}
+  .sub .tname{color:var(--fg)}
+  .url{position:absolute;bottom:34px;left:44px;font-size:22px;color:var(--accent);
+    letter-spacing:.5px}
+  .url::before{content:"▶ ";color:var(--fg)}
+  /* fake task tree on the right */
+  .rail{width:330px;font-size:18px;line-height:2.0;padding-left:34px;
+    border-left:1px solid color-mix(in srgb,var(--dim) 35%,transparent);
+    display:flex;flex-direction:column;justify-content:center}
+  .rail .rh{color:var(--dim);font-size:14px;letter-spacing:2px;margin-bottom:10px}
+  .done{color:var(--fg)} .done .mk{color:var(--ok)}
+  .prog{color:var(--fg)} .prog .mk{color:var(--accent)}
+  .todo{color:var(--dim)} .todo .mk{color:var(--dim)}
+  .badge{position:absolute;top:120px;right:44px;font-size:15px;color:var(--dim);
+    border:1px solid color-mix(in srgb,var(--dim) 45%,transparent);
+    padding:5px 12px;border-radius:20px;letter-spacing:1px}
+</style></head>
+<body>
+<div class="wrap">
+  <div class="hdr">
+    <span class="dot"></span>
+    <span class="agent">HYPERION</span>
+    <span class="sep">·</span><span class="proj">core-platform</span>
+    <span class="sep">·</span><span class="model">mythos-5-preview</span>
+    <span class="ctxbar"><span class="on">██████</span><span class="off">████</span></span><span class="model">&nbsp;58%</span>
+    <span class="tok">82 tok/s</span>
+  </div>
+  <div class="badge">⏻ autopilot</div>
+  <div class="main">
+    <div class="left">
+      <div class="title">HYPERION</div>
+      <div class="tag">The AI coding agent that looks <b>incredibly busy</b> and ships absolutely nothing.</div>
+      <div class="sub">
+        <span class="tdot">●</span> <span class="tname">deploy</span> to production &nbsp;·&nbsp; 0 deploys<br>
+        a faux-autonomous terminal that performs productivity
+      </div>
+    </div>
+    <div class="rail">
+      <div class="rh">TASK TREE</div>
+      <div class="done"><span class="mk">✓</span> audit dependency graph</div>
+      <div class="done"><span class="mk">✓</span> patch 7 CVEs</div>
+      <div class="prog"><span class="mk">▸</span> refactor auth layer</div>
+      <div class="todo"><span class="mk">○</span> migrate to mythos-5</div>
+      <div class="todo"><span class="mk">○</span> ship to production</div>
+    </div>
+  </div>
+  <div class="url">davidveksler.github.io/potemkin-pipeline</div>
+</div>
+</body></html>
