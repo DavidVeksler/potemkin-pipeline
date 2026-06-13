@@ -263,6 +263,7 @@ let bossActive=false, bossFrame=0, settingsOpen=false, helpOpen=false;
 let tok=82, ctx=58, ctxAnim=null;
 let mxActive=false, mx={cols:[],fs:14}, accentCache='#ff9d2f';
 let btopActive=false, btopState=null, btopLast=0;
+let liveState=null;   // generic per-frame ticker for live boss scenes (gpu/heatmap)
 const startEpoch=Date.now();
 const counters={files:128,lines:412000,tests:1204,cves:7,deploys:0,commits:0,incidents:0};
 const taskEls={}; const fileEls={}; let lastFileHl=null;
@@ -430,7 +431,7 @@ function renderOverlay(ev){
     }
     case 'compact':{ ctxAnim={from:ctx,to:U(22,28),t0:performance.now(),dur:(ev.wait||1600)*0.85}; break; }
     case 'app':{
-      overlayActive=true; ovClear(); btopActive=false; btopState=null;
+      overlayActive=true; ovClear(); btopActive=false; btopState=null; liveState=null;
       overlay.className='on'+(reduceFlash?'':' fadein'); overlay.classList.remove('fadeout');
       overlay.classList.add('app');
       ovback.style.background='';
@@ -444,6 +445,7 @@ function renderOverlay(ev){
       break;
     }
     case 'btopfx':{ if(btopState){ btopState.phase=ev.phase; applyBtopPhase(btopState); } break; }
+    case 'livefx':{ if(liveState&&liveState.phase) liveState.phase(ev.phase); break; }
     case 'appstep':{
       if(!ovBox)return;
       ovBox.querySelectorAll('[data-k="'+ev.k+'"]').forEach(t=>{
@@ -455,7 +457,7 @@ function renderOverlay(ev){
     }
     case 'matrix': break;
     case 'close':{
-      overlayActive=false; mxActive=false; btopActive=false; btopState=null;
+      overlayActive=false; mxActive=false; btopActive=false; btopState=null; liveState=null;
       overlay.classList.remove('fadein'); overlay.classList.add('fadeout');
       const o=overlay; setTimeout(()=>{ if(!overlayActive){o.className=''; ovClear();} },360);
       break;
@@ -489,7 +491,8 @@ function drawMatrix(){
 /* BOSS-LEVEL APP WINDOWS (faux tool GUIs the agent "pulls up")            */
 /* ====================================================================== */
 const APP_BUILDERS={grafana:buildGrafana,pipeline:buildPipeline,flame:buildFlame,cluster:buildCluster,
-  trace:buildTrace,sql:buildSql,load:buildLoad,pr:buildPR,docker:buildDocker,btop:buildBtop};
+  trace:buildTrace,sql:buildSql,load:buildLoad,pr:buildPR,docker:buildDocker,btop:buildBtop,
+  attackmap:buildAttack,gpu:buildGpu,mesh:buildMesh,heatmap:buildHeat};
 function buildApp(tool,body,ev){ const b=APP_BUILDERS[tool]; if(b) b(body,ev); }
 /* --- Grafana-style metrics dashboard --- */
 function sparkPts(spike){
@@ -778,6 +781,182 @@ function drawBtopGraph(S){
     }
   }
   x.globalAlpha=1;
+}
+function setW(elm,pct){ elm.style.width=Math.max(0,Math.min(100,pct))+'%'; }
+
+/* --- global threat map (DDoS) : stylized dot-grid world + attack arcs --- */
+/* low-res landmass bitmap as [startCol,endCol] ranges per row (W=64, H=22) */
+const ATTACK_LAND=[
+  [[23,26]],
+  [[7,15],[23,27],[44,46],[50,60]],
+  [[5,17],[24,28],[32,34],[39,60]],
+  [[5,18],[24,28],[30,37],[39,61]],
+  [[6,18],[30,38],[40,62]],
+  [[7,18],[31,37],[40,59]],
+  [[9,18],[31,39],[42,58]],
+  [[11,17],[30,40],[42,47],[50,57]],
+  [[13,17],[31,41],[43,49],[51,57]],
+  [[14,17],[31,42],[45,49],[52,58]],
+  [[15,20],[32,42],[53,58]],
+  [[16,22],[33,41],[54,58]],
+  [[16,23],[33,40]],
+  [[17,23],[34,39]],
+  [[17,24],[35,39],[53,60]],
+  [[17,23],[35,38],[52,61]],
+  [[18,23],[54,60]],
+  [[18,22],[55,59]],
+  [[18,21]],
+  [[18,20]],
+  [[18,20]],
+  [[18,19]]
+];
+function amXY(col,row){ return [col*2, row*2+3]; }
+function buildAttack(body,ev){
+  body.classList.add('am');
+  const svg=svgEl('svg',{viewBox:'0 0 128 48',class:'am-map',preserveAspectRatio:'xMidYMid meet'});
+  const dg=svgEl('g',{class:'am-land'});
+  ATTACK_LAND.forEach((ranges,r)=>ranges.forEach(([a,b])=>{
+    for(let c=a;c<=b;c++){ const [x,y]=amXY(c,r); dg.appendChild(svgEl('circle',{cx:x,cy:y,r:0.6,class:'am-dot'})); }
+  }));
+  svg.appendChild(dg);
+  const [tx,ty]=amXY(ev.target[0],ev.target[1]);
+  const ag=svgEl('g',{class:'am-arcs'});
+  ev.sources.forEach((s,i)=>{
+    const [sx,sy]=amXY(s[0],s[1]);
+    const dist=Math.hypot(tx-sx,ty-sy), cx=(sx+tx)/2, cy=Math.min(sy,ty)-dist*0.42;
+    const d='M'+sx.toFixed(1)+' '+sy.toFixed(1)+' Q'+cx.toFixed(1)+' '+cy.toFixed(1)+' '+tx.toFixed(1)+' '+ty.toFixed(1);
+    ag.appendChild(svgEl('path',{d:d,class:'am-arcbg','data-k':'arc'}));
+    const p=svgEl('path',{d:d,class:'am-arc','data-k':'arc'}); p.style.animationDelay=(i*0.17).toFixed(2)+'s'; ag.appendChild(p);
+    ag.appendChild(svgEl('circle',{cx:sx,cy:sy,r:1.3,class:'am-src','data-k':'arc'}));
+  });
+  svg.appendChild(ag);
+  const tg=svgEl('g',{class:'am-target'});
+  tg.appendChild(svgEl('circle',{cx:tx,cy:ty,r:2.7,class:'am-tring'}));
+  tg.appendChild(svgEl('circle',{cx:tx,cy:ty,r:1.4,class:'am-tdot'}));
+  svg.appendChild(tg);
+  body.appendChild(svg);
+  const st=el('am-stats');
+  function stat(t,k,v){ const s=el('am-s'); s.appendChild(spn('am-t',t)); const n=spn('am-v',v); n.dataset.k=k; s.appendChild(n); return s; }
+  st.appendChild(stat('INBOUND','in','—'));
+  st.appendChild(stat('BLOCKED','blk','0'));
+  const cs=el('am-s am-grow'); const cap=spn('am-cap','monitoring edge…'); cap.dataset.k='cap'; cs.appendChild(cap); st.appendChild(cs);
+  body.appendChild(st);
+}
+
+/* --- GPU training farm (nvidia-smi grid) : a live ticker scene --- */
+function tempLvl(t){ return t>86?'hi':t>74?'mid':'lo'; }
+function buildGpu(body,ev){
+  body.classList.add('gpu');
+  const model=(ev.model||'8× A100').replace(/^\d+×\s*/,'');
+  const head=el('gpu-head'); head.appendChild(spn('gpu-ht','GPU CLUSTER · '+(ev.model||'8× A100')+' · '+(ev.host||'dgx-01')));
+  const thr=spn('gpu-thr','— tok/s'); thr.dataset.k='thr'; head.appendChild(thr); body.appendChild(head);
+  const grid=el('gpu-grid'); const cards=[];
+  for(let i=0;i<8;i++){
+    const card=el('gpu-card');
+    const top=el('gpu-ctop'); top.appendChild(spn('gpu-ci','GPU'+i)); top.appendChild(spn('gpu-cm',model));
+    const bd=spn('gpu-bd',''); top.appendChild(bd); card.appendChild(top);
+    function row(lbl,fillCls){ const r=el('gpu-row'); r.appendChild(spn('gpu-rl',lbl)); const b=el('gpu-bar'); const f=el('gpu-fill'+(fillCls?' '+fillCls:'')); b.appendChild(f); r.appendChild(b); const v=spn('gpu-rv','0%'); r.appendChild(v); card.appendChild(r); return {f,v}; }
+    const u=row('util',''); const m=row('mem','mem');
+    const foot=el('gpu-foot'); const tpv=spn('gpu-temp','—°C'); const wv=spn('gpu-watt','—W'); foot.appendChild(tpv); foot.appendChild(wv); card.appendChild(foot);
+    grid.appendChild(card);
+    cards.push({card,uf:u.f,up:u.v,mf:m.f,mp:m.v,tpv,wv,bd, util:U(82,96),uBase:U(84,95), mem:U(0.6,0.8),mTgt:U(0.62,0.82), temp:U(58,68), hot:false,throttled:false});
+  }
+  body.appendChild(grid);
+  const cap=el('gpu-cap','training step '+grp(ri(10000,90000))+' · all GPUs nominal'); cap.dataset.k='cap'; body.appendChild(cap);
+  liveState={kind:'gpu',last:0,cards,hotIdx:(ev.hot!=null?ev.hot:0),thrEl:thr,
+    tick(ts){ if(ts-this.last<360)return; this.last=ts; let sum=0;
+      this.cards.forEach(c=>{
+        let utgt = (c.hot&&c.throttled)?(26+Math.random()*12) : c.hot?(96+Math.random()*3) : (c.uBase+(Math.random()*8-4));
+        c.util+=(utgt-c.util)*0.4; c.util=clamp(c.util,0,100);
+        c.temp+=((38+c.util*0.42+(c.hot?26:0))-c.temp)*0.18;
+        if(c.hot&&c.temp>86) c.throttled=true;
+        c.mem+=(c.mTgt-c.mem)*0.3;
+        setW(c.uf,c.util); c.up.textContent=Math.round(c.util)+'%';
+        setW(c.mf,c.mem*100); c.mp.textContent=Math.round(c.mem*100)+'%';
+        c.tpv.textContent=Math.round(c.temp)+'°C'; c.tpv.dataset.lvl=tempLvl(c.temp);
+        c.wv.textContent=Math.round(70+c.util*3.1+(c.hot?60:0))+'W';
+        c.card.dataset.state=c.throttled?'throttle':c.hot?'hot':'ok';
+        c.bd.textContent=c.throttled?'⚠ THROTTLE':'';
+        sum+=c.util;
+      });
+      this.thrEl.textContent=compactNum(Math.round(sum/8*48))+' tok/s';
+    },
+    phase(p){
+      const c=this.cards[this.hotIdx]; if(!c)return;
+      if(p==='spike'){ c.hot=true; c.mTgt=U(0.9,0.97); }
+      else if(p==='recover'){ c.hot=false; c.throttled=false; c.uBase=U(6,14); c.mTgt=U(0.18,0.3);
+        this.cards.forEach((o,i)=>{ if(i!==this.hotIdx) o.uBase=clamp(o.uBase+U(1,4),0,99); }); }
+    }
+  };
+}
+
+/* --- service mesh (Kiali) with traffic flowing along the edges --- */
+function meshNodes(){ return [
+  {x:30,y:92,l:'gateway'},{x:116,y:46,l:'productpage'},{x:116,y:138,l:'orders'},
+  {x:212,y:38,l:'reviews'},{x:212,y:96,l:'ratings'},{x:212,y:150,l:'payments'},{x:296,y:96,l:'postgres'}
+];}
+function buildMesh(body,ev){
+  const svg=svgEl('svg',{viewBox:'0 0 320 188',class:'mesh'});
+  const N=ev.nodes;
+  ev.edges.forEach(([a,b],i)=>{
+    const p=N[a],q=N[b], id='me'+i, d='M'+p.x+' '+p.y+' L'+q.x+' '+q.y;
+    const g=svgEl('g',{class:'mesh-eg','data-k':'e'+i});
+    g.appendChild(svgEl('path',{id:id,d:d,class:'mesh-edge'}));
+    if(!reduceMotion){ for(let j=0;j<2;j++){
+      const c=svgEl('circle',{r:1.9,class:'mesh-pkt'});
+      const am=svgEl('animateMotion',{dur:(1.25+i*0.06).toFixed(2)+'s',repeatCount:'indefinite',begin:(j*0.62).toFixed(2)+'s'});
+      am.appendChild(svgEl('mpath',{href:'#'+id})); c.appendChild(am); g.appendChild(c);
+    } }
+    svg.appendChild(g);
+  });
+  N.forEach((n,i)=>{
+    const g=svgEl('g',{class:'mesh-node','data-k':'n'+i});
+    const r=n.l.length>8?13:11;
+    g.appendChild(svgEl('circle',{cx:n.x,cy:n.y,r:r,class:'mesh-c'}));
+    const t=svgEl('text',{x:n.x,y:n.y+r+9,'text-anchor':'middle',class:'mesh-lbl'}); t.textContent=n.l;
+    g.appendChild(t); svg.appendChild(g);
+  });
+  body.appendChild(svg);
+  const cap=el('mesh-cap','7 services · mTLS · '+grp(ri(2000,9000))+' req/s'); cap.dataset.k='cap'; body.appendChild(cap);
+}
+
+/* --- latency heatmap (scrolling canvas) : a live ticker scene --- */
+const HEAT_BANDS=['p50','p75','p90','p95','p99','p99.9'];
+function heatColor(v){
+  v=clamp(v,0,1);
+  if(v<0.4){ const t=v/0.4; return 'rgb('+Math.round(18+t*22)+','+Math.round(58+t*120)+','+Math.round(92+t*36)+')'; }
+  if(v<0.7){ const t=(v-0.4)/0.3; return 'rgb('+Math.round(40+t*200)+','+Math.round(180+t*28)+','+Math.round(72-t*42)+')'; }
+  const t=(v-0.7)/0.3; return 'rgb('+Math.round(240+t*15)+','+Math.round(150-t*120)+','+Math.round(40-t*22)+')';
+}
+function buildHeat(body,ev){
+  body.classList.add('heat');
+  const head=el('heat-head'); head.appendChild(spn('heat-ht','LATENCY HEATMAP · gateway · p50–p99.9'));
+  head.appendChild(spn('heat-sub','last 5m')); body.appendChild(head);
+  const wrap=el('heat-wrap');
+  const yax=el('heat-y'); for(let i=HEAT_BANDS.length-1;i>=0;i--) yax.appendChild(el('heat-yl',HEAT_BANDS[i]));
+  wrap.appendChild(yax);
+  const cv=document.createElement('canvas'); cv.className='heat-cv'; wrap.appendChild(cv);
+  body.appendChild(wrap);
+  const cap=el('heat-cap','p99.9 within SLO'); cap.dataset.k='cap'; body.appendChild(cap);
+  liveState={kind:'heat',last:0,cv,ctx:null,cols:[],nCols:64,rows:HEAT_BANDS.length,hot:0,
+    tick(ts){ if(ts-this.last<150)return; this.last=ts;
+      if(!this.ctx||this.cv.width===0){ this.cv.width=this.cv.clientWidth||640; this.cv.height=this.cv.clientHeight||130; this.ctx=this.cv.getContext('2d'); this.nCols=Math.max(28,(this.cv.width/9)|0); }
+      const col=[];
+      for(let r=0;r<this.rows;r++){ const tail=r/(this.rows-1);
+        let v=0.1+tail*0.16+Math.random()*0.12;
+        if(this.hot) v+=tail*tail*(0.55+Math.random()*0.3);
+        col.push(clamp(v,0,1));
+      }
+      this.cols.push(col); while(this.cols.length>this.nCols)this.cols.shift();
+      this.draw();
+    },
+    draw(){ const x=this.ctx,W=this.cv.width,H=this.cv.height; x.clearRect(0,0,W,H);
+      const cw=W/this.nCols, ch=H/this.rows;
+      for(let i=0;i<this.cols.length;i++){ const c=this.cols[i];
+        for(let r=0;r<this.rows;r++){ x.fillStyle=heatColor(c[r]); x.fillRect(i*cw,H-(r+1)*ch,Math.ceil(cw),Math.ceil(ch)-1); } }
+    },
+    phase(p){ this.hot = p==='spike'?1:0; }
+  };
 }
 
 /* ====================================================================== */
@@ -1131,16 +1310,118 @@ function* dBtop(){
   yield WAIT(U(1400,2000));
   yield OV('close',{wait:U(700,1100)});
 }
+function* dAttack(){
+  const allSrc=[[10,5],[33,5],[51,6],[46,8],[36,11],[20,13],[57,15],[48,3]];
+  const sources=shuffle(allSrc.slice()).slice(0,ri(6,8));
+  const tbps=U(1.4,3.8).toFixed(1), asns=ri(9,28);
+  yield OV('app',{tool:'attackmap',title:'threat map · edge WAF',url:'security.internal/waf',sources:sources,target:[16,7]});
+  yield L('▌ Pulling up the global threat map','accent',{wait:U(800,1200)});
+  yield WAIT(U(800,1200));
+  beep('alert');
+  yield OV('appstep',{k:'in',text:tbps+' Tbps'});
+  yield OV('appstep',{k:'cap',text:'⚠ volumetric DDoS — '+tbps+' Tbps from '+asns+' ASNs',tone:'err'});
+  yield L('⚠ inbound flood — '+tbps+' Tbps across '+sources.length+' regions','err',{wait:U(900,1500)});
+  yield THINK();
+  yield L(pick(['Fingerprinting attack signature…','Correlating source ASNs…','Building mitigation ruleset…']),'warn',{wait:U(800,1500)});
+  yield TOOL('Bash','wafctl rule deploy --action=challenge --asn '+ri(1000,9999));
+  yield OUT('propagating rules to '+ri(120,420)+' edge PoPs','dim',{burst:true});
+  yield WAIT(U(1000,1500));
+  yield OV('appstep',{k:'arc',state:'blocked'});
+  yield OV('appstep',{k:'blk',text:compactNum(ri(400000,3000000))+' rps'});
+  yield OV('appstep',{k:'in',text:ri(20,90)+' Gbps'});
+  yield OV('appstep',{k:'cap',text:'✓ attack mitigated · '+asns+' ASNs null-routed · origin shielded'});
+  beep('ok');
+  yield L('✔ DDoS absorbed at the edge — origin never saw it','ok',{wait:U(900,1500)});
+  yield CNT('incidents',1);
+  yield WAIT(U(1200,1800));
+  yield OV('close',{wait:U(700,1100)});
+}
+function* dGpu(){
+  const model=pick(['8× A100-80G','8× H100-80G','8× H200']);
+  const host=pick(['dgx','hgx','node'])+'-'+String(ri(1,24)).padStart(2,'0');
+  const hot=ri(0,7);
+  yield OV('app',{tool:'gpu',title:'nvidia-smi · '+host,url:'',model:model,host:host,hot:hot});
+  yield L('▌ Checking the training cluster — step times slipping','accent',{wait:U(900,1400)});
+  yield WAIT(U(1100,1600));
+  beep('alert');
+  yield OV('livefx',{phase:'spike'});
+  yield WAIT(U(1000,1500));
+  yield OV('appstep',{k:'cap',text:'⚠ GPU'+hot+' thermal throttling at 89°C · throughput degraded'});
+  yield L('⚠ GPU'+hot+' overheating — throttled, dragging the all-reduce','err',{wait:U(1000,1600)});
+  yield THINK();
+  yield L(pick(RETHINK),'warn',{wait:U(800,1500)});
+  yield TOOL('Bash','kubectl drain '+host+'-gpu'+hot+' --ignore-daemonsets && scheduler reshard');
+  yield OUT('migrating shard off GPU'+hot+' · rebalancing pipeline','dim',{burst:true});
+  yield WAIT(U(1100,1600));
+  yield OV('livefx',{phase:'recover'});
+  yield OV('appstep',{k:'cap',text:'✓ GPU'+hot+' drained & cooling · shard rebalanced across 7 GPUs'});
+  beep('ok');
+  yield L('✔ hot GPU isolated · training throughput restored','ok',{wait:U(1000,1600)});
+  yield CNT('incidents',1);
+  yield WAIT(U(1200,1800));
+  yield OV('close',{wait:U(700,1100)});
+}
+function* dMesh(){
+  const nodes=meshNodes();
+  const edges=[[0,1],[0,2],[1,3],[1,4],[2,5],[3,6],[4,6],[5,6]];
+  const be=2, bn=3;   // edge productpage→reviews, node reviews
+  yield OV('app',{tool:'mesh',title:'kiali · mesh graph · prod',url:'kiali.internal/graph',nodes:nodes,edges:edges});
+  yield L('▌ Inspecting the service mesh','accent',{wait:U(700,1100)});
+  yield WAIT(U(900,1400));
+  beep('alert');
+  yield OV('appstep',{k:'e'+be,state:'down'});
+  yield OV('appstep',{k:'n'+bn,state:'down'});
+  yield OV('appstep',{k:'cap',text:'⚠ '+nodes[bn].l+' 5xx '+(28+ri(0,20))+'% · circuit breaker open'});
+  yield L('⚠ '+nodes[bn].l+' failing — breaker tripped, retries storming','err',{wait:U(900,1500)});
+  yield THINK();
+  yield L(pick(RETHINK),'warn',{wait:U(800,1500)});
+  yield TOOL('Bash','istioctl apply -f outlier-detection.yaml');
+  yield OUT('ejecting unhealthy endpoints · shifting traffic','dim',{burst:true});
+  yield WAIT(U(1000,1500));
+  yield OV('appstep',{k:'e'+be,state:'up'});
+  yield OV('appstep',{k:'n'+bn,state:'up'});
+  yield OV('appstep',{k:'cap',text:'✓ '+nodes[bn].l+' healthy · breaker closed · mTLS green'});
+  beep('ok');
+  yield L('✔ mesh recovered — traffic flowing on every edge','ok',{wait:U(900,1500)});
+  yield CNT('incidents',1);
+  yield WAIT(U(1000,1500));
+  yield OV('close',{wait:U(700,1100)});
+}
+function* dHeatmap(){
+  yield OV('app',{tool:'heatmap',title:'latency heatmap · gateway',url:'grafana.internal/d/'+hash(6)});
+  yield L('▌ Pulling up the latency heatmap','accent',{wait:U(700,1100)});
+  yield WAIT(U(1500,2100));
+  beep('alert');
+  yield OV('livefx',{phase:'spike'});
+  const p999=grp(ri(1400,2400));
+  yield WAIT(U(900,1400));
+  yield OV('appstep',{k:'cap',text:'⚠ p99.9 '+p999+'ms — tail-latency blowout in the top percentiles'});
+  yield L('⚠ tail latency exploding — p99.9 '+p999+'ms while p50 stays flat','err',{wait:U(1000,1600)});
+  yield THINK();
+  yield L(pick(RETHINK),'warn',{wait:U(800,1500)});
+  yield TOOL('Edit',pick(FILES));
+  yield DIFF('+','hedge slow requests after 200ms; cap tail with a deadline',{wait:U(80,160)});
+  yield OUT('rolling out · watching percentiles','dim',{burst:true});
+  yield WAIT(U(1500,2100));
+  yield OV('livefx',{phase:'recover'});
+  yield OV('appstep',{k:'cap',text:'✓ p99.9 '+ri(90,160)+'ms · tail back under SLO'});
+  beep('ok');
+  yield L('✔ tail latency tamed — hedging cut the long pole','ok',{wait:U(1000,1600)});
+  yield CNT('incidents',1);
+  yield WAIT(U(1400,2000));
+  yield OV('close',{wait:U(700,1100)});
+}
 const DRAMAS={anomaly:dAnomaly,deploy:dDeploy,security:dSec,matrix:dMatrix,auth:dAuth,compaction:dCompact,
   grafana:dGrafana,pipeline:dPipeline,flame:dFlame,cluster:dCluster,
-  trace:dTrace,sql:dSqlPlan,load:dLoad,pr:dPR,docker:dDocker,btop:dBtop};
-const BOSS=['grafana','pipeline','flame','cluster','trace','sql','load','pr','docker','btop'];
+  trace:dTrace,sql:dSqlPlan,load:dLoad,pr:dPR,docker:dDocker,btop:dBtop,
+  attackmap:dAttack,gpu:dGpu,mesh:dMesh,heatmap:dHeatmap};
+const BOSS=['grafana','pipeline','flame','cluster','trace','sql','load','pr','docker','btop',
+  'attackmap','gpu','mesh','heatmap'];
 const CORE=['anomaly','deploy','security','auth','matrix'];
 function enabledDramas(){
   if(intensity<=0)return [];
   if(intensity===1)return ['deploy','auth','security'];
-  if(intensity===2)return CORE.concat(BOSS.slice(0,5));   // medium: full core + half the boss roster
-  return CORE.concat(BOSS);                               // max: everything
+  return CORE.concat(BOSS);   // med & max: the full roster (max simply fires more often)
 }
 
 /* ====================================================================== */
@@ -1215,6 +1496,7 @@ function frame(ts){
   updateThinker();
   if(mxActive) drawMatrix();
   if(btopActive) tickBtop(ts);
+  if(liveState) liveState.tick(ts);
   if(bossActive){ bossFrame+=dt*0.012; bossEl.querySelector('.sp').textContent=SPIN[Math.floor(bossFrame)%SPIN.length]; }
   // engine
   if(!paused && !bossActive){

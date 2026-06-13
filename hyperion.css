@@ -338,6 +338,81 @@ body:not(.reduce) .dk-r[data-state=running] .dk-ic::before{animation:spin 1s lin
 .bt-prow.bt-dead{opacity:.4}
 .bt-prow.bt-dead .pn{text-decoration:line-through; color:var(--dim); font-weight:400}
 .bt-prow.bt-dead .pc{color:var(--dim); font-weight:400}
+/* global threat map (DDoS) */
+#appwin[data-tool=attackmap]{width:min(840px,95vw)}
+.appbody.am{padding:12px 14px}
+.am-map{width:100%; height:auto; display:block; background:color-mix(in srgb,#000 30%,var(--rail)); border-radius:6px}
+.am-dot{fill:color-mix(in srgb,var(--dim) 55%,transparent)}
+.am-arcbg{fill:none; stroke:color-mix(in srgb,var(--err) 30%,transparent); stroke-width:.5; vector-effect:non-scaling-stroke}
+.am-arc{fill:none; stroke:var(--err); stroke-width:.8; stroke-linecap:round; vector-effect:non-scaling-stroke; stroke-dasharray:4 30}
+body:not(.reduce) .am-arc{animation:amflow 1.5s linear infinite}
+@keyframes amflow{to{stroke-dashoffset:-34}}
+.am-src{fill:var(--err)}
+body:not(.reduce) .am-src{animation:ampulse 1.6s ease-in-out infinite}
+@keyframes ampulse{0%,100%{opacity:.45}50%{opacity:1}}
+.am-tring{fill:none; stroke:var(--accent); stroke-width:.7; vector-effect:non-scaling-stroke}
+body:not(.reduce) .am-tring{animation:ampulse 1.8s ease-in-out infinite}
+.am-tdot{fill:var(--accent)}
+.am-arc[data-state=blocked]{animation:none; stroke:color-mix(in srgb,var(--dim) 50%,transparent); stroke-dasharray:none; opacity:.2}
+.am-arcbg[data-state=blocked]{opacity:.12}
+.am-src[data-state=blocked]{animation:none; fill:var(--dim); opacity:.3}
+.am-stats{display:flex; gap:10px; align-items:center; margin-top:8px}
+.am-s{border:1px solid color-mix(in srgb,var(--dim) 26%,transparent); border-radius:6px; padding:5px 10px; background:color-mix(in srgb,var(--bg) 40%,transparent)}
+.am-grow{flex:1; background:none; border:none; padding-left:2px}
+.am-t{display:block; font-size:8.5px; color:var(--dim); text-transform:uppercase; letter-spacing:.5px}
+.am-v{font-size:14px; font-weight:700; color:var(--err); font-variant-numeric:tabular-nums; transition:color .3s ease}
+.am-s:nth-child(2) .am-v{color:var(--ok)}
+.am-cap{font-size:11px; color:var(--dim)}
+/* GPU training farm (nvidia-smi) */
+#appwin[data-tool=gpu]{width:min(960px,95vw)}
+.appbody.gpu{display:flex; flex-direction:column; gap:10px}
+.gpu-head{display:flex; align-items:baseline; gap:10px}
+.gpu-ht{font-size:11px; color:var(--accent); font-weight:700; letter-spacing:.5px}
+.gpu-thr{margin-left:auto; font-size:12px; color:var(--ok); font-weight:700; font-variant-numeric:tabular-nums}
+.gpu-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:8px}
+.gpu-card{border:1px solid color-mix(in srgb,var(--dim) 28%,transparent); border-radius:6px; padding:7px 9px;
+  background:color-mix(in srgb,var(--bg) 40%,transparent); transition:border-color .4s ease,box-shadow .4s ease}
+.gpu-card[data-state=hot]{border-color:var(--warn)}
+.gpu-card[data-state=throttle]{border-color:var(--err)}
+body:not(.reduce) .gpu-card[data-state=throttle]{animation:gpf 1.1s ease-in-out infinite}
+.gpu-ctop{display:flex; align-items:baseline; gap:5px; margin-bottom:5px}
+.gpu-ci{font-size:10px; font-weight:700; color:var(--fg)}
+.gpu-cm{font-size:8.5px; color:var(--dim)}
+.gpu-bd{margin-left:auto; font-size:8px; color:var(--err); font-weight:700; letter-spacing:.3px}
+.gpu-row{display:flex; align-items:center; gap:5px; margin:2px 0}
+.gpu-rl{font-size:8.5px; color:var(--dim); flex:0 0 3ch}
+.gpu-bar{position:relative; flex:1; height:7px; border-radius:2px; background:color-mix(in srgb,var(--dim) 16%,transparent); overflow:hidden}
+.gpu-fill{height:100%; width:0; background:var(--accent); transition:width .4s linear}
+.gpu-fill.mem{background:color-mix(in srgb,var(--accent) 45%,var(--dim))}
+.gpu-rv{font-size:8.5px; color:var(--fg); flex:0 0 4ch; text-align:right; font-variant-numeric:tabular-nums}
+.gpu-foot{display:flex; justify-content:space-between; margin-top:4px; font-size:9px; font-variant-numeric:tabular-nums}
+.gpu-temp{color:var(--ok); transition:color .3s ease}
+.gpu-temp[data-lvl=mid]{color:var(--warn)} .gpu-temp[data-lvl=hi]{color:var(--err); font-weight:700}
+.gpu-watt{color:var(--dim)}
+.gpu-cap{font-size:11px; color:var(--dim); text-align:center}
+/* service mesh (Kiali) with flowing traffic */
+#appwin[data-tool=mesh]{width:min(640px,94vw)}
+.mesh{width:100%; height:auto; display:block; margin-bottom:6px}
+.mesh-edge{stroke:color-mix(in srgb,var(--ok) 40%,transparent); stroke-width:1.4; fill:none; transition:stroke .4s ease}
+.mesh-pkt{fill:var(--ok)}
+.mesh-eg[data-state=down] .mesh-edge{stroke:var(--err); stroke-dasharray:3 3}
+.mesh-eg[data-state=down] .mesh-pkt{display:none}
+.mesh-c{fill:color-mix(in srgb,var(--ok) 24%,var(--rail)); stroke:var(--ok); stroke-width:1.5; transition:fill .4s ease,stroke .4s ease}
+.mesh-node[data-state=down] .mesh-c{fill:color-mix(in srgb,var(--err) 30%,var(--rail)); stroke:var(--err)}
+body:not(.reduce) .mesh-node[data-state=down] .mesh-c{animation:gpf 1s ease-in-out infinite}
+.mesh-lbl{fill:var(--dim); font-size:8px; font-family:inherit}
+.mesh-cap{font-size:11px; color:var(--dim); text-align:center}
+/* latency heatmap (scrolling) */
+#appwin[data-tool=heatmap]{width:min(760px,94vw)}
+.appbody.heat{display:flex; flex-direction:column; gap:8px}
+.heat-head{display:flex; align-items:baseline; gap:10px}
+.heat-ht{font-size:11px; color:var(--accent); font-weight:700; letter-spacing:.5px}
+.heat-sub{margin-left:auto; font-size:10px; color:var(--dim)}
+.heat-wrap{display:flex; gap:7px}
+.heat-y{display:flex; flex-direction:column; justify-content:space-between; flex:0 0 auto; padding:1px 0}
+.heat-yl{font-size:8.5px; color:var(--dim); line-height:1; text-align:right; font-variant-numeric:tabular-nums}
+.heat-cv{flex:1; height:152px; display:block; border-radius:4px; border:1px solid color-mix(in srgb,var(--dim) 22%,transparent)}
+.heat-cap{font-size:11px; color:var(--dim); text-align:center}
 /* ============================== BOSS KEY ============================== */
 #boss{position:fixed; inset:0; z-index:80; display:none; place-items:center;
   background:#05070b; color:#cdd6e4; font-size:14px}
