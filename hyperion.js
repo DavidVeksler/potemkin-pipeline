@@ -27,7 +27,7 @@ const cfg={
   mode: QS.get('mode')==='performer'?'performer':'auto',
   audio: QS.get('audio')==='on'?'on':'off',
   crt: QS.get('crt')==='on'?'on':'off',
-  idle: qint('idle',0,3600,30),             // seconds of no input before deep-work "away" mode (0 disables)
+  idle: qint('idle',0,3600,90),             // seconds of no input before deep-work "away" mode (0 disables)
   reduceFlash: QS.get('reduceFlash'),       // 'on' | 'off' | null
   seed: QS.get('seed')!=null && Number.isFinite(parseInt(QS.get('seed'),10)) ? (parseInt(QS.get('seed'),10)>>>0) : (Math.random()*4294967296>>>0),
   debug: QS.has('debug')                      // gates the window.__HYP test hook
@@ -1462,6 +1462,7 @@ function* dDeepWork(){
       if(rng()<0.3) yield CNT('files',ri(1,6));
       if(rng()<0.25) yield DIFF('+',pickNR(ADD,'add'),{wait:U(40,120)});
       if(rng()<0.18) yield L(T9(),'dim');
+      while(idleActive && dramaQ.length){ const d=dramaQ.shift(); yield* d(); }   // a scheduled crisis cuts in, then the grind resumes
     }
     if(done>=total && idleActive){
       yield BANNER('✔ '+goal.label+' — '+grp(total)+' '+goal.unit+' · '+pick(DONETAIL));
@@ -1533,11 +1534,10 @@ function checkDrama(){
   if(overlayActive||dramaQ.length)return;
   // context compaction (condition-driven): a full overlay when drama is on, a silent reset at intensity 0
   if(ctx>=80 && logicalNow-lastCompact>5000){
-    if(intensity>=1 && !idleActive) dramaQ.push(DRAMAS.compaction);
-    else ctxAnim={from:ctx,to:U(22,28),t0:performance.now(),dur:1400};   // silent compaction at intensity 0 or during deep work
+    if(intensity>=1) dramaQ.push(DRAMAS.compaction);
+    else ctxAnim={from:ctx,to:U(22,28),t0:performance.now(),dur:1400};   // silent compaction at intensity 0
     lastCompact=logicalNow; return;
   }
-  if(idleActive)return;          // no random dramas while deep work is grinding
   if(intensity<=0)return;
   if(logicalNow>=nextDramaAt){
     let type;
@@ -1700,7 +1700,7 @@ function hideBoss(){ bossActive=false; bossEl.classList.remove('on'); }
 function enterIdle(){
   if(idleActive||mode!=='auto'||paused) return false;
   idleActive=true; document.body.classList.add('deepwork'); updateMode();
-  dramaQ.length=0; dramaQ.push(dDeepWork);   // take over the stream on the next event boundary
+  dramaQ.unshift(dDeepWork);   // grind takes over next; dramas still fire and cut in mid-grind
   toast('deep work — away mode'); return true;
 }
 function exitIdle(){
@@ -1845,7 +1845,7 @@ function urlParams(forceSeed){
   if(mode!=='auto')p.set('mode',mode);
   if(cfg.audio!=='off')p.set('audio',cfg.audio);
   if(cfg.crt!=='off')p.set('crt',cfg.crt);
-  if(cfg.idle!==30)p.set('idle',String(cfg.idle));
+  if(cfg.idle!==90)p.set('idle',String(cfg.idle));
   if(cfg.reduceFlash)p.set('reduceFlash',cfg.reduceFlash);
   if(forceSeed||seedExplicit)p.set('seed',String(cfg.seed>>>0));
   return p.toString();
@@ -1859,7 +1859,7 @@ function copyLink(){
 }
 function resetConfig(){
   cfg.model='mythos-5-preview'; cfg.audio='off'; cfg.crt='off'; cfg.reduceFlash=null;
-  cfg.idle=30; idleThreshold=30; exitIdle();
+  cfg.idle=90; idleThreshold=90; exitIdle();
   speed=1; intensity=2; mode='auto'; cfg.project=PROJECTS[(rng()*PROJECTS.length)|0];
   cfg.seed=(Math.random()*4294967296)>>>0; _seed=cfg.seed; seedExplicit=false;
   cfg.agent=pickCodename(cfg.seed); agentExplicit=false;
