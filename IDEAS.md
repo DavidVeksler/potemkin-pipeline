@@ -11,12 +11,13 @@ Ranked roughly by theater-per-byte. ⭐ = recommended next.
 
 ## Top picks (high impact, low effort)
 
-### ⭐ 1. Idle / AFK "deep work" mode
-After N seconds of no input, the agent escalates into an unbroken multi-minute
-mega-mission with a progress bar toward an absurd goal ("Refactoring monorepo:
-12,481 files… 34%"). Any keypress snaps it back. This is the *actual* killer use
-case — walk away and the machine looks like it's grinding. Pairs with the
-existing boss-key instinct.
+### ✅ 1. Idle / AFK "deep work" mode — _shipped_
+After N seconds of no input (default 30, `?idle=N`), the agent clears the log and
+settles into an unbroken multi-minute grind toward an absurd goal ("Backfilling
+the ledger from genesis · 14% · 2,278,901 / 15,736,440 rows") with climbing
+counters and tool/think texture. Any keypress/mouse/touch parks the pass and
+snaps it back. Indicator: `⚙ deep work`. Test hooks: scene picker → Special →
+"deep work · away mode", or `__HYP.deepwork()` / `__HYP.wake()` with `?debug`.
 
 ### ⭐ 2. Cost / burn meter
 A live "$ spent this session" counter in the header that ticks up with every

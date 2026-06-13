@@ -125,10 +125,19 @@ the next tokens under your own fingertips — for when someone's watching and yo
 to look 100× productive on demand. The **boss key** is the emergency eject: one tap
 and the screen becomes a perfectly boring VPN spinner.
 
+Leave the keyboard alone for a while and it slips into **deep-work "away" mode**: the
+agent clears the log and settles into a single, unbroken, multi-minute grind toward a
+suitably heroic goal — *"Backfilling the ledger from genesis · 14% · 2,278,901 /
+15,736,440 rows"* — counters ticking up the whole time. Walk away from the desk and
+the machine looks like it's earning its keep; touch any key (or the mouse) and it
+parks the pass and snaps back to the regular show. Tune the delay (or switch it off)
+with `?idle=N` or the config dialog; defaults to 30s.
+
 **URL params** (all optional, all persist via the config dialog's *Copy link*):
 `?seed=N` · `?agent=NAME` · `?project=NAME` · `?theme=amber|green|cyan` ·
-`?speed=0.25–4` · `?intensity=off|low|med|max` · `?mode=performer` · `?audio=on` ·
-`?crt=on` · `?debug` (exposes a `window.__HYP` test hook — `__HYP.drama('gpu')`, `__HYP.state()`).
+`?speed=0.25–4` · `?intensity=off|low|med|max` · `?mode=performer` · `?idle=N`
+(seconds before deep-work mode; `0` disables) · `?audio=on` · `?crt=on` ·
+`?debug` (exposes a `window.__HYP` test hook — `__HYP.drama('gpu')`, `__HYP.deepwork()`, `__HYP.state()`).
 
 ## Layout
 

@@ -27,6 +27,7 @@ const cfg={
   mode: QS.get('mode')==='performer'?'performer':'auto',
   audio: QS.get('audio')==='on'?'on':'off',
   crt: QS.get('crt')==='on'?'on':'off',
+  idle: qint('idle',0,3600,30),             // seconds of no input before deep-work "away" mode (0 disables)
   reduceFlash: QS.get('reduceFlash'),       // 'on' | 'off' | null
   seed: QS.get('seed')!=null && Number.isFinite(parseInt(QS.get('seed'),10)) ? (parseInt(QS.get('seed'),10)>>>0) : (Math.random()*4294967296>>>0),
   debug: QS.has('debug')                      // gates the window.__HYP test hook
@@ -70,6 +71,7 @@ function compactNum(n){
   if(n>=1e5) return Math.round(n/1e3)+'k';
   return grp(n);
 }
+function barStr(frac,seg){seg=seg||12;const f=clamp(Math.round(frac*seg),0,seg);return '['+'▰'.repeat(f)+'▱'.repeat(seg-f)+']';}
 
 /* ====================================================================== */
 /* BANKS                                                                   */
@@ -273,6 +275,7 @@ let releaseTokens=0, lastRelease=0;
 let overlayActive=false, dramaQ=[], nextDramaAt=U(45000,75000), firstDrama=true, lastCompact=-99999;
 let activeThinker=null, lastEmit=0, lastVisible='';
 let bossActive=false, bossFrame=0, settingsOpen=false, helpOpen=false, dramaOpen=false;
+let idleActive=false, idleThreshold=cfg.idle, lastActivityTs=0;   // deep-work "away" mode
 let tok=82, ctx=58, ctxAnim=null;
 let mxActive=false, mx={cols:[],fs:14}, accentCache='#ff9d2f';
 let btopActive=false, btopState=null, btopLast=0;
@@ -1424,6 +1427,50 @@ function* dHeatmap(){
   yield WAIT(U(1400,2000));
   yield OV('close',{wait:U(700,1100)});
 }
+/* ---- deep-work "away" mode: a never-ending long-horizon grind toward an absurd goal ---- */
+const MEGA_GOALS=[
+  {label:'Refactoring the entire monorepo',unit:'files',lo:9000,hi:52000},
+  {label:'Migrating the codebase to the new type system',unit:'modules',lo:900,hi:5200},
+  {label:'Re-indexing the global vector store',unit:'embeddings',lo:4000000,hi:80000000},
+  {label:'Backfilling the ledger from genesis',unit:'rows',lo:2000000,hi:60000000},
+  {label:'Upgrading every transitive dependency',unit:'packages',lo:1200,hi:9000},
+  {label:'Formalizing core invariants as machine-checked proofs',unit:'lemmas',lo:300,hi:2400},
+  {label:'Auditing every call site for data races',unit:'call sites',lo:40000,hi:480000},
+  {label:'Porting the test suite to property-based tests',unit:'tests',lo:1500,hi:14000},
+  {label:'Rewriting the hot path in Rust',unit:'crates',lo:60,hi:600},
+  {label:'Distilling the model to int4',unit:'tensors',lo:2000,hi:24000},
+  {label:'Documenting every public symbol',unit:'symbols',lo:8000,hi:90000},
+  {label:'Eliminating all technical debt, permanently',unit:'TODOs',lo:3000,hi:40000},
+];
+function* dDeepWork(){
+  while(idleActive){
+    const goal=pick(MEGA_GOALS), total=ri(goal.lo,goal.hi);
+    yield CLR();
+    yield BANNER('▌ Deep work — '+goal.label);
+    yield L('Long-horizon autonomous run · '+grp(total)+' '+goal.unit+' queued · interactive input paused','dim');
+    yield PHASE('DEEP WORK');
+    const beats=ri(14,22);
+    let done=0;
+    for(let b=1;b<=beats && idleActive;b++){
+      done=b===beats?total:Math.min(total,Math.round(total*(b/beats)*U(0.9,1.06)));
+      const frac=done/total, r=rng();
+      if(r<0.4){ yield TOOL(pick(['Edit','Edit','MultiEdit','Bash','Read']),pick(FILES)); if(rng()<0.5) yield FILE(pick(FILES)); }
+      else if(r<0.55){ yield THINK(); yield L(pick(RETHINK),'warn',{wait:U(500,1200)}); }
+      yield L(barStr(frac)+' '+goal.label+' · '+Math.round(frac*100)+'% · '+grp(done)+' / '+grp(total)+' '+goal.unit, frac>=1?'ok':'accent',{wait:U(1500,3300)});
+      if(rng()<0.5) yield CNT('lines',ri(40,900));
+      if(rng()<0.3) yield CNT('files',ri(1,6));
+      if(rng()<0.25) yield DIFF('+',pickNR(ADD,'add'),{wait:U(40,120)});
+      if(rng()<0.18) yield L(T9(),'dim');
+    }
+    if(done>=total && idleActive){
+      yield BANNER('✔ '+goal.label+' — '+grp(total)+' '+goal.unit+' · '+pick(DONETAIL));
+      yield CNT('tests',ri(2,9));
+      yield L('Idle — scanning for the next big lever…','dim',{wait:U(1600,3200)});
+    }
+  }
+  yield L('▌ Interactive session resumed — parking the deep-work pass','accent',{wait:U(300,600)});
+  yield L('checkpointed · resumable from the last batch','dim',{wait:U(500,900)});
+}
 const DRAMAS={anomaly:dAnomaly,deploy:dDeploy,security:dSec,matrix:dMatrix,auth:dAuth,compaction:dCompact,
   grafana:dGrafana,pipeline:dPipeline,flame:dFlame,cluster:dCluster,
   trace:dTrace,sql:dSqlPlan,load:dLoad,pr:dPR,docker:dDocker,btop:dBtop,
@@ -1485,10 +1532,11 @@ function checkDrama(){
   if(overlayActive||dramaQ.length)return;
   // context compaction (condition-driven): a full overlay when drama is on, a silent reset at intensity 0
   if(ctx>=80 && logicalNow-lastCompact>5000){
-    if(intensity>=1) dramaQ.push(DRAMAS.compaction);
-    else ctxAnim={from:ctx,to:U(22,28),t0:performance.now(),dur:1400};
+    if(intensity>=1 && !idleActive) dramaQ.push(DRAMAS.compaction);
+    else ctxAnim={from:ctx,to:U(22,28),t0:performance.now(),dur:1400};   // silent compaction at intensity 0 or during deep work
     lastCompact=logicalNow; return;
   }
+  if(idleActive)return;          // no random dramas while deep work is grinding
   if(intensity<=0)return;
   if(logicalNow>=nextDramaAt){
     let type;
@@ -1511,6 +1559,7 @@ function frame(ts){
   if(btopActive) tickBtop(ts);
   if(liveState) liveState.tick(ts);
   if(bossActive){ bossFrame+=dt*0.012; bossEl.querySelector('.sp').textContent=SPIN[Math.floor(bossFrame)%SPIN.length]; }
+  tickIdle(ts);
   // engine
   if(!paused && !bossActive){
     if(mode==='auto'){ logicalNow+=dt*speed; pumpAuto(); }
@@ -1560,6 +1609,7 @@ function ctxBump(x){ if(!ctxAnim) ctx=clamp(ctx+x,0,98); }
 /* ====================================================================== */
 function isTyping(t){ return t&&(t.tagName==='INPUT'||t.tagName==='SELECT'||t.tagName==='TEXTAREA'); }
 addEventListener('keydown',e=>{
+  markActivity();
   if(bossActive){ e.preventDefault(); hideBoss(); return; }
   if(settingsEl.open){                            // config dialog owns input while open
     if(isTyping(e.target)) return;                // let fields receive keystrokes (incl. Esc handled natively)
@@ -1593,7 +1643,8 @@ addEventListener('keydown',e=>{
 });
 
 function updateMode(){
-  modeind.textContent=paused?'⏸ paused':mode==='performer'?'▸ performer':'⏻ auto';
+  if(idleActive){ modeind.textContent='⚙ deep work'; modeind.classList.add('deep'); }
+  else { modeind.textContent=paused?'⏸ paused':mode==='performer'?'▸ performer':'⏻ auto'; modeind.classList.remove('deep'); }
   document.body.classList.toggle('performer',mode==='performer');
 }
 function setTheme(t){ cfg.theme=t; document.documentElement.setAttribute('data-theme',t); cacheAccent(); toast('theme: '+t); syncURL(); }
@@ -1605,6 +1656,28 @@ function forceDrama(){
 }
 function showBoss(){ bossActive=true; bossEl.classList.add('on'); }
 function hideBoss(){ bossActive=false; bossEl.classList.remove('on'); }
+
+/* ====================================================================== */
+/* IDLE / DEEP-WORK "AWAY" MODE                                            */
+/* ====================================================================== */
+function enterIdle(){
+  if(idleActive||mode!=='auto'||paused) return false;
+  idleActive=true; document.body.classList.add('deepwork'); updateMode();
+  dramaQ.length=0; dramaQ.push(dDeepWork);   // take over the stream on the next event boundary
+  toast('deep work — away mode'); return true;
+}
+function exitIdle(){
+  if(!idleActive) return;
+  idleActive=false; document.body.classList.remove('deepwork'); updateMode();
+  nextDramaAt=logicalNow+U(60000,110000)/Math.max(1,intensity);   // don't fire a drama the instant we resume
+}
+function markActivity(){ lastActivityTs=performance.now(); if(idleActive) exitIdle(); }
+function tickIdle(ts){
+  if(idleActive||idleThreshold<=0) return;
+  if(paused||bossActive||overlayActive||mode!=='auto'||settingsEl.open||dramaEl.open||helpOpen){ lastActivityTs=ts; return; }
+  if(ts-lastActivityTs>=idleThreshold*1000) enterIdle();
+}
+['pointerdown','pointermove','wheel','touchstart'].forEach(t=>addEventListener(t,markActivity,{passive:true}));
 
 /* ====================================================================== */
 /* SCENE PICKER (hotkey 'd') — fire any drama on demand for testing        */
@@ -1619,6 +1692,8 @@ const SCENE_GROUPS=[
   {title:'Ambient drama', items:[
     ['deploy','deploy & rollout'],['security','CVE patch'],['auth','auth / secret rotation'],
     ['anomaly','metric anomaly'],['matrix','matrix cascade'],['compaction','context compaction'] ]},
+  {title:'Special', items:[
+    ['deepwork','deep work · away mode'] ]},
 ];
 function queueDrama(name){
   if(!DRAMAS[name]){ toast('unknown scene'); return; }
@@ -1637,7 +1712,7 @@ function buildDramaPicker(){
     const sec=el('cfg-sec'); sec.appendChild(el('cfg-sech',grp.title));
     const g=el('dp-grid');
     grp.items.forEach(([name,label])=>{
-      const b=mkBtn('dp-item',label,()=>{ toggleDrama(false); queueDrama(name); });
+      const b=mkBtn('dp-item',label,()=>{ toggleDrama(false); if(name==='deepwork'){ if(!enterIdle())toast('deep work needs auto mode'); } else queueDrama(name); });
       b.title=name; g.appendChild(b);
     });
     sec.appendChild(g); bd.appendChild(sec);
@@ -1698,6 +1773,7 @@ function buildConfig(){
   g=sec('Behavior');
   fld(g,'mode',sel(['auto','performer'],mode,v=>{mode=v;updateMode();syncURL();}));
   fld(g,'audio',sel(['off','on'],cfg.audio,v=>{cfg.audio=v;if(v==='on')audioUnlock();syncURL();}));
+  fld(g,'idle → deep work',rng_(0,180,5,idleThreshold,v=>{idleThreshold=v|0;cfg.idle=v|0;if(idleActive&&idleThreshold<=0)exitIdle();syncURL();},v=>(v|0)?(v|0)+'s':'off'),true);
   fld(g,'reduce flash',sel([{v:'auto',t:'auto (follow OS)'},{v:'on',t:'on'},{v:'off',t:'off'}],cfg.reduceFlash||'auto',v=>{cfg.reduceFlash=v==='auto'?null:v;reduceFlash=v==='on'?true:v==='off'?false:prefersRM;document.body.classList.toggle('reduce',reduceFlash);syncURL();}),true);
 
   g=sec('Determinism');
@@ -1732,6 +1808,7 @@ function urlParams(forceSeed){
   if(mode!=='auto')p.set('mode',mode);
   if(cfg.audio!=='off')p.set('audio',cfg.audio);
   if(cfg.crt!=='off')p.set('crt',cfg.crt);
+  if(cfg.idle!==30)p.set('idle',String(cfg.idle));
   if(cfg.reduceFlash)p.set('reduceFlash',cfg.reduceFlash);
   if(forceSeed||seedExplicit)p.set('seed',String(cfg.seed>>>0));
   return p.toString();
@@ -1745,6 +1822,7 @@ function copyLink(){
 }
 function resetConfig(){
   cfg.model='mythos-5-preview'; cfg.audio='off'; cfg.crt='off'; cfg.reduceFlash=null;
+  cfg.idle=30; idleThreshold=30; exitIdle();
   speed=1; intensity=2; mode='auto'; cfg.project=PROJECTS[(rng()*PROJECTS.length)|0];
   cfg.seed=(Math.random()*4294967296)>>>0; _seed=cfg.seed; seedExplicit=false;
   cfg.agent=pickCodename(cfg.seed); agentExplicit=false;
@@ -1790,7 +1868,7 @@ function beep(kind){
 /* ====================================================================== */
 document.addEventListener('visibilitychange',()=>{
   if(document.hidden){ hidden=true; if(rafId)cancelAnimationFrame(rafId); rafId=0; }
-  else { hidden=false; lastTs=0; if(!rafId) rafId=requestAnimationFrame(frame); }  // clamp: don't replay backlog
+  else { hidden=false; lastTs=0; markActivity(); if(!rafId) rafId=requestAnimationFrame(frame); }  // returning to the tab counts as activity; don't replay backlog
 });
 
 /* ====================================================================== */
@@ -1813,12 +1891,13 @@ function init(){
   renderCtx(); updateMode();
   if(cfg.audio==='on'){ /* will unlock on first gesture */ }
   pending=stream.next().value; nextAt=320;
+  lastActivityTs=performance.now();
   rafId=requestAnimationFrame(frame);
 }
 init();
 
 // test/debug hook — only exposed with ?debug in the URL, so production ships zero global surface
 if(cfg.debug){
-  window.__HYP={state:()=>({lines:logEl.childElementCount,counters:Object.assign({},counters),mode,paused,speed,intensity,ctx:Math.round(ctx),overlayActive,logicalNow:Math.round(logicalNow),missionId}),force:forceDrama,drama:n=>{if(DRAMAS[n]&&!overlayActive&&!dramaQ.length)dramaQ.push(DRAMAS[n]);return n;},seed:cfg.seed};
+  window.__HYP={state:()=>({lines:logEl.childElementCount,counters:Object.assign({},counters),mode,paused,speed,intensity,ctx:Math.round(ctx),overlayActive,idle:idleActive,logicalNow:Math.round(logicalNow),missionId}),force:forceDrama,drama:n=>{if(DRAMAS[n]&&!overlayActive&&!dramaQ.length)dramaQ.push(DRAMAS[n]);return n;},deepwork:enterIdle,wake:markActivity,seed:cfg.seed};
 }
 })();

@@ -123,6 +123,9 @@ body.reduce .ft-file.glow{text-shadow:none}
 #ftr .sep{opacity:.5}
 #ftr .mode{margin-left:auto;color:var(--accent)}
 body.paused #ftr .mode{color:var(--warn)}
+#ftr .mode.deep{color:var(--accent);font-weight:600;letter-spacing:.04em}
+body:not(.reduce) #ftr .mode.deep{animation:dwpulse 1.6s ease-in-out infinite}
+@keyframes dwpulse{0%,100%{opacity:.55}50%{opacity:1}}
 /* live button */
 #livebtn{
   position:fixed; right:300px; bottom:42px; z-index:30; cursor:pointer;
