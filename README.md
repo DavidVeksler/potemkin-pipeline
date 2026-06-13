@@ -10,7 +10,10 @@ a non-technical observer — but it isn't meant to fool anyone who actually read
 the content. The in-app product is branded **HYPERION**; *Potemkin Pipeline* is
 the project name.
 
-▶ **[Run it live](https://davidveksler.github.io/potemkin-pipeline/)** · press <kbd>f</kbd> to force a drama, <kbd>b</kbd> for the boss key.
+▶ **[Run it live](https://davidveksler.github.io/potemkin-pipeline/)** · press <kbd>f</kbd> to force a random drama, <kbd>d</kbd> to pick a specific scene, <kbd>b</kbd> for the boss key.
+
+> The agent picks a fresh hyperbolic codename each load (ORION, COLOSSUS, SINGULARITY, PLUS-ULTRA…),
+> riffing on the rumored next-gen model mythos. It's seed-derived, so a shared `?seed=` link reproduces it.
 
 ## The show
 

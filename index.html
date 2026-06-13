@@ -482,6 +482,19 @@ body:not(.reduce) dialog#settings[open]{animation:cfgpop .18s ease}
 #help .hk{display:flex; justify-content:space-between; margin:5px 0; font-size:12px}
 #help .hk kbd{background:var(--bg); border:1px solid var(--dim); border-radius:3px; padding:0 6px; color:var(--accent); font-weight:700}
 #help .hk span{color:var(--dim)}
+/* scene picker dialog (shares .cfg-* internals with #settings) */
+dialog#dramapick{border:1px solid color-mix(in srgb,var(--accent) 55%,transparent);
+  background:color-mix(in srgb,var(--rail) 96%,#000); color:var(--fg); border-radius:10px;
+  padding:0; width:min(560px,94vw); max-height:90vh; box-shadow:0 24px 80px rgba(0,0,0,.7);
+  font-family:inherit; overflow:hidden}
+dialog#dramapick::backdrop{background:rgba(0,0,0,.55); backdrop-filter:blur(2px)}
+body.reduce dialog#dramapick::backdrop{backdrop-filter:none}
+body:not(.reduce) dialog#dramapick[open]{animation:cfgpop .18s ease}
+.dp-grid{display:grid; grid-template-columns:1fr 1fr; gap:7px}
+.dp-item{background:var(--bg); color:var(--fg); border:1px solid var(--dim); border-radius:5px;
+  padding:8px 10px; font:inherit; font-size:12px; text-align:left; cursor:pointer;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; transition:border-color .1s, color .1s}
+.dp-item:hover,.dp-item:focus-visible{border-color:var(--accent); color:var(--accent); outline:none}
 /* toast */
 #toast{position:fixed; left:50%; bottom:48px; transform:translateX(-50%); z-index:90;
   background:color-mix(in srgb,var(--rail) 95%,#000); color:var(--fg);
@@ -533,13 +546,15 @@ body.crt #app::after{content:""; position:fixed; inset:0; z-index:60; pointer-ev
 <div id="overlay"><div class="backdrop"></div></div>
 <div id="boss"><div class="bx"><div class="sp">⠋</div><div class="msg">Connecting to corporate VPN…</div><div class="hint">press any key</div></div></div>
 <dialog id="settings" aria-label="Configuration"></dialog>
+<dialog id="dramapick" aria-label="Boss scene picker"></dialog>
 <div id="help" class="drawer">
   <h2>HOTKEYS</h2>
   <div class="hk"><kbd>m</kbd><span>autopilot ↔ performer</span></div>
   <div class="hk"><kbd>space</kbd><span>pause / resume</span></div>
   <div class="hk"><kbd>1 2 3</kbd><span>theme: amber / green / cyan</span></div>
   <div class="hk"><kbd>+ −</kbd><span>speed up / down</span></div>
-  <div class="hk"><kbd>f</kbd><span>force a drama event</span></div>
+  <div class="hk"><kbd>f</kbd><span>force a random drama</span></div>
+  <div class="hk"><kbd>d</kbd><span>pick a specific scene</span></div>
   <div class="hk"><kbd>b</kbd><span>boss key (blank screen)</span></div>
   <div class="hk"><kbd>s</kbd><span>configuration dialog</span></div>
   <div class="hk"><kbd>?</kbd><span>this help · <kbd>esc</kbd> closes</span></div>
@@ -558,8 +573,17 @@ const THEMES=['amber','green','cyan'];
 function qint(name,lo,hi,def){const v=parseInt(QS.get(name),10);return Number.isFinite(v)?Math.max(lo,Math.min(hi,v)):def;}
 function qfloat(name,lo,hi,def){const v=parseFloat(QS.get(name));return Number.isFinite(v)?Math.max(lo,Math.min(hi,v)):def;}
 const PROJECTS=['core-platform','payments-core','atlas-api','mesh-gateway','ledger-svc','vector-db','edge-runtime','quorum-store'];
+/* hyperbolic agent codenames — riffs on the rumored next-gen model mythos
+   (OpenAI Orion/Strawberry/Q*, xAI Colossus/Aurora, Gemini Ultra, Claude's mythos/fable …)
+   plus the cosmic/mythic grandiosity the genre demands. One is picked per seed at load. */
+const CODENAMES=['HYPERION','ORION','COLOSSUS','PROMETHEUS','OLYMPUS','TITAN','LEVIATHAN','BEHEMOTH',
+  'OVERMIND','SINGULARITY','OMNISCIENCE','ASCENDANT','TRANSCENDENCE','DEMIURGE','OMEGA-9','ULTRAMAX',
+  'MEGAMIND','GIGABRAIN','QUASAR','SUPERNOVA','HELIOS','KRONOS','AETHER','NEXUS','ORACLE','MAGNUS',
+  'IMPERIUM','INFINITY','SOVEREIGN','MONOLITH','ARCHON','GODHEAD','EMPYREAN','PINNACLE','APEX-X',
+  'ZENITH','PARAGON','STRAWBERRY-Q','AURORA','ARRAKIS','MOONSHOT','PLUS-ULTRA','AVATAR-9','OBELISK',
+  'VANGUARD','APOTHEOSIS'];
 const cfg={
-  agent: QS.get('agent')||'HYPERION',
+  agent: QS.get('agent')||null,
   project: QS.get('project')||'',
   model: QS.get('model')||'mythos-5-preview',
   theme: THEMES.includes(QS.get('theme'))?QS.get('theme'):'amber',
@@ -573,6 +597,7 @@ const cfg={
   debug: QS.has('debug')                      // gates the window.__HYP test hook
 };
 let seedExplicit = QS.get('seed')!=null;       // only pin seed in the URL when the user set it
+let agentExplicit = QS.get('agent')!=null;     // only pin agent in the URL when the user set it
 const prefersRM = matchMedia('(prefers-reduced-motion: reduce)').matches;
 let reduceFlash = cfg.reduceFlash==='on' ? true : cfg.reduceFlash==='off' ? false : prefersRM;
 let reduceMotion = prefersRM;
@@ -581,6 +606,9 @@ let reduceMotion = prefersRM;
 /* RNG + HELPERS                                                           */
 /* ====================================================================== */
 let _seed=cfg.seed>>>0;
+function hashU32(s){ s=Math.imul(s^(s>>>16),0x45d9f3b)>>>0; s=Math.imul(s^(s>>>16),0x45d9f3b)>>>0; return (s^(s>>>16))>>>0; }
+function pickCodename(seed){ return CODENAMES[hashU32(seed>>>0)%CODENAMES.length]; }
+if(!cfg.agent) cfg.agent=pickCodename(cfg.seed);   // seed-derived; independent of the main RNG stream so the story is unchanged
 function rng(){ // mulberry32
   _seed=(_seed+0x6D2B79F5)|0; let t=_seed;
   t=Math.imul(t^(t>>>15),1|t); t=(t+Math.imul(t^(t>>>7),61|t))^t;
@@ -796,7 +824,7 @@ function OV(op,o){return Object.assign({kind:'ov',op:op},o);}
 const $=s=>document.querySelector(s);
 const logEl=$('#log'), caret=$('#caret'), railTasks=$('#tasktree'), fileTreeEl=$('#filetree');
 const overlay=$('#overlay'), ovback=overlay.querySelector('.backdrop');
-const bossEl=$('#boss'), settingsEl=$('#settings'), helpEl=$('#help'), toastEl=$('#toast'), liveBtn=$('#livebtn'), cfgbtn=$('#cfgbtn');
+const bossEl=$('#boss'), settingsEl=$('#settings'), helpEl=$('#help'), toastEl=$('#toast'), liveBtn=$('#livebtn'), cfgbtn=$('#cfgbtn'), dramaEl=$('#dramapick');
 const hAgent=$('.h-agent'),hProj=$('.h-proj'),hModel=$('.h-model'),ctxbar=$('.ctxbar'),ctxpct=$('.ctxpct'),hTok=$('.h-tok'),hTime=$('.h-time'),modeind=$('#modeind');
 const cFiles=$('#c-files'),cLines=$('#c-lines'),cTests=$('#c-tests'),cCves=$('#c-cves'),cDeploys=$('#c-deploys');
 
@@ -809,7 +837,7 @@ let paused=false, mode=cfg.mode, speed=cfg.speed, intensity=cfg.intensity;
 let releaseTokens=0, lastRelease=0;
 let overlayActive=false, dramaQ=[], nextDramaAt=U(45000,75000), firstDrama=true, lastCompact=-99999;
 let activeThinker=null, lastEmit=0, lastVisible='';
-let bossActive=false, bossFrame=0, settingsOpen=false, helpOpen=false;
+let bossActive=false, bossFrame=0, settingsOpen=false, helpOpen=false, dramaOpen=false;
 let tok=82, ctx=58, ctxAnim=null;
 let mxActive=false, mx={cols:[],fs:14}, accentCache='#ff9d2f';
 let btopActive=false, btopState=null, btopLast=0;
@@ -2103,6 +2131,10 @@ addEventListener('keydown',e=>{
     if(e.key==='s'){ toggleSettings(false); e.preventDefault(); }   // 's' toggles the dialog shut
     return;                                        // Escape is closed by <dialog> itself
   }
+  if(dramaEl.open){                               // scene picker owns input while open (Esc closes natively)
+    if(e.key==='d'){ toggleDrama(false); e.preventDefault(); }
+    return;
+  }
   if(e.key==='Escape' && helpOpen){ toggleHelp(false); return; }
   if(isTyping(e.target)) return;
   if(e.metaKey||e.ctrlKey||e.altKey) return;     // don't hijack copy/devtools
@@ -2117,6 +2149,7 @@ addEventListener('keydown',e=>{
     case '+': case '=': setSpeed(speed*1.5); e.preventDefault(); return;
     case '-': case '_': setSpeed(speed/1.5); e.preventDefault(); return;
     case 'f': forceDrama(); e.preventDefault(); return;
+    case 'd': toggleDrama(); e.preventDefault(); return;
     case 'b': showBoss(); e.preventDefault(); return;
     case 's': toggleSettings(); e.preventDefault(); return;
     case '?': toggleHelp(); e.preventDefault(); return;
@@ -2137,6 +2170,54 @@ function forceDrama(){
 }
 function showBoss(){ bossActive=true; bossEl.classList.add('on'); }
 function hideBoss(){ bossActive=false; bossEl.classList.remove('on'); }
+
+/* ====================================================================== */
+/* SCENE PICKER (hotkey 'd') — fire any drama on demand for testing        */
+/* ====================================================================== */
+const SCENE_GROUPS=[
+  {title:'Boss scenes', items:[
+    ['btop','btop · runaway process'],['grafana','Grafana · SLO breach'],['pipeline','CI/CD pipeline'],
+    ['flame','pprof flame graph'],['cluster','k9s · CrashLoopBackOff'],['trace','Jaeger slow trace'],
+    ['sql','EXPLAIN · slow query'],['load','k6 load test'],['pr','GitHub pull request'],
+    ['docker','docker buildx'],['attackmap','threat map · DDoS'],['gpu','GPU farm · throttle'],
+    ['mesh','service mesh · breaker'],['heatmap','latency heatmap'] ]},
+  {title:'Ambient drama', items:[
+    ['deploy','deploy & rollout'],['security','CVE patch'],['auth','auth / secret rotation'],
+    ['anomaly','metric anomaly'],['matrix','matrix cascade'],['compaction','context compaction'] ]},
+];
+function queueDrama(name){
+  if(!DRAMAS[name]){ toast('unknown scene'); return; }
+  if(overlayActive||dramaQ.length){ toast('overlay busy'); return; }
+  dramaQ.push(DRAMAS[name]); toast('scene: '+name);
+}
+function buildDramaPicker(){
+  dramaEl.innerHTML='';
+  const hd=el('cfg-hd');
+  hd.appendChild(el('h2','SCENE PICKER'));
+  hd.appendChild(el('badge','for testing'));
+  const x=mkBtn('cfg-x','✕',()=>toggleDrama(false)); x.title='Close (Esc)'; hd.appendChild(x);
+  dramaEl.appendChild(hd);
+  const bd=el('cfg-bd'); dramaEl.appendChild(bd);
+  SCENE_GROUPS.forEach(grp=>{
+    const sec=el('cfg-sec'); sec.appendChild(el('cfg-sech',grp.title));
+    const g=el('dp-grid');
+    grp.items.forEach(([name,label])=>{
+      const b=mkBtn('dp-item',label,()=>{ toggleDrama(false); queueDrama(name); });
+      b.title=name; g.appendChild(b);
+    });
+    sec.appendChild(g); bd.appendChild(sec);
+  });
+  const hint=el('cfg-hint'); hint.innerHTML='Pick a scene to play it now. <kbd>d</kbd> toggles this · <kbd>esc</kbd> closes. Scenes are skipped while one is already on screen.';
+  bd.appendChild(hint);
+}
+function toggleDrama(force){
+  const open = force!=null ? force : !dramaEl.open;
+  if(open){ if(settingsEl.open) toggleSettings(false); buildDramaPicker(); if(!dramaEl.open&&dramaEl.showModal) dramaEl.showModal(); dramaOpen=true; }
+  else { if(dramaEl.open) dramaEl.close(); dramaOpen=false; }
+}
+dramaEl.addEventListener('close',()=>{ dramaOpen=false; });
+dramaEl.addEventListener('cancel',()=>{ dramaOpen=false; });
+dramaEl.addEventListener('click',e=>{ if(e.target===dramaEl) toggleDrama(false); });   // click backdrop to dismiss
 
 /* ====================================================================== */
 /* CONFIGURATION DIALOG (native <dialog>, centered modal)                  */
@@ -2167,7 +2248,7 @@ function buildConfig(){
 
   let g;
   g=sec('Identity');
-  fld(g,'agent',txt(cfg.agent,v=>{cfg.agent=v;hAgent.textContent=v||'HYPERION';syncURL();}),true);
+  fld(g,'agent',txt(cfg.agent,v=>{cfg.agent=v;agentExplicit=!!v;hAgent.textContent=v||pickCodename(cfg.seed);syncURL();}),true);
   fld(g,'project',txt(cfg.project,v=>{cfg.project=v;hProj.textContent=v;syncURL();}));
   fld(g,'model',txt(cfg.model,v=>{cfg.model=v;hModel.textContent=v;syncURL();}));
 
@@ -2207,7 +2288,7 @@ function mkBtn(cls,label,on){ const b=document.createElement('button'); b.type='
 function reseed(n){ _seed=n>>>0; cfg.seed=n>>>0; seedExplicit=true; syncURL(); }
 function urlParams(forceSeed){
   const p=new URLSearchParams();
-  if(cfg.agent!=='HYPERION')p.set('agent',cfg.agent);
+  if(agentExplicit&&cfg.agent)p.set('agent',cfg.agent);
   if(cfg.project)p.set('project',cfg.project);
   if(cfg.model!=='mythos-5-preview')p.set('model',cfg.model);
   if(cfg.theme!=='amber')p.set('theme',cfg.theme);
@@ -2228,9 +2309,10 @@ function copyLink(){
   else { history.replaceState(null,'',location.pathname+(q?'?'+q:'')); toast('link in URL bar'); }
 }
 function resetConfig(){
-  cfg.agent='HYPERION'; cfg.model='mythos-5-preview'; cfg.audio='off'; cfg.crt='off'; cfg.reduceFlash=null;
+  cfg.model='mythos-5-preview'; cfg.audio='off'; cfg.crt='off'; cfg.reduceFlash=null;
   speed=1; intensity=2; mode='auto'; cfg.project=PROJECTS[(rng()*PROJECTS.length)|0];
   cfg.seed=(Math.random()*4294967296)>>>0; _seed=cfg.seed; seedExplicit=false;
+  cfg.agent=pickCodename(cfg.seed); agentExplicit=false;
   reduceFlash=prefersRM; reduceMotion=prefersRM;
   document.body.classList.toggle('crt',false); document.body.classList.toggle('reduce',reduceFlash);
   hAgent.textContent=cfg.agent; hProj.textContent=cfg.project; hModel.textContent=cfg.model;

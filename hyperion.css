@@ -473,6 +473,19 @@ body:not(.reduce) dialog#settings[open]{animation:cfgpop .18s ease}
 #help .hk{display:flex; justify-content:space-between; margin:5px 0; font-size:12px}
 #help .hk kbd{background:var(--bg); border:1px solid var(--dim); border-radius:3px; padding:0 6px; color:var(--accent); font-weight:700}
 #help .hk span{color:var(--dim)}
+/* scene picker dialog (shares .cfg-* internals with #settings) */
+dialog#dramapick{border:1px solid color-mix(in srgb,var(--accent) 55%,transparent);
+  background:color-mix(in srgb,var(--rail) 96%,#000); color:var(--fg); border-radius:10px;
+  padding:0; width:min(560px,94vw); max-height:90vh; box-shadow:0 24px 80px rgba(0,0,0,.7);
+  font-family:inherit; overflow:hidden}
+dialog#dramapick::backdrop{background:rgba(0,0,0,.55); backdrop-filter:blur(2px)}
+body.reduce dialog#dramapick::backdrop{backdrop-filter:none}
+body:not(.reduce) dialog#dramapick[open]{animation:cfgpop .18s ease}
+.dp-grid{display:grid; grid-template-columns:1fr 1fr; gap:7px}
+.dp-item{background:var(--bg); color:var(--fg); border:1px solid var(--dim); border-radius:5px;
+  padding:8px 10px; font:inherit; font-size:12px; text-align:left; cursor:pointer;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; transition:border-color .1s, color .1s}
+.dp-item:hover,.dp-item:focus-visible{border-color:var(--accent); color:var(--accent); outline:none}
 /* toast */
 #toast{position:fixed; left:50%; bottom:48px; transform:translateX(-50%); z-index:90;
   background:color-mix(in srgb,var(--rail) 95%,#000); color:var(--fg);
