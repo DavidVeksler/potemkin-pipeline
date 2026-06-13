@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en" data-theme="amber">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<title>HYPERION</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%230c0a08'/%3E%3Ctext x='8' y='12.5' font-size='13' font-weight='700' text-anchor='middle' fill='%23ff9d2f' font-family='monospace'%3EH%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="hyperion.css">
+</head>
+<body>
+<div id="app">
+  <header id="hdr">
+    <span class="dot"></span>
+    <span class="h-agent">HYPERION</span>
+    <span class="sep">·</span><span class="h-proj">core-platform</span>
+    <span class="sep">·</span><span class="h-model">mythos-5-preview</span>
+    <span class="sep">·</span><span>ctx</span><span class="ctxbar">▮▮▮▮▮▮░░░░</span><span class="ctxpct">58%</span>
+    <span class="sep">·</span><span class="h-tok">82 tok/s</span>
+    <span class="h-time">00:00</span>
+    <button id="cfgbtn" title="Configuration (s)" aria-label="Open configuration">⚙</button>
+  </header>
+  <div id="main">
+    <section id="log" tabindex="0" aria-label="activity log"><div id="caret">▋</div></section>
+    <aside id="rail">
+      <div class="rail-sec">
+        <div class="rail-h">TASK TREE</div>
+        <ul id="tasktree"></ul>
+      </div>
+      <div class="rail-sec">
+        <div class="rail-h">FILE TREE</div>
+        <div id="filetree"></div>
+      </div>
+    </aside>
+  </div>
+  <footer id="ftr">
+    <span>files <b id="c-files">128</b></span><span class="sep detail">·</span>
+    <span class="detail">lines <b id="c-lines">412k</b></span><span class="sep">·</span>
+    <span>tests <b id="c-tests">1,204</b></span><span class="sep detail">·</span>
+    <span class="detail">CVEs patched <b id="c-cves">7</b></span><span class="sep detail">·</span>
+    <span class="detail">deploys <b id="c-deploys">0</b></span>
+    <span class="mode" id="modeind">⏻ auto</span>
+  </footer>
+</div>
+<button id="livebtn">↓ live</button>
+<div id="overlay"><div class="backdrop"></div></div>
+<div id="boss"><div class="bx"><div class="sp">⠋</div><div class="msg">Connecting to corporate VPN…</div><div class="hint">press any key</div></div></div>
+<dialog id="settings" aria-label="Configuration"></dialog>
+<div id="help" class="drawer">
+  <h2>HOTKEYS</h2>
+  <div class="hk"><kbd>m</kbd><span>autopilot ↔ performer</span></div>
+  <div class="hk"><kbd>space</kbd><span>pause / resume</span></div>
+  <div class="hk"><kbd>1 2 3</kbd><span>theme: amber / green / cyan</span></div>
+  <div class="hk"><kbd>+ −</kbd><span>speed up / down</span></div>
+  <div class="hk"><kbd>f</kbd><span>force a drama event</span></div>
+  <div class="hk"><kbd>b</kbd><span>boss key (blank screen)</span></div>
+  <div class="hk"><kbd>s</kbd><span>configuration dialog</span></div>
+  <div class="hk"><kbd>?</kbd><span>this help · <kbd>esc</kbd> closes</span></div>
+  <div class="hk" style="margin-top:10px"><span>In performer mode, mash any other key to stream output.</span></div>
+</div>
+<div id="toast"></div>
+
+<script src="hyperion.js"></script>
+</body>
+</html>
