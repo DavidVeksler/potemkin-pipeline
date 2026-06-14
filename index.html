@@ -2337,7 +2337,9 @@ function checkDrama(){
     if(firstDrama && en.indexOf('anomaly')>=0){ type='anomaly'; firstDrama=false; }
     else { type=pick(en); firstDrama=false; }
     if(type&&DRAMAS[type]) dramaQ.push(DRAMAS[type]);
-    nextDramaAt=logicalNow+U(60000,110000)/dramaFreq;
+    // clustered cadence: squared draw biases the gap toward ~0 (bursts fire back-to-back, gated only by play time)
+    // with rare long lulls. Mean ≈ 85s preserved (255000·⅓), so overall density matches the old U(60000,110000).
+    nextDramaAt=logicalNow+Math.pow(rng(),2)*255000/dramaFreq;
   }
 }
 
