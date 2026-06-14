@@ -182,6 +182,8 @@ body.reduce #ovbanner{animation:none}
 #ovbox[data-variant=auth] .ovtitle{color:var(--ok)}
 #ovbox[data-variant=context]{border-color:color-mix(in srgb,var(--fg) 45%,transparent)}
 #ovbox[data-variant=context] .ovtitle{color:var(--fg)}
+#ovbox[data-variant=git]{border-color:color-mix(in srgb,var(--accent) 50%,var(--ok) 50%)}
+#ovbox[data-variant=git] .ovtitle{color:color-mix(in srgb,var(--accent) 55%,var(--ok) 45%)}
 #mxcanvas{position:absolute; inset:0; width:100%; height:100%; background:rgba(0,0,0,.55)}
 body:not(.reduce) #overlay.fadein{animation:ovfade .35s ease}
 @keyframes ovfade{from{opacity:0}to{opacity:1}}
