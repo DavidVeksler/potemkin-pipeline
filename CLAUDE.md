@@ -15,7 +15,7 @@ one). Source keeps the `hyperion.*` prefix — leave that split alone.
 ## Build & the cardinal rule
 
 ```sh
-./build.sh        # inlines hyperion.css + hyperion.js into index.html
+./build.sh        # concatenates src/ → hyperion.js, then inlines css+js into index.html
 ```
 
 On Windows, use PowerShell instead:
@@ -24,8 +24,10 @@ On Windows, use PowerShell instead:
 .\build.ps1       # same output, PowerShell equivalent
 ```
 
-Edit **`hyperion.{html,css,js}`** — never `index.html` (it is generated). After any change
-run `./build.sh` and commit both the source file(s) and the regenerated `index.html`.
+Edit **`src/**`** files — never `hyperion.js` or `index.html` directly (both are generated).
+`hyperion.css` and `hyperion.html` are still hand-edited source files.
+After any change run `./build.sh` and commit both the source file(s) and the regenerated
+`hyperion.js` + `index.html`.
 **Auto-commit these changes — no need to ask first.** No npm, no framework, no server, no
 external requests — the zero-dependency single-file output is the whole point. Runs over
 `file://`.
@@ -39,23 +41,40 @@ There is no test suite. Test manually: open `hyperion.html` (raw) or `index.html
 in a browser. Append `?debug` to expose `window.__HYP`:
 `__HYP.drama('gpu')` · `__HYP.force()` · `__HYP.deepwork()`/`.wake()` · `__HYP.state()`.
 
-## Where things live (hyperion.js, ~1900 lines, banner-comment sections)
+## Where things live (src/ directory)
 
 Sections are delimited by `/* ===== TITLE ===== */` banners — grep the title to jump.
-Line numbers drift; the `const X=` / `function X` anchors below are stable.
+The `const X=` / `function X` anchors below are stable across files.
 
-| To change… | Go to | Notes |
+| To change… | File | Notes |
 |---|---|---|
-| URL params / defaults | `CONFIG` → `const cfg=` | parsed via `QS`/`qint`/`qfloat` |
-| String flavor (verbs, snippets, CVEs) | `BANKS` | flat arrays; `pick()`ed by generators |
-| A mission's beats | `MISSION GENERATORS` | `function*` yielding events |
-| A boss drama | `DRAMA GENERATORS` + `const DRAMAS=` map | key → `function* dXxx` |
-| A drama's overlay GUI | `const APP_BUILDERS=` map + OVERLAY/`BOSS-LEVEL APP WINDOWS` | tool → `buildXxx` |
-| Drama timing / cadence | `SCHEDULER` → `pumpAuto`, `nextDramaAt`, `dramaFreq` | |
-| Header widgets (cost, ctx, tokens) | `DOM REFS` (`$('.h-cost')`) + `STATE` vars + tick fn (e.g. `burnTick`) | also edit html markup + css |
-| Hotkeys | `INPUT / HOTKEYS` | |
-| Deep-work / away behavior | `IDLE / DEEP-WORK` → `enterIdle`, `markActivity` | |
-| Config dialog controls | `CONFIGURATION DIALOG` → `fld`/`rng_`, `syncURL` | `s` hotkey |
+| URL params / defaults | `src/config.js` → `const cfg=` | parsed via `QS`/`qint`/`qfloat` |
+| RNG, helpers, formatters | `src/rng.js` | `rng()`, `pick()`, `hash()`, `barStr()` etc. |
+| String flavor (verbs, snippets, CVEs) | `src/content-banks/banks.js` | flat arrays; `pick()`ed by generators |
+| Code snippet generators | `src/content-banks/snippets.js` | `snipTS`, `genSnippet`, `hiCode` |
+| Event constructors | `src/event-dsl.js` | `TOOL OUT DIFF THINK TASK FILE SNIP BANNER PHASE CNT CLR WAIT OV` |
+| Runtime state vars | `src/state.js` | `logicalNow`, `counters`, `SPIN`, etc. |
+| DOM element refs | `src/render/dom.js` | `$()`, `logEl`, `cFiles`, etc. |
+| File tree rendering | `src/render/file-tree.js` | `buildFileTree`, `highlightFile` |
+| Log renderer | `src/render/renderer.js` | `render()`, `appendLine`, autoscroll |
+| Overlay renderer + matrix rain | `src/render/overlay.js` | `renderOverlay`, `drawMatrix` |
+| Boss-level app GUIs | `src/overlays/index.js` | `APP_BUILDERS`, `buildGrafana` … `buildCpu` |
+| A mission's beats | `src/missions/index.js` | `pScan`, `pImpl`, `missionStream` |
+| Simple dramas (anomaly/deploy/sec/matrix/auth/compact) | `src/dramas/simple.js` | |
+| Boss dramas (grafana/btop/gpu/mesh/…) | `src/dramas/boss.js` | |
+| Git dramas (rebase/bisect/blame/…) | `src/dramas/git.js` | |
+| Deep-work away mode | `src/dramas/deep-work.js` | `MEGA_GOALS`, `dDeepWork` |
+| Drama registry | `src/dramas/registry.js` | `DRAMAS`, `BOSS`, `GIT`, `CORE`, `enabledDramas` |
+| Drama timing / cadence | `src/scheduler.js` | `pumpAuto`, `nextDramaAt`, `dramaFreq`, `frame` |
+| Header widgets (cost, ctx, tokens) | `src/render/header.js` | `burnTick`, `renderBurn`, `ctxBump` — also edit html markup + css |
+| Hotkeys | `src/ui/hotkeys.js` | |
+| Deep-work / away behavior | `src/ui/idle.js` | `enterIdle`, `markActivity` |
+| Scene picker dialog | `src/ui/scene-picker.js` | `SCENE_GROUPS`, `buildDramaPicker` |
+| Config dialog controls | `src/ui/config-dialog.js` | `fld`/`rng_`, `syncURL` — `s` hotkey |
+| Audio (WebAudio synth) | `src/audio.js` | `beep`, `sfx`, `tone`, `sweep` |
+| Visibility / tab-away pause | `src/render/visibility.js` | |
+| Init | `src/main.js` | `init()` |
+| Debug hook | `src/debug.js` | `window.__HYP` — only with `?debug` |
 
 ## How the engine works (read these together)
 
@@ -77,14 +96,14 @@ Line numbers drift; the `const X=` / `function X` anchors below are stable.
 
 ## Recurring change recipes (from commit history)
 
-- **Add a boss drama:** new `function* dXxx` in `DRAMA GENERATORS` → register in `DRAMAS` →
-  if it needs a new GUI add `buildXxx` to `APP_BUILDERS` + overlay CSS. See `IDEAS.md` for
+- **Add a boss drama:** new `function* dXxx` in `src/dramas/boss.js` → register in `src/dramas/registry.js` →
+  if it needs a new GUI add `buildXxx` to `src/overlays/index.js` + overlay CSS. See `IDEAS.md` for
   the planned backlog and the rules each scene follows.
 - **Add a config knob:** four places must stay in sync — parse in `cfg`/CONFIG → add a
   control in the config dialog (`fld`/`rng_`) + `syncURL` → surface in `__HYP.state()` if
   useful → document in README's URL-params list.
-- **Add a header widget:** markup in `hyperion.html` + style in `hyperion.css` + a `DOM REF`
-  + state var + a tick hook called from the render/event path (mirror `burnTick`).
+- **Add a header widget:** markup in `hyperion.html` + style in `hyperion.css` + a DOM ref in `src/render/dom.js`
+  + state var in `src/state.js` + a tick hook in `src/render/header.js` called from `frame()` (mirror `burnTick`).
 
 ## Conventions
 

@@ -127,19 +127,63 @@ function shuffle(a){for(let i=a.length-1;i>0;i--){const j=(rng()*(i+1))|0;const 
 function genFiles(){
   const st=pick(STACKS), head=[];
   st.cfg.forEach(f=>head.push(f));
-  if(rng()<0.7) head.push('README.md');
-  head.push('infra/k8s/'+pick(['ingress','deployment','service','hpa'])+'.yaml');
-  head.push('db/migrations/'+String(ri(1,99)).padStart(4,'0')+'_'+pick(['add_idx','alter_ledger','init_schema','backfill'])+'.sql');
-  if(rng()<0.5) head.push('.github/workflows/ci.yaml');
+
+  if(rng()<0.75) head.push('README.md');
+  if(rng()<0.35) head.push('docs/adr/'+String(ri(1,12)).padStart(4,'0')+'-'+pick(['agent-runtime','event-contracts','service-boundaries','vector-search','observability-strategy'])+'.md');
+  if(rng()<0.28) head.push('Dockerfile');
+  if(rng()<0.22) head.push('Makefile');
+
+  const k8s=['ingress','deployment','service','hpa','serviceaccount','configmap','secret-provider','poddisruptionbudget','networkpolicy','canary-rollout'];
+  const tf=['service_mesh','private_link','redis_cluster','postgres_replica','key_vault','log_analytics','container_registry','managed_identity'];
+  const helm=['values-dev','values-qa','values-prod','chart'];
+
+  head.push('infra/k8s/'+pick(k8s)+'.yaml');
+  if(rng()<0.55) head.push('infra/k8s/'+pick(k8s)+'.yaml');
+  if(rng()<0.45) head.push('infra/terraform/'+pick(tf)+'.tf');
+  if(rng()<0.35) head.push('infra/helm/'+pick(helm)+'.yaml');
+
+  const migrations=[
+    'add_idx',
+    'alter_ledger',
+    'init_schema',
+    'backfill',
+    'partition_events',
+    'add_covering_index',
+    'backfill_embeddings',
+    'materialize_projection',
+    'add_audit_columns',
+    'rebuild_vector_index',
+    'normalize_idempotency_keys',
+    'add_workflow_state'
+  ];
+
+  head.push('db/migrations/'+String(ri(1,99)).padStart(4,'0')+'_'+pick(migrations)+'.sql');
+  if(rng()<0.45) head.push('db/migrations/'+String(ri(100,199)).padStart(4,'0')+'_'+pick(migrations)+'.sql');
+  if(rng()<0.32) head.push('db/projections/'+pick(['account_balance','workflow_state','usage_rollup','reconciliation_window','tenant_limits'])+'.sql');
+
+  if(rng()<0.55) head.push('.github/workflows/'+pick(['ci','release','canary','security-scan','nightly-replay'])+'.yaml');
+
   const roots=shuffle(st.roots.slice()).slice(0,ri(2,Math.min(4,st.roots.length)));
   const doms=shuffle(DOMAINS.slice());
-  const budget=ri(13,18), src=[]; let di=0,guard=0;
-  while(src.length<budget && guard++<300){
+  const subdirs=['internal','impl','v2','util','adapters','ports','runtime','events','policies','contracts','workers','projectors','middleware'];
+  const suffixes=['','_test','_spec','_bench','_fixture'];
+
+  const budget=ri(22,34), src=[];
+  let di=0, guard=0;
+
+  while(src.length<budget && guard++<500){
     const r=pick(roots), dom=doms[di++%doms.length];
-    const sub=rng()<0.22?'/'+pick(['internal','impl','v2','util']):'';
-    const path=r+'/'+dom+sub+'/'+pick(BASES)+'.'+st.ext;
+    const sub=rng()<0.34?'/'+pick(subdirs):'';
+    const base=pick(BASES);
+    const suffix=rng()<0.18?pick(suffixes):'';
+    const path=r+'/'+dom+sub+'/'+base+suffix+'.'+st.ext;
     if(!src.includes(path)) src.push(path);
   }
+
+  if(rng()<0.45) src.push('proto/'+pick(['runtime','events','payment','telemetry','workflow'])+'/v'+ri(1,3)+'/'+pick(['executor','envelope','ledger','span','command','checkpoint'])+'.proto');
+  if(rng()<0.35) src.push('workers/'+pick(['ingest','scheduler','replay','compaction','embedding'])+'/'+pick(['consumer','lease_renewer','dead_letter_replay','shard_balancer','batch_writer'])+'.'+st.ext);
+  if(rng()<0.28) src.push('wasm/sandbox/'+pick(['capability_filter','fuel_meter','syscall_proxy','policy_vm'])+'.rs');
+
   return [...new Set(head.concat(src))];
 }
 /* a plausible new path inside an existing source dir — seeded, so a run reproduces */
@@ -166,7 +210,7 @@ const CVSS=['7.1','7.5','8.2','8.8','9.1','9.8','9.8','8.8','9.1'];
 const METRICS=[['p99 latency','down','ms'],['tail latency','down','ms'],['error rate','down','%'],['memory RSS','down','MB'],['GC pause','down','ms'],['cold-start','down','ms'],['lock contention','down','%'],['allocation rate','down','/s'],['throughput','up','rps']];
 const AGENTS=['scout','mason','auditor','scribe','sentry','runner','forge','probe','warden','drake'];
 const SUBTASKS=['audit auth flow','migrate config schema','dedupe utils','port tests to vitest','tighten error types','inline hot path','purge dead exports','wire feature flags','harden input validation','backfill migrations','split god module','vendor lockfile'];
-const TASKBANK=['map the dependency multiverse','model every reachable code path','war-game all failure modes','interrogate the call graph','exhume the legacy core','triangulate the root cause','enumerate every edge case','out-think the race condition','prove correctness by exhaustion','consult the changelog oracle','vaporize a decade of tech debt','flatten the abstraction tower','negotiate with the type checker','reverse local entropy','decompile original intent','audit the full blast radius','achieve total observability','rewrite physics in the hot path','tame the monorepo','summon the missing invariant','bend the latency curve','unify all microservices','defeat the heisenbug','sharpen Occam’s razor'];
+const TASKBANK=['map the dependency multiverse','model every reachable code path','war-game all failure modes','interrogate the call graph','exhume the legacy core','triangulate the root cause','enumerate every edge case','out-think the race condition','prove correctness by exhaustion','consult the changelog oracle','vaporize a decade of tech debt','flatten the abstraction tower','negotiate with the type checker','reverse local entropy','decompile original intent','audit the full blast radius','achieve total observability','rewrite physics in the hot path','tame the monorepo','summon the missing invariant','bend the latency curve','unify all microservices','defeat the heisenbug','sharpen Occam's razor'];
 const SCANNED=['scanned','analyzed','inspected','audited','traced'];
 const FINDING=['vulnerabilities','code smells','anti-patterns','hot spots','dead branches','data races','N+1 queries','leaks'];
 const DONETAIL=['no regressions','all gates green','p99 within SLO','coverage +2.1%','zero criticals','rollback verified','SLO budget intact'];
@@ -300,16 +344,6 @@ function WAIT(ms){return {kind:'wait',wait:ms};}
 function OV(op,o){return Object.assign({kind:'ov',op:op},o);}
 
 /* ====================================================================== */
-/* DOM REFS                                                                */
-/* ====================================================================== */
-const $=s=>document.querySelector(s);
-const logEl=$('#log'), caret=$('#caret'), railTasks=$('#tasktree'), fileTreeEl=$('#filetree');
-const overlay=$('#overlay'), ovback=overlay.querySelector('.backdrop');
-const bossEl=$('#boss'), settingsEl=$('#settings'), helpEl=$('#help'), toastEl=$('#toast'), liveBtn=$('#livebtn'), cfgbtn=$('#cfgbtn'), dramaEl=$('#dramapick');
-const hAgent=$('.h-agent'),hProj=$('.h-proj'),hModel=$('.h-model'),ctxbar=$('.ctxbar'),ctxpct=$('.ctxpct'),hTok=$('.h-tok'),hCost=$('.h-cost'),hBudget=$('.h-budget'),hTime=$('.h-time'),modeind=$('#modeind');
-const cFiles=$('#c-files'),cLines=$('#c-lines'),cTests=$('#c-tests'),cCves=$('#c-cves'),cDeploys=$('#c-deploys'),cCommits=$('#c-commits'),cIncidents=$('#c-incidents');
-
-/* ====================================================================== */
 /* STATE                                                                   */
 /* ====================================================================== */
 const MAX_LINES=500, REL_CAP=10, MAX_PER_FRAME=8;
@@ -329,6 +363,16 @@ const startEpoch=Date.now();
 const counters={files:ri(80,250),lines:ri(80,600)*1000,tests:ri(800,2500),cves:ri(2,12),deploys:0,commits:0,incidents:0};
 const taskEls={}; const fileEls={}; let lastFileHl=null;
 const SPIN=['⠋','⠙','⠹','⠸','⠼','⠴','⠦','⠧','⠇','⠏'];
+
+/* ====================================================================== */
+/* DOM REFS                                                                */
+/* ====================================================================== */
+const $=s=>document.querySelector(s);
+const logEl=$('#log'), caret=$('#caret'), railTasks=$('#tasktree'), fileTreeEl=$('#filetree');
+const overlay=$('#overlay'), ovback=overlay.querySelector('.backdrop');
+const bossEl=$('#boss'), settingsEl=$('#settings'), helpEl=$('#help'), toastEl=$('#toast'), liveBtn=$('#livebtn'), cfgbtn=$('#cfgbtn'), dramaEl=$('#dramapick');
+const hAgent=$('.h-agent'),hProj=$('.h-proj'),hModel=$('.h-model'),ctxbar=$('.ctxbar'),ctxpct=$('.ctxpct'),hTok=$('.h-tok'),hCost=$('.h-cost'),hBudget=$('.h-budget'),hTime=$('.h-time'),modeind=$('#modeind');
+const cFiles=$('#c-files'),cLines=$('#c-lines'),cTests=$('#c-tests'),cCves=$('#c-cves'),cDeploys=$('#c-deploys'),cCommits=$('#c-commits'),cIncidents=$('#c-incidents');
 
 /* ====================================================================== */
 /* FILE TREE                                                               */
@@ -1412,6 +1456,7 @@ function* dAuth(){
   yield OV('boxline',{text:'GRANTED ✔',tone:'ok',wait:U(400,800)});
   yield OV('close',{wait:U(500,900)});
 }
+
 /* ---- boss-level: the agent pulls up an external tool's GUI ---- */
 function* dGrafana(){
   yield OV('app',{tool:'grafana',title:'Grafana · '+cfg.project+' / prod',url:'grafana.internal/d/'+hash(6)});
@@ -1784,6 +1829,7 @@ function* dCpuheat(){
   yield WAIT(U(1400,2000));
   yield OV('close',{wait:U(700,1100)});
 }
+
 /* ---- git operations: wild source-control theater ---- */
 function* dRebase(){
   const n=ri(28,64), onto=pick(['main','origin/main','release/'+ri(2,5)+'.x']);
@@ -1941,6 +1987,7 @@ function* dBlame(){
   yield CNT('incidents',1); yield CNT('tests',ri(1,4));
   yield OV('close',{wait:U(500,900)});
 }
+
 /* ---- deep-work "away" mode: a never-ending long-horizon grind toward an absurd goal ---- */
 const MEGA_GOALS=[
   {label:'Refactoring the entire monorepo',unit:'files',lo:9000,hi:52000},
@@ -1987,6 +2034,7 @@ function* dDeepWork(){
   yield L('▌ Interactive session resumed — parking the deep-work pass','accent',{wait:U(300,600)});
   yield L('checkpointed · resumable from the last batch','dim',{wait:U(500,900)});
 }
+
 const DRAMAS={anomaly:dAnomaly,deploy:dDeploy,security:dSec,matrix:dMatrix,auth:dAuth,compaction:dCompact,
   grafana:dGrafana,pipeline:dPipeline,flame:dFlame,cluster:dCluster,
   trace:dTrace,sql:dSqlPlan,load:dLoad,pr:dPR,docker:dDocker,btop:dBtop,oom:dOom,
@@ -2562,4 +2610,5 @@ init();
 if(cfg.debug){
   window.__HYP={state:()=>({lines:logEl.childElementCount,counters:Object.assign({},counters),mode,paused,speed,dramas:dramaOn,freq:dramaFreq,ctx:Math.round(ctx),overlayActive,idle:idleActive,logicalNow:Math.round(logicalNow),missionId}),force:forceDrama,drama:n=>{if(DRAMAS[n])enqueueDrama(DRAMAS[n],n);return n;},deepwork:enterIdle,wake:markActivity,seed:cfg.seed};
 }
+
 })();
