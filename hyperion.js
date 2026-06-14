@@ -7,16 +7,47 @@ const QS=new URLSearchParams(location.search);
 const THEMES=['amber','green','cyan'];
 function qint(name,lo,hi,def){const v=parseInt(QS.get(name),10);return Number.isFinite(v)?Math.max(lo,Math.min(hi,v)):def;}
 function qfloat(name,lo,hi,def){const v=parseFloat(QS.get(name));return Number.isFinite(v)?Math.max(lo,Math.min(hi,v)):def;}
-const PROJECTS=['core-platform','payments-core','atlas-api','mesh-gateway','ledger-svc','vector-db','edge-runtime','quorum-store'];
+const PROJECTS = [
+  "sovereignty-ledger",
+  "blast-radius-index",
+  "intent-router",
+  "causality-bus",
+  "trust-fabric",
+  "policy-singularity",
+  "rollback-horizon",
+  "containment-plane",
+  "lineage-vault",
+  "anomaly-foundry",
+  "semantic-firewall",
+  "determinism-engine",
+  "drift-sentinel",
+  "fallback-mesh",
+  "compliance-reactor",
+  "graph-of-record",
+  "schema-bunker",
+  "runtime-diplomacy",
+  "shadow-config",
+  "telemetry-cathedral",
+  "cache-armistice",
+  "event-horizon-log",
+  "idempotency-chamber",
+  "blast-door-proxy",
+];
 /* hyperbolic agent codenames — riffs on the rumored next-gen model mythos
    (OpenAI Orion/Strawberry/Q*, xAI Colossus/Aurora, Gemini Ultra, Claude's mythos/fable …)
    plus the cosmic/mythic grandiosity the genre demands. One is picked per seed at load. */
-const CODENAMES=['HYPERION','ORION','COLOSSUS','PROMETHEUS','OLYMPUS','TITAN','LEVIATHAN','BEHEMOTH',
-  'OVERMIND','SINGULARITY','OMNISCIENCE','ASCENDANT','TRANSCENDENCE','DEMIURGE','OMEGA-9','ULTRAMAX',
-  'MEGAMIND','GIGABRAIN','QUASAR','SUPERNOVA','HELIOS','KRONOS','AETHER','NEXUS','ORACLE','MAGNUS',
-  'IMPERIUM','INFINITY','SOVEREIGN','MONOLITH','ARCHON','GODHEAD','EMPYREAN','PINNACLE','APEX-X',
-  'ZENITH','PARAGON','STRAWBERRY-Q','AURORA','ARRAKIS','MOONSHOT','PLUS-ULTRA','AVATAR-9','OBELISK',
-  'VANGUARD','APOTHEOSIS'];
+const CODENAMES = [
+  "CURSOR-X",
+  "NOVA",
+  "FLUX",
+  "VECTOR",
+  "KERNEL",
+  "RELAY",
+  "PRISM",
+  "ORBIT",
+  "FORGE",
+  "PILOT",
+];
 const cfg={
   agent: QS.get('agent')||null,
   project: QS.get('project')||'',
