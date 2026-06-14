@@ -1510,7 +1510,7 @@ function waitOf(ev){
     default:return U(120,400);
   }
 }
-function emit(ev){ render(ev); lastEmit=performance.now(); }
+function emit(ev){ render(ev); sfx(ev); lastEmit=performance.now(); }
 
 function pumpAuto(){
   let count=0;
@@ -1712,6 +1712,7 @@ function tickIdle(ts){
   if(ts-lastActivityTs>=idleThreshold*1000) enterIdle();
 }
 ['pointerdown','pointermove','wheel','touchstart'].forEach(t=>addEventListener(t,markActivity,{passive:true}));
+['pointerdown','touchstart'].forEach(t=>addEventListener(t,audioUnlock,{passive:true}));   // a click/tap also satisfies the audio-gesture requirement
 
 /* ====================================================================== */
 /* SCENE PICKER (hotkey 'd') — fire any drama on demand for testing        */
@@ -1806,7 +1807,7 @@ function buildConfig(){
 
   g=sec('Behavior');
   fld(g,'mode',sel(['auto','performer'],mode,v=>{mode=v;updateMode();syncURL();}));
-  fld(g,'audio',sel(['off','on'],cfg.audio,v=>{cfg.audio=v;if(v==='on')audioUnlock();syncURL();}));
+  fld(g,'audio',sel(['off','on'],cfg.audio,v=>{cfg.audio=v;if(v==='on')audioUnlock();else audioConfirmed=false;syncURL();}));
   fld(g,'idle → deep work',rng_(0,180,5,idleThreshold,v=>{idleThreshold=v|0;cfg.idle=v|0;if(idleActive&&idleThreshold<=0)exitIdle();syncURL();},v=>(v|0)?(v|0)+'s':'off'),true);
   fld(g,'reduce flash',sel([{v:'auto',t:'auto (follow OS)'},{v:'on',t:'on'},{v:'off',t:'off'}],cfg.reduceFlash||'auto',v=>{cfg.reduceFlash=v==='auto'?null:v;reduceFlash=v==='on'?true:v==='off'?false:prefersRM;document.body.classList.toggle('reduce',reduceFlash);syncURL();}),true);
 
@@ -1879,23 +1880,97 @@ function toast(msg){ toastEl.textContent=msg; toastEl.classList.add('on'); clear
 /* ====================================================================== */
 /* AUDIO (WebAudio, no assets)                                             */
 /* ====================================================================== */
-let actx=null, master=null;
+let actx=null, master=null, audioConfirmed=false;
 function audioUnlock(){
-  if(cfg.audio!=='on'||actx)return;
-  try{ actx=new (window.AudioContext||window.webkitAudioContext)(); master=actx.createGain(); master.gain.value=0.06; master.connect(actx.destination); }catch(e){ actx=null; }
+  if(cfg.audio!=='on')return;
+  try{
+    if(!actx){ actx=new (window.AudioContext||window.webkitAudioContext)(); master=actx.createGain(); master.gain.value=0.16; master.connect(actx.destination); }
+    if(actx.state==='suspended') actx.resume().then(audioConfirm,()=>{});   // browsers start the context suspended until a gesture resumes it
+    else audioConfirm();
+  }catch(e){ actx=null; }
 }
+function audioConfirm(){   // a rising two-note chime the first time audio actually starts, so it's obvious it works
+  if(audioConfirmed||!actx||actx.state!=='running')return;
+  audioConfirmed=true; const t=actx.currentTime;
+  tone(523,0.12,'sine',0.3,t); tone(784,0.16,'sine',0.3,t+0.11);
+}
+/* --- synth primitives -------------------------------------------------- */
 function tone(freq,dur,type,vol,when){
   if(!actx)return; const t=(when||actx.currentTime); const o=actx.createOscillator(),g=actx.createGain();
   o.type=type||'square'; o.frequency.value=freq; o.connect(g); g.connect(master);
   g.gain.setValueAtTime(0.0001,t); g.gain.linearRampToValueAtTime(vol||0.3,t+0.004); g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
   o.start(t); o.stop(t+dur+0.02);
 }
+function sweep(f0,f1,dur,type,vol,when){   // a pitch glide — risers, whooshes, klaxon wails
+  if(!actx)return; const t=(when||actx.currentTime); const o=actx.createOscillator(),g=actx.createGain();
+  o.type=type||'sawtooth'; o.frequency.setValueAtTime(f0,t); o.frequency.exponentialRampToValueAtTime(Math.max(1,f1),t+dur);
+  o.connect(g); g.connect(master);
+  g.gain.setValueAtTime(0.0001,t); g.gain.linearRampToValueAtTime(vol||0.25,t+0.02); g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+  o.start(t); o.stop(t+dur+0.02);
+}
+function noise(dur,vol,hp,when){   // filtered white-noise burst — impacts, rumble beds
+  if(!actx)return; const t=(when||actx.currentTime); const n=Math.max(1,(actx.sampleRate*dur)|0);
+  const buf=actx.createBuffer(1,n,actx.sampleRate), d=buf.getChannelData(0);
+  for(let i=0;i<n;i++) d[i]=Math.random()*2-1;
+  const src=actx.createBufferSource(); src.buffer=buf; const g=actx.createGain();
+  g.gain.setValueAtTime(vol||0.2,t); g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+  let node=src; if(hp){ const f=actx.createBiquadFilter(); f.type='highpass'; f.frequency.value=hp; src.connect(f); node=f; }
+  node.connect(g); g.connect(master); src.start(t); src.stop(t+dur+0.02);
+}
+function arp(freqs,step,dur,type,vol,when){   // ascending/descending run of notes
+  if(!actx)return; const t=(when||actx.currentTime); freqs.forEach((f,i)=>tone(f,dur,type||'triangle',vol||0.28,t+i*step));
+}
 function blip(){ if(!actx)return; tone(420+rng()*180,0.03,'square',0.28); }
+
+/* --- named cues -------------------------------------------------------- */
+function klaxon(){   // descending two-tone alarm, wailed three times over a low rumble — the drama hits
+  if(!actx)return; const t=actx.currentTime;
+  for(let i=0;i<3;i++){ const tt=t+i*0.30; sweep(780,520,0.15,'sawtooth',0.34,tt); sweep(520,780,0.14,'sawtooth',0.30,tt+0.15); }
+  noise(0.55,0.10,140,t);
+}
+function fanfare(){   // triumphant rising arpeggio + sparkle — ships to prod
+  if(!actx)return; const t=actx.currentTime;
+  arp([523,659,784,1047],0.09,0.18,'triangle',0.32,t);
+  tone(1568,0.30,'sine',0.22,t+0.36); tone(2093,0.20,'sine',0.12,t+0.40);
+}
+function resolveChord(){   // warm major triad — crisis resolved, all green
+  if(!actx)return; const t=actx.currentTime;
+  [392,494,587,784].forEach(f=>tone(f,0.5,'sine',0.16,t));
+}
 function beep(kind){
-  if(cfg.audio!=='on'||!actx)return; const t=actx.currentTime;
-  if(kind==='alert'){ tone(660,0.16,'triangle',0.35,t); tone(440,0.22,'triangle',0.35,t+0.16); }
-  else if(kind==='deploy'){ tone(523,0.12,'triangle',0.3,t); tone(659,0.16,'triangle',0.3,t+0.10); }
-  else if(kind==='ok'){ tone(784,0.14,'sine',0.28,t); }
+  if(cfg.audio!=='on'||!actx)return;
+  if(kind==='alert') klaxon();
+  else if(kind==='deploy') fanfare();
+  else if(kind==='ok') resolveChord();
+}
+
+/* --- per-event scoring: every emitted event gets a voice ---------------- */
+let lastTick=0;
+function sfx(ev){
+  if(cfg.audio!=='on'||!actx||actx.state!=='running')return;
+  const now=performance.now();
+  switch(ev.kind){
+    case 'line': case 'output':{   // streaming text → quiet typewriter ticks (throttled so fast bursts don't buzz)
+      if(now-lastTick<55)return; lastTick=now; tone(1500+rng()*500,0.010,'square',0.05); break;
+    }
+    case 'tool': sweep(440,900,0.07,'square',0.16); break;            // crisp "select" chirp
+    case 'phase': sweep(200,640,0.26,'sawtooth',0.18); break;          // rising whoosh on a new phase
+    case 'diff': tone(ev.sign==='+'?880:330,0.05,'triangle',0.14); break;
+    case 'thinking': tone(150,0.20,'sine',0.13); break;               // low contemplative pulse
+    case 'snippet': for(let i=0;i<4;i++) tone(1400+rng()*600,0.012,'square',0.05,actx.currentTime+i*0.03); break;
+    case 'task': if(ev.state==='✔'){ tone(784,0.10,'sine',0.20); tone(1047,0.13,'sine',0.18,actx.currentTime+0.06); } break;
+    case 'clear': sweep(820,200,0.22,'sine',0.12); break;
+    case 'counter': if(now-lastTick>110){ lastTick=now; tone(2000+rng()*300,0.008,'square',0.035); } break;
+    case 'ov': sfxOverlay(ev,now); break;
+  }
+}
+function sfxOverlay(ev,now){
+  switch(ev.op){
+    case 'open': case 'app': sweep(120,900,0.5,'sawtooth',0.22); noise(0.4,0.06,200); break;   // tension riser as the overlay slams open
+    case 'banner': if(ev.cls&&ev.cls.indexOf('ok')>=0) resolveChord(); break;
+    case 'boxline': if(now-lastTick>40){ lastTick=now; tone(1200+rng()*300,0.010,'square',0.06); } break;
+    case 'bar': tone(1500,0.010,'square',0.045); break;
+  }
 }
 
 /* ====================================================================== */

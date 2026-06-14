@@ -98,8 +98,12 @@ framework). The interesting parts:
 - **Theming & a11y.** Three palettes (amber / green / cyan) via CSS custom properties.
   All motion sits behind `body:not(.reduce)` and honors `prefers-reduced-motion`, so the
   office screensaver doesn't induce a seizure.
-- **Sound from nothing.** Optional WebAudio blips and beeps, synthesized on the fly. No
-  audio files — audio files are dependencies, and we don't do those here.
+- **Sound from nothing.** Turn audio on (`?audio=on` or the config dialog) and the whole
+  show is *scored* live by WebAudio — every tool call chirps, phases whoosh, text clatters
+  like a typewriter, thinking hums, a boss drama slams in on an alarm klaxon and a deploy
+  rings out a fanfare. All synthesized on the fly from oscillators and noise; no audio files,
+  because audio files are dependencies and we don't do those here. (It can only start after
+  your first click or keypress — browsers forbid autoplay — so a chime confirms it's live.)
 - **One file, zero requests.** `build.sh` is a tiny `awk` script that inlines the CSS and
   JS into `index.html` — the only "bundler" a no-dependency project is allowed. The result
   opens over `file://` on a plane: no server, no fonts, no trackers, no `node_modules`
