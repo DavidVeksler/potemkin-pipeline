@@ -62,6 +62,8 @@ const SCENE_REGISTRY=[
   {id:'blame',        label:'pickaxe archaeology',         category:'Version control',             generator:dBlame,         appBuilder:null,          weight:1,autoplay:true, requiresMotion:false,tags:['git']},
   // ---- Agent & session ----
   {id:'swarm',        label:'subagent fleet',              category:'Agent & session',             generator:dSwarm,         appBuilder:buildSwarm,    weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
+  {id:'chatter',      label:'agent-to-agent review',       category:'Agent & session',             generator:dChatter,       appBuilder:null,          weight:1,autoplay:true, requiresMotion:false,tags:['core']},
+  {id:'postmortem',   label:'incident postmortem',         category:'Agent & session',             generator:dPostmortem,    appBuilder:null,          weight:1,autoplay:true, requiresMotion:false,tags:['core']},
   {id:'matrix',       label:'matrix cascade',              category:'Agent & session',             generator:dMatrix,        appBuilder:null,          weight:1,autoplay:true, requiresMotion:true, tags:['core']},
   // system entries — never auto-picked; compaction triggered by ctx pressure, deepwork by idle timeout
   {id:'compaction',   label:'context compaction',          category:'Agent & session',             generator:dCompact,       appBuilder:null,          weight:0,autoplay:false,requiresMotion:false,tags:['core','system']},

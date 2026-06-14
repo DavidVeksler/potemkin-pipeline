@@ -84,6 +84,35 @@ function* dTerraform(){
   yield CNT('deploys',1);
   yield OV('close',{wait:U(700,1200)});
 }
+function* dPostmortem(){
+  const svc=pick(['api-gateway','checkout','payments','auth','search','ingest','ledger']);
+  const sev=pick(['SEV-2','SEV-2','SEV-3']);
+  const dur=ri(6,47), mttr=ri(4,22);
+  const rc=pick(['a missing happens-before edge let two writers race','a cache stampede right after the deploy','an unbounded retry storm saturated the pool','a stale read slipped past the fence','a thundering herd hit a cold cache','a clock skew tripped the lease renewal']);
+  yield OV('open',{type:'box'});
+  yield OV('box',{title:'⛑ POSTMORTEM · '+sev+' · '+svc,variant:'context',wait:U(250,500)});
+  yield OV('boxline',{text:'Impact: '+dur+'m degraded · '+grp(ri(2000,90000))+' requests affected',tone:'warn',wait:U(350,650)});
+  yield OV('boxline',{text:'Timeline: detect '+ri(1,4)+'m → mitigate '+ri(2,9)+'m → resolve '+mttr+'m',tone:'dim',wait:U(350,650)});
+  yield OV('boxline',{text:'Root cause: '+rc,tone:'fg',wait:U(400,800)});
+  yield OV('boxline',{text:'Action items',tone:'accent',wait:U(250,500)});
+  const items=shuffle(['add a regression test pinning the invariant','add a circuit breaker with jittered backoff','alert on the leading indicator','write a runbook + dashboard','backfill the missing fence','load-test the cold path']);
+  for(let i=0;i<3;i++) yield OV('boxline',{text:'  ☐ '+items[i]+' · @'+pick(AGENTS),tone:'dim',wait:U(250,500)});
+  yield OV('boxline',{text:'Blameless: the system let this happen, not a person ✔',tone:'ok',wait:U(500,900)});
+  yield OV('close',{wait:U(1100,1700)});
+}
+function* dChatter(){
+  const a=cfg.agent, b=pick(CODENAMES.filter(c=>c!==a))||'ORION';
+  const topic=pick(['the retry backoff','the lock ordering','the cache TTL','the migration plan','the API contract','the rollout strategy','the index choice']);
+  const pr=ri(120,9999);
+  yield L('▌ '+a+' ⇄ '+b+' — multi-agent review','accent',{wait:U(400,800)});
+  yield L(a+': PR #'+pr+' is up — can you review '+topic+'?','dim',{wait:U(500,1000)});
+  yield L(b+': looking… I’d push back on '+pick(['the unbounded retry','the global lock','the 5m TTL','the in-place migration','the Seq Scan']),'warn',{wait:U(700,1300)});
+  yield THINK();
+  yield L(a+': fair — '+pick(RETHINK),'dim',{wait:U(600,1200)});
+  yield L(b+': '+pick(['ship it with a jittered backoff','gate it behind a flag','add a fence and we’re good','split it into two PRs','LGTM once tests are green']),'dim',{wait:U(600,1200)});
+  yield L('✔ consensus reached — '+b+' approved PR #'+pr+' · merging','ok',{wait:U(500,1000)});
+  yield CNT('commits',1);
+}
 function* dPager(){
   const min=ri(10,55), sec=String(ri(10,59)).padStart(2,'0');
   const sev=pick(['P1','P1','P2']), ackS=ri(8,40), mttr=ri(4,9);
@@ -105,4 +134,5 @@ function* dPager(){
   yield L('✔ page resolved · '+svc+' back under SLO · postmortem auto-drafted','ok',{wait:U(600,1100)});
   yield CNT('incidents',1);
   yield OV('close',{wait:U(600,1000)});
+  if(rng()<0.5 && dramaQ.length<3) dramaQ.push(dPostmortem);   // the page often spawns the postmortem
 }

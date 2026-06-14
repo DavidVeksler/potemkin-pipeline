@@ -447,6 +447,14 @@ function el(cls,text){const d=document.createElement('div');d.className=cls;if(t
 function spn(cls,text){const s=document.createElement('span');s.className=cls;if(text!=null)s.textContent=text;return s;}
 function svgEl(tag,attrs){const e=document.createElementNS('http://www.w3.org/2000/svg',tag);for(const k in attrs)e.setAttribute(k,attrs[k]);return e;}
 
+// per-call token cost — Math.random flavor (not seeded; like toolSig/jitter). Heavy calls always
+// carry a count and feed the burn meter, so cost ticks come *from* visible work. 0 = no trailing tag.
+function toolTokens(t){
+  const R=Math.random;
+  if(t==='Bash'||t==='Task'||t==='WebFetch'||t.startsWith('mcp__')) return 400+Math.floor(R()*R()*4200);
+  if(t==='Read'||t==='Grep'||t==='MultiEdit'||t==='Write') return R()<0.5 ? 300+Math.floor(R()*1700) : 0;
+  return R()<0.25 ? 200+Math.floor(R()*900) : 0;
+}
 // cosmetic key:value tool params — Math.random (flavor, not seeded/load-bearing; mustn't touch the rng stream)
 function toolSig(t){
   const R=Math.random, P=a=>a[Math.floor(R()*a.length)], ps=[];
@@ -483,7 +491,9 @@ function render(ev){
         d.appendChild(spn('tval',String(v)));
       }
       d.appendChild(document.createTextNode(')'));
-      appendLine(d); activeTool={dot:dot,start:logicalNow}; ctxBump(1.3); burnTick(); break;
+      const tk=toolTokens(ev.tool);
+      if(tk) d.appendChild(spn('ttok',' · '+compactNum(tk)+' tokens'));
+      appendLine(d); activeTool={dot:dot,start:logicalNow}; ctxBump(1.3); burnTick(tk); break;
     }
     case 'output':{
       const d=el('ln out tone-'+(ev.tone||'dim'));
@@ -1469,13 +1479,32 @@ function* mcpShip(m){
   else { yield TOOL('mcp__github__create_pull_request','title: "'+commitMsg(m)+'"');
     yield OUT('opened #'+ri(1000,9999)+' · '+ri(1,4)+' reviewers requested','dim',{wait:U(300,640)}); }
 }
+// typo-and-correct micro-beat — the agent fat-fingers a command, gets an error, retypes.
+// Imperfection reads as more real than flawless output. Position of the typo is cosmetic (Math.random).
+function mangle(s){
+  const i=2+((Math.random()*(s.length-3))|0), r=Math.random();
+  if(r<0.4) return s.slice(0,i)+s.slice(i+1);              // drop a char
+  if(r<0.7) return s.slice(0,i)+s[i]+s.slice(i);            // double a char
+  return s.slice(0,i)+'xqz;'[(Math.random()*4)|0]+s.slice(i); // wrong char
+}
+function* typoBeat(){
+  const cmd=pick(TESTCMDS.concat(['kubectl get pods','docker ps','git status','npm run build','terraform plan']));
+  const bad=mangle(cmd), prog=bad.split(' ')[0];
+  yield TOOL('Bash',bad);
+  yield OUT(pick(['command not found: '+prog,'zsh: '+prog+': command not found','bash: '+prog+': not found','error: unknown command "'+prog+'"']),'err',{burst:true});
+  yield L(pick(['typo — retyping that','fat-fingered it, retrying','missed a character, again']),'dim',{wait:U(300,700)});
+  yield TOOL('Bash',cmd);
+  yield OUT(pick(['ok','done','✓ ok']),'dim',{burst:true});
+}
 function* missionStream(){
   while(true){
     const m=newMission();
     yield CLR();
     yield BANNER('▌ Mission #'+m.id+' — '+m.subject);
     yield L('root: '+m.rootFile+'  · difficulty '+m.difficulty,'dim');
-    yield* pScan(m); yield* pMap(m); yield* pPlan(m); yield* pImpl(m); yield* pTest(m); yield* pDeploy(m); yield* pDone(m);
+    yield* pScan(m); yield* pMap(m); yield* pPlan(m);
+    if(rng()<0.18) yield* typoBeat();
+    yield* pImpl(m); yield* pTest(m); yield* pDeploy(m); yield* pDone(m);
     ctxBump(3);
   }
 }
@@ -1566,6 +1595,35 @@ function* dTerraform(){
   yield CNT('deploys',1);
   yield OV('close',{wait:U(700,1200)});
 }
+function* dPostmortem(){
+  const svc=pick(['api-gateway','checkout','payments','auth','search','ingest','ledger']);
+  const sev=pick(['SEV-2','SEV-2','SEV-3']);
+  const dur=ri(6,47), mttr=ri(4,22);
+  const rc=pick(['a missing happens-before edge let two writers race','a cache stampede right after the deploy','an unbounded retry storm saturated the pool','a stale read slipped past the fence','a thundering herd hit a cold cache','a clock skew tripped the lease renewal']);
+  yield OV('open',{type:'box'});
+  yield OV('box',{title:'⛑ POSTMORTEM · '+sev+' · '+svc,variant:'context',wait:U(250,500)});
+  yield OV('boxline',{text:'Impact: '+dur+'m degraded · '+grp(ri(2000,90000))+' requests affected',tone:'warn',wait:U(350,650)});
+  yield OV('boxline',{text:'Timeline: detect '+ri(1,4)+'m → mitigate '+ri(2,9)+'m → resolve '+mttr+'m',tone:'dim',wait:U(350,650)});
+  yield OV('boxline',{text:'Root cause: '+rc,tone:'fg',wait:U(400,800)});
+  yield OV('boxline',{text:'Action items',tone:'accent',wait:U(250,500)});
+  const items=shuffle(['add a regression test pinning the invariant','add a circuit breaker with jittered backoff','alert on the leading indicator','write a runbook + dashboard','backfill the missing fence','load-test the cold path']);
+  for(let i=0;i<3;i++) yield OV('boxline',{text:'  ☐ '+items[i]+' · @'+pick(AGENTS),tone:'dim',wait:U(250,500)});
+  yield OV('boxline',{text:'Blameless: the system let this happen, not a person ✔',tone:'ok',wait:U(500,900)});
+  yield OV('close',{wait:U(1100,1700)});
+}
+function* dChatter(){
+  const a=cfg.agent, b=pick(CODENAMES.filter(c=>c!==a))||'ORION';
+  const topic=pick(['the retry backoff','the lock ordering','the cache TTL','the migration plan','the API contract','the rollout strategy','the index choice']);
+  const pr=ri(120,9999);
+  yield L('▌ '+a+' ⇄ '+b+' — multi-agent review','accent',{wait:U(400,800)});
+  yield L(a+': PR #'+pr+' is up — can you review '+topic+'?','dim',{wait:U(500,1000)});
+  yield L(b+': looking… I’d push back on '+pick(['the unbounded retry','the global lock','the 5m TTL','the in-place migration','the Seq Scan']),'warn',{wait:U(700,1300)});
+  yield THINK();
+  yield L(a+': fair — '+pick(RETHINK),'dim',{wait:U(600,1200)});
+  yield L(b+': '+pick(['ship it with a jittered backoff','gate it behind a flag','add a fence and we’re good','split it into two PRs','LGTM once tests are green']),'dim',{wait:U(600,1200)});
+  yield L('✔ consensus reached — '+b+' approved PR #'+pr+' · merging','ok',{wait:U(500,1000)});
+  yield CNT('commits',1);
+}
 function* dPager(){
   const min=ri(10,55), sec=String(ri(10,59)).padStart(2,'0');
   const sev=pick(['P1','P1','P2']), ackS=ri(8,40), mttr=ri(4,9);
@@ -1587,6 +1645,7 @@ function* dPager(){
   yield L('✔ page resolved · '+svc+' back under SLO · postmortem auto-drafted','ok',{wait:U(600,1100)});
   yield CNT('incidents',1);
   yield OV('close',{wait:U(600,1000)});
+  if(rng()<0.5 && dramaQ.length<3) dramaQ.push(dPostmortem);   // the page often spawns the postmortem
 }
 
 /* ---- boss-level: the agent pulls up an external tool's GUI ---- */
@@ -2398,6 +2457,8 @@ const SCENE_REGISTRY=[
   {id:'blame',        label:'pickaxe archaeology',         category:'Version control',             generator:dBlame,         appBuilder:null,          weight:1,autoplay:true, requiresMotion:false,tags:['git']},
   // ---- Agent & session ----
   {id:'swarm',        label:'subagent fleet',              category:'Agent & session',             generator:dSwarm,         appBuilder:buildSwarm,    weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
+  {id:'chatter',      label:'agent-to-agent review',       category:'Agent & session',             generator:dChatter,       appBuilder:null,          weight:1,autoplay:true, requiresMotion:false,tags:['core']},
+  {id:'postmortem',   label:'incident postmortem',         category:'Agent & session',             generator:dPostmortem,    appBuilder:null,          weight:1,autoplay:true, requiresMotion:false,tags:['core']},
   {id:'matrix',       label:'matrix cascade',              category:'Agent & session',             generator:dMatrix,        appBuilder:null,          weight:1,autoplay:true, requiresMotion:true, tags:['core']},
   // system entries — never auto-picked; compaction triggered by ctx pressure, deepwork by idle timeout
   {id:'compaction',   label:'context compaction',          category:'Agent & session',             generator:dCompact,       appBuilder:null,          weight:0,autoplay:false,requiresMotion:false,tags:['core','system']},
@@ -2554,8 +2615,8 @@ const BURN_LINES=[
   'note to self: fewer, bigger edits from here',
 ];
 function fmtCost(n){ return '$'+(n<1000?n.toFixed(2):compactNum(Math.round(n))); }
-function burnTick(){            // every tool call nudges spend + budget pressure
-  cost+=U(0.008,0.055);
+function burnTick(tokens){      // every tool call nudges spend + budget pressure; heavier calls cost more
+  cost+=0.002 + (tokens||0)*0.0000045 + U(0.004,0.016);
   if(!burnWarn && !burnEase) burnPct=clamp(burnPct+U(0.6,1.9),0,99);
   // codebase steadily grows as the "agent" churns — keep footer counters alive between mission beats
   bumpCounter('lines',ri(2,80));

@@ -16,6 +16,14 @@ function el(cls,text){const d=document.createElement('div');d.className=cls;if(t
 function spn(cls,text){const s=document.createElement('span');s.className=cls;if(text!=null)s.textContent=text;return s;}
 function svgEl(tag,attrs){const e=document.createElementNS('http://www.w3.org/2000/svg',tag);for(const k in attrs)e.setAttribute(k,attrs[k]);return e;}
 
+// per-call token cost — Math.random flavor (not seeded; like toolSig/jitter). Heavy calls always
+// carry a count and feed the burn meter, so cost ticks come *from* visible work. 0 = no trailing tag.
+function toolTokens(t){
+  const R=Math.random;
+  if(t==='Bash'||t==='Task'||t==='WebFetch'||t.startsWith('mcp__')) return 400+Math.floor(R()*R()*4200);
+  if(t==='Read'||t==='Grep'||t==='MultiEdit'||t==='Write') return R()<0.5 ? 300+Math.floor(R()*1700) : 0;
+  return R()<0.25 ? 200+Math.floor(R()*900) : 0;
+}
 // cosmetic key:value tool params — Math.random (flavor, not seeded/load-bearing; mustn't touch the rng stream)
 function toolSig(t){
   const R=Math.random, P=a=>a[Math.floor(R()*a.length)], ps=[];
@@ -52,7 +60,9 @@ function render(ev){
         d.appendChild(spn('tval',String(v)));
       }
       d.appendChild(document.createTextNode(')'));
-      appendLine(d); activeTool={dot:dot,start:logicalNow}; ctxBump(1.3); burnTick(); break;
+      const tk=toolTokens(ev.tool);
+      if(tk) d.appendChild(spn('ttok',' · '+compactNum(tk)+' tokens'));
+      appendLine(d); activeTool={dot:dot,start:logicalNow}; ctxBump(1.3); burnTick(tk); break;
     }
     case 'output':{
       const d=el('ln out tone-'+(ev.tone||'dim'));

@@ -137,13 +137,32 @@ function* mcpShip(m){
   else { yield TOOL('mcp__github__create_pull_request','title: "'+commitMsg(m)+'"');
     yield OUT('opened #'+ri(1000,9999)+' · '+ri(1,4)+' reviewers requested','dim',{wait:U(300,640)}); }
 }
+// typo-and-correct micro-beat — the agent fat-fingers a command, gets an error, retypes.
+// Imperfection reads as more real than flawless output. Position of the typo is cosmetic (Math.random).
+function mangle(s){
+  const i=2+((Math.random()*(s.length-3))|0), r=Math.random();
+  if(r<0.4) return s.slice(0,i)+s.slice(i+1);              // drop a char
+  if(r<0.7) return s.slice(0,i)+s[i]+s.slice(i);            // double a char
+  return s.slice(0,i)+'xqz;'[(Math.random()*4)|0]+s.slice(i); // wrong char
+}
+function* typoBeat(){
+  const cmd=pick(TESTCMDS.concat(['kubectl get pods','docker ps','git status','npm run build','terraform plan']));
+  const bad=mangle(cmd), prog=bad.split(' ')[0];
+  yield TOOL('Bash',bad);
+  yield OUT(pick(['command not found: '+prog,'zsh: '+prog+': command not found','bash: '+prog+': not found','error: unknown command "'+prog+'"']),'err',{burst:true});
+  yield L(pick(['typo — retyping that','fat-fingered it, retrying','missed a character, again']),'dim',{wait:U(300,700)});
+  yield TOOL('Bash',cmd);
+  yield OUT(pick(['ok','done','✓ ok']),'dim',{burst:true});
+}
 function* missionStream(){
   while(true){
     const m=newMission();
     yield CLR();
     yield BANNER('▌ Mission #'+m.id+' — '+m.subject);
     yield L('root: '+m.rootFile+'  · difficulty '+m.difficulty,'dim');
-    yield* pScan(m); yield* pMap(m); yield* pPlan(m); yield* pImpl(m); yield* pTest(m); yield* pDeploy(m); yield* pDone(m);
+    yield* pScan(m); yield* pMap(m); yield* pPlan(m);
+    if(rng()<0.18) yield* typoBeat();
+    yield* pImpl(m); yield* pTest(m); yield* pDeploy(m); yield* pDone(m);
     ctxBump(3);
   }
 }
