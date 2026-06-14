@@ -18,6 +18,12 @@ one). Source keeps the `hyperion.*` prefix — leave that split alone.
 ./build.sh        # inlines hyperion.css + hyperion.js into index.html
 ```
 
+On Windows, use PowerShell instead:
+
+```powershell
+.\build.ps1       # same output, PowerShell equivalent
+```
+
 Edit **`hyperion.{html,css,js}`** — never `index.html` (it is generated). After any change
 run `./build.sh` and commit both the source file(s) and the regenerated `index.html`.
 **Auto-commit these changes — no need to ask first.** No npm, no framework, no server, no
