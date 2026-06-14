@@ -19,21 +19,19 @@ counters and tool/think texture. Any keypress/mouse/touch parks the pass and
 snaps it back. Indicator: `⚙ deep work`. Test hooks: scene picker → Special →
 "deep work · away mode", or `__HYP.deepwork()` / `__HYP.wake()` with `?debug`.
 
-### ⭐ 2. Cost / burn meter
+### ✅ 2. Cost / burn meter — _shipped_
 A live "$ spent this session" counter in the header that ticks up with every
 tool call, plus the occasional `⚠ token budget 80%` warning the agent nervously
 works around. Near-zero code, very 2026.
 
-### 3. Incident → postmortem arc
-When a boss drama resolves, occasionally auto-generate a one-screen postmortem
-(timeline, root cause, "action items," a blameless-culture platitude). The most
-LinkedIn-brained possible artifact; reads as deeply real from a distance.
+### ✅ 3. Incident → postmortem arc — _shipped_
+A blameless one-screen postmortem box (impact, timeline, root cause, action
+items with @owners, a blameless-culture platitude). Registered as an autoplay
+CORE scene `dPostmortem`; the on-call page (`pager`) spawns one ~50% of the time.
 
-### 4. Agent-to-agent chatter
-A second/third named codename occasionally appears — ORION asks COLOSSUS to
-review its PR, they "disagree" on an approach, reach consensus. Multi-agent
-swarm theater, which is exactly the zeitgeist being parodied. Just more
-generators.
+### ✅ 4. Agent-to-agent chatter — _shipped_
+`dChatter`: a second seed-derived codename reviews the PR, pushes back on an
+approach, and reaches consensus — multi-agent swarm theater. Log-only CORE scene.
 
 ---
 
@@ -61,8 +59,9 @@ realism-per-byte work in the project.
     (test runs, `kubectl logs`, Sentry queries) trail a dim
     `… +N lines (ctrl+r to expand)` via an `OUT(...,{more:N})` field; signals
     the call did a lot without showing it. (`.ln.out.collapse`.)
-20. **Per-call token cost** — a faint trailing `· 1.2k tokens` on heavier calls,
-    feeding the burn meter so cost ticks come *from* visible work.
+20. ✅ **Per-call token cost** — _shipped_. A faint trailing `· 1.2k tokens` on
+    heavier calls (Math.random flavor, untouched seeded stream), feeding
+    `burnTick` so the cost meter ticks come *from* visible work.
 21. **Nested sub-tool indentation** — `Task`/subagent child calls indent one level
     under their parent (the swarm drama already has the fiction).
 22. ✅ **MCP-flavored calls** — _shipped_. Purpose-driven beats: `mcpScan`
@@ -75,16 +74,16 @@ realism-per-byte work in the project.
 
 ## New boss scenes
 
-5. **Kafka / event-stream lag** — consumer-group lag spikes into the millions,
-   partitions rebalance, lag drains. (Canvas bar-per-partition.)
+5. ✅ **Kafka / event-stream lag** — _shipped_ (`kafka` / `buildKafka`). Consumer-group
+   lag spikes into the millions on a few partitions, rebalances, drains.
 6. **Postgres replication failover** — primary goes dark, a replica is promoted,
    WAL catches up.
-7. **Terraform plan/apply** — `+47 ~12 -3`, a scary `-aws_db_instance.prod`,
-   then a confident apply. The destroy-line is the joke.
-8. **git bisect hunt** — walks commits, narrows to the culprit, "found it."
-   Satisfying, legible arc.
-9. **On-call page** — a PagerDuty-style alert fires at "03:14," gets acked,
-   resolved. Timestamps imply the agent never sleeps.
+7. ✅ **Terraform plan/apply** — _shipped_ (`terraform`). `+47 ~12 -3`, a scary
+   `- …prod (forces replacement)`, then a confident apply. The destroy-line is the joke.
+8. ✅ **git bisect hunt** — _shipped_ (`bisect`). Walks commits log₂, narrows to the
+   culprit, reverts it.
+9. ✅ **On-call page** — _shipped_ (`pager`). A PagerDuty-style P1 fires at "03:14,"
+   gets ack'd in seconds, resolved with an MTTR. Often chains into the postmortem.
 
 ---
 
@@ -92,9 +91,9 @@ realism-per-byte work in the project.
 
 10. **Fake commit ticker / contribution graph** in the rail — an all-green wall
     that fills as it works.
-11. **Typo-and-correct micro-beats** — the agent occasionally "mistypes" a
-    command, gets an error, fixes it. Imperfection reads as *more* real than
-    flawless output.
+11. ✅ **Typo-and-correct micro-beats** — _shipped_ (`typoBeat` in missions, ~18%
+    per mission). The agent fat-fingers a Bash command, gets command-not-found,
+    retypes. Imperfection reads as *more* real than flawless output.
 12. **Sound-design pass** — distinct cues per drama severity (the WebAudio
     engine already exists).
 13. **Screenshot / share-card export** — a button that renders the current frame
@@ -104,9 +103,9 @@ realism-per-byte work in the project.
 
 ## Meta & distribution
 
-14. **Preset "vibes" via URL** — `?vibe=startup-crunch | enterprise-migration |
-    security-incident` bundles seed + intensity + drama-weighting into one
-    shareable link.
+14. ✅ **Preset "vibes" via URL** — _shipped_. `?vibe=startup-crunch | enterprise-migration |
+    security-incident` bundles seed + pacing (speed/freq) + drama-weighting into one
+    shareable link; the scheduler favors each vibe's signature scenes (~62%).
 15. **OG image + meta tags** so the live link unfurls nicely when shared.
 
 ---
@@ -127,7 +126,7 @@ So anything that reads as **"a category × time grid that's calm until one band 
 
 1. **GC / heap-pressure heatmap** — rows = `Eden / S0 / S1 / Old / Metaspace`, color = occupancy. Spike: Old gen creeps up, pause times climb, a "STOP-THE-WORLD 4.2s" banner. Fix: "tune G1 region size." The bottom-row-flat / top-row-blowout shape maps perfectly onto generational heap.
 
-2. **Thermal / power throttle map** — rows = GPU dies or rack units, color = °C. This is the *most* natural fit — heat is literally the metaphor. Spike: a column of dies redlines to 94°C, throttle kicks in. Pairs nicely as a sibling to the existing `gpu` drama.
+2. ✅ **Thermal / power throttle map** — _shipped_ (`thermal` / `buildThermal`). Rows = GPU dies, color = °C. A column of dies redlines past 90°C, throttle kicks in, fans/power-cap recover it. Sibling to the `gpu` drama.
 
 3. **Cache hit-rate heatmap** — rows = `L1 / L2 / Redis / CDN / origin`, color = miss-rate. Spike: a cache stampede — misses cascade downward through the tiers as each layer's hit-rate collapses. Cascade *direction* (top→bottom) is a fresh visual beat the latency one doesn't have.
 
@@ -171,7 +170,11 @@ Each spec is written to drop straight into the engine. The shared shape:
 
 ---
 
-## ⭐ 0. `vim` — the vim edit hero session  _(headliner)_
+## ✅ 0. `vim` — the vim edit hero session  _(headliner — shipped)_
+
+_Shipped as `dVim` / `buildVim`: search → visual-yank → macro replay (the lines
+counter ticks under `@a`) → `:%s//gc` live count → `gg=G` → `:wq`, exits on the first
+try. Wild variant edits `~/.vimrc` during deep-work. Below is the original spec._
 
 **The joke.** The single most-mythologized developer flex — a touch-typist flying through
 modal editing — performed by an agent that writes no code. Macros, `:%s` with a live
@@ -226,7 +229,10 @@ the macro loop.
 
 ---
 
-## 1. `tmux` — split-pane war room
+## ✅ 1. `tmux` — split-pane war room — _shipped_
+
+_Shipped as `dTmux` / `buildTmux`: a 2×2 grid (logs/build/htop/test), the test pane
+goes red, the agent Ctrl-b jumps to it, fixes, all panes settle green._
 
 The agent tiles a tmux session: logs tailing in one pane, `htop` in another, a build in a
 third, a vim sliver in the fourth. One pane goes red (a test fails / a tail spikes), the
@@ -240,7 +246,10 @@ agent `Ctrl-b →` jumps to it, fixes, all panes settle green.
   + `DIFF('+',pick(FIX))` → pane back to `ok` → `beep('ok')` resolved → `CNT('tests',N)`.
 - Pairs with `vim` and `btop` thematically; reuses the appstep-mutation pattern wholesale.
 
-## 2. `dns` — propagation / the cursed cache
+## ✅ 2. `dns` — propagation / the cursed cache — _shipped_
+
+_Shipped as `dDns` / `buildDns`: a resolver→answer→TTL table, rows stale-red until they
+flip fresh one by one as the record propagates. "It's always DNS."_
 
 A record change that "should be instant" but isn't. A `dig` fan-out across resolvers
 (8.8.8.8, 1.1.1.1, authoritative, regional) shows stale vs fresh TTLs draining toward 0.
@@ -252,7 +261,10 @@ A record change that "should be instant" but isn't. A `dig` fan-out across resol
   → `banner` ok "✓ PROPAGATED — global consensus reached" → `CNT('incidents',1)`.
 - The eternal "it's always DNS" punchline; legible countdown arc.
 
-## 3. `chaos` — chaos-engineering game day
+## ✅ 3. `chaos` — chaos-engineering game day — _shipped_
+
+_Shipped as `dChaos` (reuses the mesh window): the agent injects a fault on purpose,
+services go red, breakers hold, steady state confirmed._
 
 Self-inflicted crisis: the agent *intentionally* kills a dependency to prove resilience,
 sweats while the blast radius spreads, then the circuit breakers hold.
@@ -263,7 +275,10 @@ sweats while the blast radius spreads, then the circuit breakers hold.
   engage (`appstep` to `degraded`→`ok`) → `banner` ok "✓ STEADY STATE held · 0 user-facing
   errors" → `CNT('incidents',1)`. The boss the agent *chose* — distinct tonal beat.
 
-## 4. `terraform` — plan/apply (from the backlog, #7, now specced)
+## ✅ 4. `terraform` — plan/apply (from the backlog, #7) — _shipped_
+
+_Shipped as `dTerraform`: box scene, `Plan: +N ~N -N`, a scary `- …prod (forces
+replacement)`, the agent explains it's an intentional blue/green swap, then applies._
 
 The destroy-line is the joke. `box`/`bar` scene, no live canvas.
 
@@ -273,7 +288,10 @@ The destroy-line is the joke. `box`/`bar` scene, no live canvas.
   → `boxline` ok "Apply complete! 47 added, 12 changed, 3 destroyed" → `beep('deploy')`
   `CNT('deploys',1)`. Register in `BOSS` (it's app-flavored) or `CORE`.
 
-## 5. `pager` — 03:14 on-call page (from the backlog, #9)
+## ✅ 5. `pager` — 03:14 on-call page (from the backlog, #9) — _shipped_
+
+_Shipped as `dPager`: P1 page at 03:NN, ack'd in seconds, triage + hotfix, resolved
+with an MTTR; chains into `dPostmortem` ~50% of the time._
 
 PagerDuty-style. `anomaly`-class overlay. Timestamps imply the agent never sleeps.
 
@@ -282,7 +300,10 @@ PagerDuty-style. `anomaly`-class overlay. Timestamps imply the agent never sleep
   `banner` ok "✓ RESOLVED · 03:21 · MTTR 6m" → `CNT('incidents',1)`. Optionally chain into
   the **postmortem arc** (backlog #3) as a follow-on `box`.
 
-## 6. `kafka` — consumer-group lag (backlog #5, canvas)
+## ✅ 6. `kafka` — consumer-group lag (backlog #5, canvas) — _shipped_
+
+_Shipped as `dKafka` / `buildKafka`: bar-per-partition live ticker, spike localizes to
+a few partitions climbing into the millions, rebalance drains it._
 
 Bar-per-partition `liveState` canvas (clone `buildHeat`/`buildGpu` mechanics). Spike: a few
 partitions' lag climbs into the millions, a rebalance churns, lag drains. `livefx`

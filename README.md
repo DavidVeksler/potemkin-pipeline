@@ -34,8 +34,10 @@ someone who has never once been on call. Here's the highlight reel:
 
 ## The full roster
 
-Seventeen distinct dramas, each a tidy crisis → the-agent-acts → recovery arc that
-always, always ends in green.
+Two dozen-plus distinct dramas, each a tidy crisis → the-agent-acts → recovery arc
+that always, always ends in green. A sampling (the rest — vim hero sessions, a tmux
+war room, terraform plan/apply, an on-call page, DNS propagation, a chaos game-day,
+kafka consumer lag, a thermal-throttle map — you'll meet by leaving it running):
 
 <table>
 <tr>
@@ -73,7 +75,7 @@ always, always ends in green.
 
 ## Under the hood
 
-For a project about fake software, the engine is real and small (~105 KB of JS, no
+For a project about fake software, the engine is real and small (~190 KB of JS, no
 framework). The interesting parts:
 
 - **One render loop, one clock.** A single `requestAnimationFrame` drives a *logical*
@@ -82,8 +84,9 @@ framework). The interesting parts:
 - **The script is a generator.** Every mission and boss drama is a JS generator
   (`function*`) that *yields* typed events — `TOOL('Bash', …)`, `DIFF('+', …)`,
   `THINK()`, `WAIT(900)`, `OV('app', …)`. A scheduler pumps each event when the clock
-  passes its due time. ~14 event constructors compose **23 scripted dramas** (6 ambient
-  + 17 boss) on top of a never-ending stream of fake missions.
+  passes its due time. ~14 event constructors compose **41 scripted scenes** — 23 boss
+  app-windows, 10 ambient incident beats, and 8 git-theater arcs — on top of a
+  never-ending stream of fake missions, plus a deep-work "away" grind.
 - **Determinism by seed.** A 32-bit `mulberry32` PRNG seeds everything narratively
   load-bearing: the procedurally generated file tree, the project, the agent's codename,
   which crisis strikes and how bad it gets. `?seed=N` reproduces a run to the beat.
@@ -139,9 +142,16 @@ parks the pass and snaps back to the regular show. Boss dramas still cut in mid-
 after. Tune the delay (or switch it off) with `?idle=N` or the config dialog;
 defaults to 90s.
 
+**Vibe presets** bundle a seed, pacing, and drama-weighting into one shareable link:
+`?vibe=startup-crunch` (fast, ship-happy), `?vibe=enterprise-migration` (slow, git- and
+infra-heavy), `?vibe=security-incident` (frantic, all DDoS/CVE/page). Each pins a curated
+seed and leans the scheduler toward its signature scenes; override any piece with the
+params below.
+
 **URL params** (all optional, all persist via the config dialog's *Copy link*):
 `?seed=N` · `?agent=NAME` · `?project=NAME` · `?theme=amber|green|cyan` ·
 `?speed=0.25–4` · `?dramas=on|off` · `?freq=0.25–4` (drama cadence) ·
+`?vibe=startup-crunch|enterprise-migration|security-incident` ·
 `?mode=performer` · `?idle=N`
 (seconds before deep-work mode; `0` disables) · `?audio=on` · `?crt=on` ·
 `?debug` (exposes a `window.__HYP` test hook — `__HYP.drama('gpu')`, `__HYP.deepwork()`, `__HYP.state()`).
@@ -164,7 +174,7 @@ Developed as split files and re-inlined into a standalone distributable:
 ## Build
 
 ```sh
-./build.sh   # → index.html  (~140 KB, zero external requests)
+./build.sh   # → index.html  (~240 KB, zero external requests)
 ```
 
 There is no test suite, because there is nothing to test, because none of it is real.
