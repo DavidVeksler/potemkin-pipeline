@@ -307,7 +307,7 @@ const logEl=$('#log'), caret=$('#caret'), railTasks=$('#tasktree'), fileTreeEl=$
 const overlay=$('#overlay'), ovback=overlay.querySelector('.backdrop');
 const bossEl=$('#boss'), settingsEl=$('#settings'), helpEl=$('#help'), toastEl=$('#toast'), liveBtn=$('#livebtn'), cfgbtn=$('#cfgbtn'), dramaEl=$('#dramapick');
 const hAgent=$('.h-agent'),hProj=$('.h-proj'),hModel=$('.h-model'),ctxbar=$('.ctxbar'),ctxpct=$('.ctxpct'),hTok=$('.h-tok'),hCost=$('.h-cost'),hBudget=$('.h-budget'),hTime=$('.h-time'),modeind=$('#modeind');
-const cFiles=$('#c-files'),cLines=$('#c-lines'),cTests=$('#c-tests'),cCves=$('#c-cves'),cDeploys=$('#c-deploys');
+const cFiles=$('#c-files'),cLines=$('#c-lines'),cTests=$('#c-tests'),cCves=$('#c-cves'),cDeploys=$('#c-deploys'),cCommits=$('#c-commits'),cIncidents=$('#c-incidents');
 
 /* ====================================================================== */
 /* STATE                                                                   */
@@ -506,6 +506,8 @@ function bumpCounter(field,delta){
   else if(field==='tests')cTests.textContent=compactNum(counters.tests);
   else if(field==='cves')cCves.textContent=compactNum(counters.cves);
   else if(field==='deploys')cDeploys.textContent=compactNum(counters.deploys);
+  else if(field==='commits')cCommits.textContent=compactNum(counters.commits);
+  else if(field==='incidents')cIncidents.textContent=compactNum(counters.incidents);
 }
 /* ---- autoscroll ---- */
 let pinned=true;
