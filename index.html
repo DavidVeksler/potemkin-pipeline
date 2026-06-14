@@ -1884,6 +1884,7 @@ function* pScan(m){
     if(t==='Read'){ yield FILE(f); if(rng()<0.45) yield SNIP(f,false); }
     else if(rng()<0.4) yield FILE(pick(FILES));
   }
+  if(rng()<0.4) yield* mcpScan(m);
   yield L(T1(),'fg'); yield L(T10(),'dim');
 }
 function* pMap(m){
@@ -1971,6 +1972,7 @@ function* pDeploy(m){
   }
   yield OUT('deploy '+hash()+' healthy ✔','ok');
   yield CNT('deploys',1); yield CNT('files',ri(0,3)); yield CNT('lines',ri(20,400));
+  if(rng()<0.6) yield* mcpShip(m);
   yield TASK('deploy','ship','✔');
 }
 function* pDone(m){
@@ -1978,6 +1980,24 @@ function* pDone(m){
   yield BANNER('✔ '+cap(m.subject)+' shipped — '+pick(DONETAIL));
   yield CNT('tests',ri(1,6));
   yield L('Idle — watching for new work…','dim',{wait:U(1200,2600)});
+}
+// MCP-flavored tool beats — the mcp__server__action namespace reads as authentic precisely
+// because nobody fakes it. Seeded (structural: real TOOL events that bump cost/ctx).
+function* mcpScan(m){
+  const r=rng();
+  if(r<0.5){ yield TOOL('mcp__sentry__search_issues','query: "is:unresolved '+m.short+'"');
+    yield OUT('Found '+ri(2,40)+' issues · top: '+grp(ri(40,9000))+' events, last seen '+ri(1,59)+'m ago','dim',{wait:U(320,680),more:ri(3,18)}); }
+  else { yield TOOL('mcp__datadog__query_metrics','query: "p99:'+m.short+'{env:prod}"');
+    yield OUT(ri(80,1800)+'ms p99 over '+ri(2,24)+'h · '+ri(1,9)+' anomalies','dim',{wait:U(320,680)}); }
+}
+function* mcpShip(m){
+  const r=rng();
+  if(r<0.4){ const id='ENG-'+ri(120,990); yield TOOL('mcp__linear__update_issue','id: "'+id+'", state: "Done"');
+    yield OUT('moved '+id+' → Done','dim',{wait:U(300,640)}); }
+  else if(r<0.7){ yield TOOL('mcp__slack__post_message','channel: "#eng-deploys", text: "shipped '+m.short+' ✓"');
+    yield OUT('posted to #eng-deploys','dim',{wait:U(300,640)}); }
+  else { yield TOOL('mcp__github__create_pull_request','title: "'+commitMsg(m)+'"');
+    yield OUT('opened #'+ri(1000,9999)+' · '+ri(1,4)+' reviewers requested','dim',{wait:U(300,640)}); }
 }
 function* missionStream(){
   while(true){
@@ -2002,7 +2022,7 @@ function* dAnomaly(){
   beep('alert');
   yield L('▌ Incident — auto-triage engaged','err',{wait:U(500,900)});
   yield TOOL('Bash','kubectl logs -l app=api --since=5m | tail');
-  yield OUT('spike correlates with deploy '+hash(),'dim',{burst:true});
+  yield OUT('spike correlates with deploy '+hash(),'dim',{burst:true,more:ri(20,140)});
   yield OUT(ri(120,9000)+' anomalous spans in '+region,'dim',{burst:true});
   yield THINK();
   yield L(pick(RETHINK),'warn',{wait:U(800,1800)});

@@ -57,15 +57,19 @@ realism-per-byte work in the project.
     `Task(desc, subagent_type: "Explore")`. Param keys dim, values normal;
     generated per-tool at render with `Math.random` (cosmetic flavor — leaves
     the seeded rng stream untouched, like the jitter rule).
-19. **Collapsed long output** — `⎿ … +37 lines (ctrl+r to expand)`. Instantly
-    recognizable CC affordance; signals the call did a lot without showing it.
+19. ✅ **Collapsed long output** — _shipped_. Bash-stdout-shaped results
+    (test runs, `kubectl logs`, Sentry queries) trail a dim
+    `… +N lines (ctrl+r to expand)` via an `OUT(...,{more:N})` field; signals
+    the call did a lot without showing it. (`.ln.out.collapse`.)
 20. **Per-call token cost** — a faint trailing `· 1.2k tokens` on heavier calls,
     feeding the burn meter so cost ticks come *from* visible work.
 21. **Nested sub-tool indentation** — `Task`/subagent child calls indent one level
     under their parent (the swarm drama already has the fiction).
-22. **MCP-flavored calls** — occasional `mcp__linear__create_issue(...)` /
-    `playwright(browser_navigate)`. The two-underscore namespace reads as *more*
-    authentic precisely because nobody bothers to fake it.
+22. ✅ **MCP-flavored calls** — _shipped_. Purpose-driven beats: `mcpScan`
+    (Sentry/Datadog query during SCAN) and `mcpShip` (Linear/Slack/GitHub after
+    deploy). The `mcp__server__action` namespace renders with the `mcp__server__`
+    prefix dimmed (`.tns`); reads as *more* authentic precisely because nobody
+    bothers to fake it.
 
 ---
 
