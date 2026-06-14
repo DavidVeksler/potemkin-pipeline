@@ -35,6 +35,7 @@ function buildConfig(){
   fld(g,'CRT scanlines',sel(['off','on'],cfg.crt,v=>{cfg.crt=v;document.body.classList.toggle('crt',v==='on');syncURL();}));
 
   g=sec('Pacing');
+  fld(g,'vibe preset',sel([{v:'',t:'— none —'},{v:'startup-crunch',t:'startup crunch'},{v:'enterprise-migration',t:'enterprise migration'},{v:'security-incident',t:'security incident'}],cfg.vibe||'',v=>{ location.search=v?'?vibe='+v:''; }),true);
   fld(g,'speed',rng_(0.25,4,0.05,speed,v=>{speed=v;syncURL();},v=>v.toFixed(2)+'×'));
   fld(g,'dramas',sel(['on','off'],dramaOn?'on':'off',v=>{dramaOn=(v==='on');cfg.dramas=v;syncURL();}));
   fld(g,'drama frequency',rng_(0.25,4,0.25,dramaFreq,v=>{dramaFreq=v;cfg.freq=v;nextDramaAt=logicalNow+U(60000,110000)/dramaFreq;syncURL();},v=>v.toFixed(2)+'×'));
@@ -78,6 +79,7 @@ function urlParams(forceSeed){
   if(mode!=='auto')p.set('mode',mode);
   if(cfg.audio!=='off')p.set('audio',cfg.audio);
   if(cfg.crt!=='off')p.set('crt',cfg.crt);
+  if(cfg.vibe)p.set('vibe',cfg.vibe);
   if(cfg.idle!==90)p.set('idle',String(cfg.idle));
   if(cfg.reduceFlash)p.set('reduceFlash',cfg.reduceFlash);
   if(forceSeed||seedExplicit)p.set('seed',String(cfg.seed>>>0));

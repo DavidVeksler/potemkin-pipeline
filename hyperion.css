@@ -555,7 +555,7 @@ body:not(.reduce) .dns-row[data-state=stale]{animation:gpf 1.3s ease-in-out infi
 .dns-row[data-state=fresh] .dns-ans{color:var(--ok)}
 .dns-cap{font-size:11px; color:var(--dim); text-align:center}
 /* latency heatmap (scrolling) */
-#appwin[data-tool=heatmap],#appwin[data-tool=cpuheat]{width:min(760px,94vw)}
+#appwin[data-tool=heatmap],#appwin[data-tool=cpuheat],#appwin[data-tool=thermal]{width:min(760px,94vw)}
 .appbody.heat{display:flex; flex-direction:column; gap:8px}
 .heat-head{display:flex; align-items:baseline; gap:10px}
 .heat-ht{font-size:11px; color:var(--accent); font-weight:700; letter-spacing:.5px}

@@ -55,6 +55,10 @@ function checkDrama(){
     let type;
     const en=enabledDramas();
     if(firstDrama && en.indexOf('anomaly')>=0){ type='anomaly'; firstDrama=false; }
+    else if(cfg.vibe && VIBES[cfg.vibe] && rng()<0.62){   // vibe presets favor their signature scenes
+      const bias=VIBES[cfg.vibe].bias.filter(id=>en.indexOf(id)>=0);
+      type=bias.length?pick(bias):pick(en); firstDrama=false;
+    }
     else { type=pick(en); firstDrama=false; }
     if(type&&DRAMAS[type]) dramaQ.push(DRAMAS[type]);
     // clustered cadence: squared draw biases the gap toward ~0 (bursts fire back-to-back, gated only by play time)

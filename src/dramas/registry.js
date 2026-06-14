@@ -31,6 +31,7 @@ const SCENE_REGISTRY=[
   {id:'load',         label:'k6 load test',                category:'Performance & profiling',     generator:dLoad,          appBuilder:buildLoad,     weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
   {id:'heatmap',      label:'latency heatmap',             category:'Performance & profiling',     generator:dHeatmap,       appBuilder:buildHeat,     weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
   {id:'cpuheat',      label:'cpu · core pinned',           category:'Performance & profiling',     generator:dCpuheat,       appBuilder:buildCpu,      weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
+  {id:'thermal',      label:'thermal throttle map',        category:'Performance & profiling',     generator:dThermal,       appBuilder:buildThermal,  weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
   // ---- Infrastructure & containers ----
   {id:'cluster',      label:'k9s · CrashLoopBackOff',      category:'Infrastructure & containers', generator:dCluster,       appBuilder:buildCluster,  weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
   {id:'docker',       label:'docker buildx',               category:'Infrastructure & containers', generator:dDocker,        appBuilder:buildDocker,   weight:1,autoplay:true, requiresMotion:false,tags:['boss']},

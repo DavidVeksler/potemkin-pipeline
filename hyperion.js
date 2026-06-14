@@ -48,20 +48,29 @@ const CODENAMES = [
   "FORGE",
   "PILOT",
 ];
+/* preset "vibes" — one shareable ?vibe= link bundles seed + pacing + drama-weighting.
+   bias[] scenes are favored by the scheduler; seed pins a curated run. */
+const VIBES={
+  'startup-crunch':       {speed:1.4, freq:1.9, seed:1337,    bias:['deploy','pipeline','pr','vim','tmux','swarm','chatter','docker']},
+  'enterprise-migration': {speed:0.8, freq:0.7, seed:90909,   bias:['rebase','octopus','sql','terraform','docker','cluster','mergeconflict','cherrypick']},
+  'security-incident':    {speed:1.2, freq:2.3, seed:31337,   bias:['attackmap','security','auth','filterrepo','pager','anomaly','dns','postmortem']},
+};
+const VIBE = VIBES[QS.get('vibe')] || null;
 const cfg={
   agent: QS.get('agent')||null,
   project: QS.get('project')||'',
   model: QS.get('model')||'mythos-5-preview',
   theme: THEMES.includes(QS.get('theme'))?QS.get('theme'):'amber',
-  speed: qfloat('speed',0.25,4,1),
+  speed: qfloat('speed',0.25,4, VIBE?VIBE.speed:1),
   dramas: (QS.get('dramas')==='off'||QS.get('intensity')==='0')?'off':'on',  // boss/ambient dramas on or off (legacy ?intensity=0 → off)
-  freq: qfloat('freq',0.25,4,1),            // drama cadence multiplier (higher = more often)
+  freq: qfloat('freq',0.25,4, VIBE?VIBE.freq:1),            // drama cadence multiplier (higher = more often)
+  vibe: VIBE?QS.get('vibe'):null,                            // active preset id (null when none / unknown)
   mode: QS.get('mode')==='performer'?'performer':'auto',
   audio: QS.get('audio')==='on'?'on':'off',
   crt: QS.get('crt')==='on'?'on':'off',
   idle: qint('idle',0,3600,90),             // seconds of no input before deep-work "away" mode (0 disables)
   reduceFlash: QS.get('reduceFlash'),       // 'on' | 'off' | null
-  seed: QS.get('seed')!=null && Number.isFinite(parseInt(QS.get('seed'),10)) ? (parseInt(QS.get('seed'),10)>>>0) : (Math.random()*4294967296>>>0),
+  seed: QS.get('seed')!=null && Number.isFinite(parseInt(QS.get('seed'),10)) ? (parseInt(QS.get('seed'),10)>>>0) : (VIBE&&VIBE.seed!=null ? VIBE.seed>>>0 : (Math.random()*4294967296>>>0)),
   debug: QS.has('debug')                      // gates the window.__HYP test hook
 };
 let seedExplicit = QS.get('seed')!=null;       // only pin seed in the URL when the user set it
@@ -1306,6 +1315,38 @@ function buildHeat(body,ev){
     phase(p){ this.hot = p==='spike'?1:0; }
   };
 }
+/* --- thermal / power throttle map (scrolling canvas) : a column of dies redlines --- */
+const THERMAL_ROWS=['die7','die6','die5','die4','die3','die2','die1','die0'];
+function buildThermal(body,ev){
+  body.classList.add('heat');
+  const head=el('heat-head'); head.appendChild(spn('heat-ht','THERMAL MAP · '+(ev.host||'rack-07')+' · '+THERMAL_ROWS.length+' dies °C'));
+  head.appendChild(spn('heat-sub','last 5m')); body.appendChild(head);
+  const wrap=el('heat-wrap');
+  const yax=el('heat-y'); THERMAL_ROWS.forEach(l=>yax.appendChild(el('heat-yl',l)));
+  wrap.appendChild(yax);
+  const cv=document.createElement('canvas'); cv.className='heat-cv'; wrap.appendChild(cv);
+  body.appendChild(wrap);
+  const cap=el('heat-cap','all dies nominal · < 70°C'); cap.dataset.k='cap'; body.appendChild(cap);
+  liveState={kind:'thermal',last:0,cv,ctx:null,cols:[],nCols:64,rows:THERMAL_ROWS.length,hot:0,hotRow:(ev.hot!=null?ev.hot:0),
+    tick(ts){ if(ts-this.last<150)return; this.last=ts;
+      if(!this.ctx||this.cv.width===0){ this.cv.width=this.cv.clientWidth||640; this.cv.height=this.cv.clientHeight||152; this.ctx=this.cv.getContext('2d'); this.nCols=Math.max(28,(this.cv.width/9)|0); }
+      const col=[];
+      for(let r=0;r<this.rows;r++){
+        let v=0.27+Math.random()*0.1;                                     // warm baseline (~60s °C)
+        if(this.hot && (r===this.hotRow||r===this.hotRow+1)) v=0.88+Math.random()*0.12;   // a column of dies redlines
+        col.push(clamp(v,0,1));
+      }
+      this.cols.push(col); while(this.cols.length>this.nCols)this.cols.shift();
+      this.draw();
+    },
+    draw(){ const x=this.ctx,W=this.cv.width,H=this.cv.height; x.clearRect(0,0,W,H);
+      const cw=W/this.nCols, ch=H/this.rows;
+      for(let i=0;i<this.cols.length;i++){ const c=this.cols[i];
+        for(let r=0;r<this.rows;r++){ x.fillStyle=heatColor(c[r]); x.fillRect(i*cw,H-(r+1)*ch,Math.ceil(cw),Math.ceil(ch)-1); } }
+    },
+    phase(p){ this.hot = p==='spike'?1:0; }
+  };
+}
 /* --- cpu utilization by core (scrolling canvas) : noisy-neighbor scene --- */
 const CPU_CORES=16;
 function buildCpu(body,ev){
@@ -1995,6 +2036,31 @@ function* dHeatmap(){
   yield WAIT(U(1400,2000));
   yield OV('close',{wait:U(700,1100)});
 }
+function* dThermal(){
+  const host=pick(['rack','dgx','hgx','node'])+'-'+String(ri(1,24)).padStart(2,'0');
+  const hot=ri(0,6);
+  yield OV('app',{tool:'thermal',title:'thermal map · '+host,url:'',host,hot});
+  yield L('▌ Pulling up the rack thermal map — the fans are screaming','accent',{wait:U(700,1100)});
+  yield WAIT(U(1400,2000));
+  beep('alert');
+  yield OV('livefx',{phase:'spike'});
+  yield WAIT(U(900,1400));
+  const t=ri(91,97);
+  yield OV('appstep',{k:'cap',text:'⚠ die'+hot+' '+t+'°C — thermal throttle engaged, clocks dropping'});
+  yield L('⚠ a column of dies redlining at '+t+'°C — throttling, throughput sagging','err',{wait:U(1000,1600)});
+  yield THINK();
+  yield L(pick(RETHINK),'warn',{wait:U(800,1500)});
+  yield TOOL('Bash','ipmitool raw 0x30 0x30 0x02 0xff 0x64 && nvidia-smi -pl 250');
+  yield OUT('fan curve to 100% · capping power limit · migrating the hot shard','dim',{burst:true});
+  yield WAIT(U(1400,2000));
+  yield OV('livefx',{phase:'recover'});
+  yield OV('appstep',{k:'cap',text:'✓ dies cooling · '+ri(58,68)+'°C · clocks restored across the rack'});
+  beep('ok');
+  yield L('✔ thermals back in band — fans spun down, no hardware throttle','ok',{wait:U(1000,1600)});
+  yield CNT('incidents',1);
+  yield WAIT(U(1200,1800));
+  yield OV('close',{wait:U(700,1100)});
+}
 function* dKafka(){
   const topic=pick(['orders.v2','payments.events','clickstream','user.activity','ledger.cdc','telemetry.spans']);
   const group=pick(['checkout-consumers','billing-workers','analytics-sink','search-indexer','fraud-scoring']);
@@ -2426,6 +2492,7 @@ const SCENE_REGISTRY=[
   {id:'load',         label:'k6 load test',                category:'Performance & profiling',     generator:dLoad,          appBuilder:buildLoad,     weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
   {id:'heatmap',      label:'latency heatmap',             category:'Performance & profiling',     generator:dHeatmap,       appBuilder:buildHeat,     weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
   {id:'cpuheat',      label:'cpu · core pinned',           category:'Performance & profiling',     generator:dCpuheat,       appBuilder:buildCpu,      weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
+  {id:'thermal',      label:'thermal throttle map',        category:'Performance & profiling',     generator:dThermal,       appBuilder:buildThermal,  weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
   // ---- Infrastructure & containers ----
   {id:'cluster',      label:'k9s · CrashLoopBackOff',      category:'Infrastructure & containers', generator:dCluster,       appBuilder:buildCluster,  weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
   {id:'docker',       label:'docker buildx',               category:'Infrastructure & containers', generator:dDocker,        appBuilder:buildDocker,   weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
@@ -2540,6 +2607,10 @@ function checkDrama(){
     let type;
     const en=enabledDramas();
     if(firstDrama && en.indexOf('anomaly')>=0){ type='anomaly'; firstDrama=false; }
+    else if(cfg.vibe && VIBES[cfg.vibe] && rng()<0.62){   // vibe presets favor their signature scenes
+      const bias=VIBES[cfg.vibe].bias.filter(id=>en.indexOf(id)>=0);
+      type=bias.length?pick(bias):pick(en); firstDrama=false;
+    }
     else { type=pick(en); firstDrama=false; }
     if(type&&DRAMAS[type]) dramaQ.push(DRAMAS[type]);
     // clustered cadence: squared draw biases the gap toward ~0 (bursts fire back-to-back, gated only by play time)
@@ -2806,6 +2877,7 @@ function buildConfig(){
   fld(g,'CRT scanlines',sel(['off','on'],cfg.crt,v=>{cfg.crt=v;document.body.classList.toggle('crt',v==='on');syncURL();}));
 
   g=sec('Pacing');
+  fld(g,'vibe preset',sel([{v:'',t:'— none —'},{v:'startup-crunch',t:'startup crunch'},{v:'enterprise-migration',t:'enterprise migration'},{v:'security-incident',t:'security incident'}],cfg.vibe||'',v=>{ location.search=v?'?vibe='+v:''; }),true);
   fld(g,'speed',rng_(0.25,4,0.05,speed,v=>{speed=v;syncURL();},v=>v.toFixed(2)+'×'));
   fld(g,'dramas',sel(['on','off'],dramaOn?'on':'off',v=>{dramaOn=(v==='on');cfg.dramas=v;syncURL();}));
   fld(g,'drama frequency',rng_(0.25,4,0.25,dramaFreq,v=>{dramaFreq=v;cfg.freq=v;nextDramaAt=logicalNow+U(60000,110000)/dramaFreq;syncURL();},v=>v.toFixed(2)+'×'));
@@ -2849,6 +2921,7 @@ function urlParams(forceSeed){
   if(mode!=='auto')p.set('mode',mode);
   if(cfg.audio!=='off')p.set('audio',cfg.audio);
   if(cfg.crt!=='off')p.set('crt',cfg.crt);
+  if(cfg.vibe)p.set('vibe',cfg.vibe);
   if(cfg.idle!==90)p.set('idle',String(cfg.idle));
   if(cfg.reduceFlash)p.set('reduceFlash',cfg.reduceFlash);
   if(forceSeed||seedExplicit)p.set('seed',String(cfg.seed>>>0));

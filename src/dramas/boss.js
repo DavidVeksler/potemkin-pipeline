@@ -345,6 +345,31 @@ function* dHeatmap(){
   yield WAIT(U(1400,2000));
   yield OV('close',{wait:U(700,1100)});
 }
+function* dThermal(){
+  const host=pick(['rack','dgx','hgx','node'])+'-'+String(ri(1,24)).padStart(2,'0');
+  const hot=ri(0,6);
+  yield OV('app',{tool:'thermal',title:'thermal map · '+host,url:'',host,hot});
+  yield L('▌ Pulling up the rack thermal map — the fans are screaming','accent',{wait:U(700,1100)});
+  yield WAIT(U(1400,2000));
+  beep('alert');
+  yield OV('livefx',{phase:'spike'});
+  yield WAIT(U(900,1400));
+  const t=ri(91,97);
+  yield OV('appstep',{k:'cap',text:'⚠ die'+hot+' '+t+'°C — thermal throttle engaged, clocks dropping'});
+  yield L('⚠ a column of dies redlining at '+t+'°C — throttling, throughput sagging','err',{wait:U(1000,1600)});
+  yield THINK();
+  yield L(pick(RETHINK),'warn',{wait:U(800,1500)});
+  yield TOOL('Bash','ipmitool raw 0x30 0x30 0x02 0xff 0x64 && nvidia-smi -pl 250');
+  yield OUT('fan curve to 100% · capping power limit · migrating the hot shard','dim',{burst:true});
+  yield WAIT(U(1400,2000));
+  yield OV('livefx',{phase:'recover'});
+  yield OV('appstep',{k:'cap',text:'✓ dies cooling · '+ri(58,68)+'°C · clocks restored across the rack'});
+  beep('ok');
+  yield L('✔ thermals back in band — fans spun down, no hardware throttle','ok',{wait:U(1000,1600)});
+  yield CNT('incidents',1);
+  yield WAIT(U(1200,1800));
+  yield OV('close',{wait:U(700,1100)});
+}
 function* dKafka(){
   const topic=pick(['orders.v2','payments.events','clickstream','user.activity','ledger.cdc','telemetry.spans']);
   const group=pick(['checkout-consumers','billing-workers','analytics-sink','search-indexer','fraud-scoring']);

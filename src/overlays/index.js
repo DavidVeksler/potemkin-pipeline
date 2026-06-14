@@ -634,6 +634,38 @@ function buildHeat(body,ev){
     phase(p){ this.hot = p==='spike'?1:0; }
   };
 }
+/* --- thermal / power throttle map (scrolling canvas) : a column of dies redlines --- */
+const THERMAL_ROWS=['die7','die6','die5','die4','die3','die2','die1','die0'];
+function buildThermal(body,ev){
+  body.classList.add('heat');
+  const head=el('heat-head'); head.appendChild(spn('heat-ht','THERMAL MAP · '+(ev.host||'rack-07')+' · '+THERMAL_ROWS.length+' dies °C'));
+  head.appendChild(spn('heat-sub','last 5m')); body.appendChild(head);
+  const wrap=el('heat-wrap');
+  const yax=el('heat-y'); THERMAL_ROWS.forEach(l=>yax.appendChild(el('heat-yl',l)));
+  wrap.appendChild(yax);
+  const cv=document.createElement('canvas'); cv.className='heat-cv'; wrap.appendChild(cv);
+  body.appendChild(wrap);
+  const cap=el('heat-cap','all dies nominal · < 70°C'); cap.dataset.k='cap'; body.appendChild(cap);
+  liveState={kind:'thermal',last:0,cv,ctx:null,cols:[],nCols:64,rows:THERMAL_ROWS.length,hot:0,hotRow:(ev.hot!=null?ev.hot:0),
+    tick(ts){ if(ts-this.last<150)return; this.last=ts;
+      if(!this.ctx||this.cv.width===0){ this.cv.width=this.cv.clientWidth||640; this.cv.height=this.cv.clientHeight||152; this.ctx=this.cv.getContext('2d'); this.nCols=Math.max(28,(this.cv.width/9)|0); }
+      const col=[];
+      for(let r=0;r<this.rows;r++){
+        let v=0.27+Math.random()*0.1;                                     // warm baseline (~60s °C)
+        if(this.hot && (r===this.hotRow||r===this.hotRow+1)) v=0.88+Math.random()*0.12;   // a column of dies redlines
+        col.push(clamp(v,0,1));
+      }
+      this.cols.push(col); while(this.cols.length>this.nCols)this.cols.shift();
+      this.draw();
+    },
+    draw(){ const x=this.ctx,W=this.cv.width,H=this.cv.height; x.clearRect(0,0,W,H);
+      const cw=W/this.nCols, ch=H/this.rows;
+      for(let i=0;i<this.cols.length;i++){ const c=this.cols[i];
+        for(let r=0;r<this.rows;r++){ x.fillStyle=heatColor(c[r]); x.fillRect(i*cw,H-(r+1)*ch,Math.ceil(cw),Math.ceil(ch)-1); } }
+    },
+    phase(p){ this.hot = p==='spike'?1:0; }
+  };
+}
 /* --- cpu utilization by core (scrolling canvas) : noisy-neighbor scene --- */
 const CPU_CORES=16;
 function buildCpu(body,ev){
