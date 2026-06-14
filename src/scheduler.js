@@ -95,5 +95,6 @@ function frame(ts){
       } else { lastRelease=ts; }
     }
   }
+  flushRender();   // batched DOM: insert this frame's queued log lines + scroll once
   rafId=requestAnimationFrame(frame);
 }

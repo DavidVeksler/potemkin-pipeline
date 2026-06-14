@@ -44,7 +44,7 @@ function highlightFile(path,st){
   if(!el){ if(st!=='A')return; el=insertFileRow(path); if(!el)return; el.classList.add('ft-new'); }
   if(lastFileHl && lastFileHl!==el){lastFileHl.classList.remove('hl');}
   el.classList.add('hl','glow'); lastFileHl=el; setStatus(el,st);
-  el.scrollIntoView({block:'nearest'});
+  pendingFileScroll=el;   // coalesced: the rail scroll runs once per frame in flushRender()
   setTimeout(()=>el.classList.remove('glow'),900);
 }
 /* new mission = committed working tree: clear M/A decorations, keep added files */

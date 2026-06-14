@@ -6,11 +6,25 @@ function appendLine(node){
   const txt=node.textContent;
   if(txt && txt===lastVisible) return;   // drop: never two identical consecutive log lines
   lastVisible=txt;
-  logEl.insertBefore(node,caret);
-  while(logEl.childElementCount>MAX_LINES+1){
-    const f=logEl.firstChild; if(f===caret)break; logEl.removeChild(f);
+  lineQueue.push(node);                   // batched: actual DOM insert happens in flushRender(), once per frame
+}
+// flush queued log lines as one DocumentFragment + a single autoscroll + one coalesced rail scroll.
+// called once per frame from frame(); keeps high-speed mode from thrashing layout per event.
+function flushRender(){
+  if(lineQueue.length){
+    const frag=document.createDocumentFragment();
+    for(let i=0;i<lineQueue.length;i++) frag.appendChild(lineQueue[i]);
+    lineQueue.length=0;
+    logEl.insertBefore(frag,caret);
+    while(logEl.childElementCount>MAX_LINES+1){
+      const f=logEl.firstChild; if(f===caret)break; logEl.removeChild(f);
+    }
+    autoscroll();
   }
-  autoscroll();
+  if(pendingFileScroll){
+    if(pendingFileScroll.isConnected) pendingFileScroll.scrollIntoView({block:'nearest'});
+    pendingFileScroll=null;
+  }
 }
 function el(cls,text){const d=document.createElement('div');d.className=cls;if(text!=null)d.textContent=text;return d;}
 function spn(cls,text){const s=document.createElement('span');s.className=cls;if(text!=null)s.textContent=text;return s;}

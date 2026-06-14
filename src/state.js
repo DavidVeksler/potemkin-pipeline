@@ -17,4 +17,5 @@ let liveState=null;   // generic per-frame ticker for live boss scenes (gpu/heat
 const startEpoch=Date.now();
 const counters={files:ri(80,250),lines:ri(80,600)*1000,tests:ri(800,2500),cves:ri(2,12),deploys:0,commits:0,incidents:0};
 const taskEls={}; const fileEls={}; let lastFileHl=null;
+let lineQueue=[], pendingFileScroll=null;   // batched DOM: queue log appends + coalesce rail scroll, flush once per frame
 const SPIN=['⠋','⠙','⠹','⠸','⠼','⠴','⠦','⠧','⠇','⠏'];

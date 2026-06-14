@@ -1149,6 +1149,7 @@ let liveState=null;   // generic per-frame ticker for live boss scenes (gpu/heat
 const startEpoch=Date.now();
 const counters={files:ri(80,250),lines:ri(80,600)*1000,tests:ri(800,2500),cves:ri(2,12),deploys:0,commits:0,incidents:0};
 const taskEls={}; const fileEls={}; let lastFileHl=null;
+let lineQueue=[], pendingFileScroll=null;   // batched DOM: queue log appends + coalesce rail scroll, flush once per frame
 const SPIN=['⠋','⠙','⠹','⠸','⠼','⠴','⠦','⠧','⠇','⠏'];
 
 /* ====================================================================== */
@@ -1207,7 +1208,7 @@ function highlightFile(path,st){
   if(!el){ if(st!=='A')return; el=insertFileRow(path); if(!el)return; el.classList.add('ft-new'); }
   if(lastFileHl && lastFileHl!==el){lastFileHl.classList.remove('hl');}
   el.classList.add('hl','glow'); lastFileHl=el; setStatus(el,st);
-  el.scrollIntoView({block:'nearest'});
+  pendingFileScroll=el;   // coalesced: the rail scroll runs once per frame in flushRender()
   setTimeout(()=>el.classList.remove('glow'),900);
 }
 /* new mission = committed working tree: clear M/A decorations, keep added files */
@@ -1224,11 +1225,25 @@ function appendLine(node){
   const txt=node.textContent;
   if(txt && txt===lastVisible) return;   // drop: never two identical consecutive log lines
   lastVisible=txt;
-  logEl.insertBefore(node,caret);
-  while(logEl.childElementCount>MAX_LINES+1){
-    const f=logEl.firstChild; if(f===caret)break; logEl.removeChild(f);
+  lineQueue.push(node);                   // batched: actual DOM insert happens in flushRender(), once per frame
+}
+// flush queued log lines as one DocumentFragment + a single autoscroll + one coalesced rail scroll.
+// called once per frame from frame(); keeps high-speed mode from thrashing layout per event.
+function flushRender(){
+  if(lineQueue.length){
+    const frag=document.createDocumentFragment();
+    for(let i=0;i<lineQueue.length;i++) frag.appendChild(lineQueue[i]);
+    lineQueue.length=0;
+    logEl.insertBefore(frag,caret);
+    while(logEl.childElementCount>MAX_LINES+1){
+      const f=logEl.firstChild; if(f===caret)break; logEl.removeChild(f);
+    }
+    autoscroll();
   }
-  autoscroll();
+  if(pendingFileScroll){
+    if(pendingFileScroll.isConnected) pendingFileScroll.scrollIntoView({block:'nearest'});
+    pendingFileScroll=null;
+  }
 }
 function el(cls,text){const d=document.createElement('div');d.className=cls;if(text!=null)d.textContent=text;return d;}
 function spn(cls,text){const s=document.createElement('span');s.className=cls;if(text!=null)s.textContent=text;return s;}
@@ -3426,6 +3441,7 @@ function frame(ts){
       } else { lastRelease=ts; }
     }
   }
+  flushRender();   // batched DOM: insert this frame's queued log lines + scroll once
   rafId=requestAnimationFrame(frame);
 }
 
