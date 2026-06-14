@@ -23,7 +23,7 @@ const cfg={
   model: QS.get('model')||'mythos-5-preview',
   theme: THEMES.includes(QS.get('theme'))?QS.get('theme'):'amber',
   speed: qfloat('speed',0.25,4,1),
-  intensity: qint('intensity',0,3,2),
+  dramas: (QS.get('dramas')==='off'||QS.get('intensity')==='0')?'off':'on',  // boss/ambient dramas on or off (legacy ?intensity=0 → off)
   freq: qfloat('freq',0.25,4,1),            // drama cadence multiplier (higher = more often)
   mode: QS.get('mode')==='performer'?'performer':'auto',
   audio: QS.get('audio')==='on'?'on':'off',
@@ -271,7 +271,7 @@ const cFiles=$('#c-files'),cLines=$('#c-lines'),cTests=$('#c-tests'),cCves=$('#c
 /* ====================================================================== */
 const MAX_LINES=500, REL_CAP=10, MAX_PER_FRAME=8;
 let logicalNow=0, nextAt=320, pending=null, lastTs=0, rafId=0, hidden=false;
-let paused=false, mode=cfg.mode, speed=cfg.speed, intensity=cfg.intensity, dramaFreq=cfg.freq;
+let paused=false, mode=cfg.mode, speed=cfg.speed, dramaOn=(cfg.dramas!=='off'), dramaFreq=cfg.freq;
 let releaseTokens=0, lastRelease=0;
 let overlayActive=false, dramaQ=[], nextDramaAt=U(45000,75000)/cfg.freq, firstDrama=true, lastCompact=-99999;
 let activeThinker=null, lastEmit=0, lastVisible='';
@@ -1481,11 +1481,7 @@ const DRAMAS={anomaly:dAnomaly,deploy:dDeploy,security:dSec,matrix:dMatrix,auth:
 const BOSS=['grafana','pipeline','flame','cluster','trace','sql','load','pr','docker','btop',
   'attackmap','gpu','mesh','heatmap'];
 const CORE=['anomaly','deploy','security','auth','matrix'];
-function enabledDramas(){
-  if(intensity<=0)return [];
-  if(intensity===1)return ['deploy','auth','security'];
-  return CORE.concat(BOSS);   // med & max: the full roster (max simply fires more often)
-}
+function enabledDramas(){ return dramaOn ? CORE.concat(BOSS) : []; }   // on → full roster; off → none (cadence is the frequency control)
 
 /* ====================================================================== */
 /* SCHEDULER                                                               */
@@ -1533,20 +1529,20 @@ function emitOne(){
 }
 function checkDrama(){
   if(overlayActive||dramaQ.length)return;
-  // context compaction (condition-driven): a full overlay when drama is on, a silent reset at intensity 0
+  // context compaction (condition-driven): a full overlay when dramas are on, a silent reset when off
   if(ctx>=80 && logicalNow-lastCompact>5000){
-    if(intensity>=1) dramaQ.push(DRAMAS.compaction);
-    else ctxAnim={from:ctx,to:U(22,28),t0:performance.now(),dur:1400};   // silent compaction at intensity 0
+    if(dramaOn) dramaQ.push(DRAMAS.compaction);
+    else ctxAnim={from:ctx,to:U(22,28),t0:performance.now(),dur:1400};   // silent compaction when dramas are off
     lastCompact=logicalNow; return;
   }
-  if(intensity<=0)return;
+  if(!dramaOn)return;
   if(logicalNow>=nextDramaAt){
     let type;
     const en=enabledDramas();
     if(firstDrama && en.indexOf('anomaly')>=0){ type='anomaly'; firstDrama=false; }
     else { type=pick(en); firstDrama=false; }
     if(type&&DRAMAS[type]) dramaQ.push(DRAMAS[type]);
-    nextDramaAt=logicalNow+U(60000,110000)/Math.max(1,intensity)/dramaFreq;
+    nextDramaAt=logicalNow+U(60000,110000)/dramaFreq;
   }
 }
 
@@ -1707,7 +1703,7 @@ function enterIdle(){
 function exitIdle(){
   if(!idleActive) return;
   idleActive=false; document.body.classList.remove('deepwork'); updateMode();
-  nextDramaAt=logicalNow+U(60000,110000)/Math.max(1,intensity)/dramaFreq;   // don't fire a drama the instant we resume
+  nextDramaAt=logicalNow+U(60000,110000)/dramaFreq;   // don't fire a drama the instant we resume
 }
 function markActivity(){ lastActivityTs=performance.now(); if(idleActive) exitIdle(); }
 function tickIdle(ts){
@@ -1777,7 +1773,6 @@ function toggleSettings(force){
 }
 function toggleHelp(force){ helpOpen=force!=null?force:!helpOpen; helpEl.classList.toggle('on',helpOpen); }
 
-const INTENSITY_LABEL=['off','low','med','max'];
 function buildConfig(){
   settingsEl.innerHTML='';
   // ---- header ----
@@ -1806,8 +1801,8 @@ function buildConfig(){
 
   g=sec('Pacing');
   fld(g,'speed',rng_(0.25,4,0.05,speed,v=>{speed=v;syncURL();},v=>v.toFixed(2)+'×'));
-  fld(g,'drama intensity',rng_(0,3,1,intensity,v=>{intensity=v|0;syncURL();},v=>INTENSITY_LABEL[v|0]||String(v)));
-  fld(g,'drama frequency',rng_(0.25,4,0.25,dramaFreq,v=>{dramaFreq=v;cfg.freq=v;nextDramaAt=logicalNow+U(60000,110000)/Math.max(1,intensity)/dramaFreq;syncURL();},v=>v.toFixed(2)+'×'),true);
+  fld(g,'dramas',sel(['on','off'],dramaOn?'on':'off',v=>{dramaOn=(v==='on');cfg.dramas=v;syncURL();}));
+  fld(g,'drama frequency',rng_(0.25,4,0.25,dramaFreq,v=>{dramaFreq=v;cfg.freq=v;nextDramaAt=logicalNow+U(60000,110000)/dramaFreq;syncURL();},v=>v.toFixed(2)+'×'));
 
   g=sec('Behavior');
   fld(g,'mode',sel(['auto','performer'],mode,v=>{mode=v;updateMode();syncURL();}));
@@ -1843,7 +1838,7 @@ function urlParams(forceSeed){
   if(cfg.model!=='mythos-5-preview')p.set('model',cfg.model);
   if(cfg.theme!=='amber')p.set('theme',cfg.theme);
   if(speed!==1)p.set('speed',speed.toFixed(2));
-  if(intensity!==2)p.set('intensity',String(intensity));
+  if(!dramaOn)p.set('dramas','off');
   if(dramaFreq!==1)p.set('freq',dramaFreq.toFixed(2));
   if(mode!=='auto')p.set('mode',mode);
   if(cfg.audio!=='off')p.set('audio',cfg.audio);
@@ -1863,7 +1858,7 @@ function copyLink(){
 function resetConfig(){
   cfg.model='mythos-5-preview'; cfg.audio='off'; cfg.crt='off'; cfg.reduceFlash=null;
   cfg.idle=90; idleThreshold=90; exitIdle();
-  speed=1; intensity=2; dramaFreq=1; cfg.freq=1; mode='auto'; cfg.project=PROJECTS[(rng()*PROJECTS.length)|0];
+  speed=1; dramaOn=true; cfg.dramas='on'; dramaFreq=1; cfg.freq=1; mode='auto'; cfg.project=PROJECTS[(rng()*PROJECTS.length)|0];
   cfg.seed=(Math.random()*4294967296)>>>0; _seed=cfg.seed; seedExplicit=false;
   cfg.agent=pickCodename(cfg.seed); agentExplicit=false;
   reduceFlash=prefersRM; reduceMotion=prefersRM;
@@ -1938,6 +1933,6 @@ init();
 
 // test/debug hook — only exposed with ?debug in the URL, so production ships zero global surface
 if(cfg.debug){
-  window.__HYP={state:()=>({lines:logEl.childElementCount,counters:Object.assign({},counters),mode,paused,speed,intensity,ctx:Math.round(ctx),overlayActive,idle:idleActive,logicalNow:Math.round(logicalNow),missionId}),force:forceDrama,drama:n=>{if(DRAMAS[n]&&!overlayActive&&!dramaQ.length)dramaQ.push(DRAMAS[n]);return n;},deepwork:enterIdle,wake:markActivity,seed:cfg.seed};
+  window.__HYP={state:()=>({lines:logEl.childElementCount,counters:Object.assign({},counters),mode,paused,speed,dramas:dramaOn,freq:dramaFreq,ctx:Math.round(ctx),overlayActive,idle:idleActive,logicalNow:Math.round(logicalNow),missionId}),force:forceDrama,drama:n=>{if(DRAMAS[n]&&!overlayActive&&!dramaQ.length)dramaQ.push(DRAMAS[n]);return n;},deepwork:enterIdle,wake:markActivity,seed:cfg.seed};
 }
 })();

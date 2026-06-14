@@ -68,7 +68,7 @@ always, always ends in green.
 </tr>
 </table>
 
-> GIFs are short loops captured at default (medium) intensity. They re-render slightly
+> GIFs are short loops captured at default cadence. They re-render slightly
 > differently every run — every story beat is driven by a seeded RNG.
 
 ## Under the hood
@@ -137,7 +137,7 @@ defaults to 90s.
 
 **URL params** (all optional, all persist via the config dialog's *Copy link*):
 `?seed=N` · `?agent=NAME` · `?project=NAME` · `?theme=amber|green|cyan` ·
-`?speed=0.25–4` · `?intensity=off|low|med|max` · `?freq=0.25–4` (drama cadence) ·
+`?speed=0.25–4` · `?dramas=on|off` · `?freq=0.25–4` (drama cadence) ·
 `?mode=performer` · `?idle=N`
 (seconds before deep-work mode; `0` disables) · `?audio=on` · `?crt=on` ·
 `?debug` (exposes a `window.__HYP` test hook — `__HYP.drama('gpu')`, `__HYP.deepwork()`, `__HYP.state()`).
