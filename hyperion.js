@@ -2131,6 +2131,10 @@ function fmtCost(n){ return '$'+(n<1000?n.toFixed(2):compactNum(Math.round(n)));
 function burnTick(){            // every tool call nudges spend + budget pressure
   cost+=U(0.008,0.055);
   if(!burnWarn && !burnEase) burnPct=clamp(burnPct+U(0.6,1.9),0,99);
+  // codebase steadily grows as the "agent" churns — keep footer counters alive between mission beats
+  bumpCounter('lines',ri(2,80));
+  if(rng()<0.12) bumpCounter('files',1);
+  if(rng()<0.2) bumpCounter('tests',ri(1,4));
 }
 function renderBurn(ts){
   // trip the 80% warning, then "nervously work around it" — ease the budget back down
