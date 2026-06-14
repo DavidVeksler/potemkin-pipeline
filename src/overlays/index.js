@@ -1,10 +1,6 @@
 /* ====================================================================== */
 /* BOSS-LEVEL APP WINDOWS (faux tool GUIs the agent "pulls up")            */
 /* ====================================================================== */
-const APP_BUILDERS={grafana:buildGrafana,pipeline:buildPipeline,flame:buildFlame,cluster:buildCluster,
-  trace:buildTrace,sql:buildSql,load:buildLoad,pr:buildPR,docker:buildDocker,btop:buildBtop,
-  attackmap:buildAttack,gpu:buildGpu,mesh:buildMesh,heatmap:buildHeat,cpuheat:buildCpu,swarm:buildSwarm};
-function buildApp(tool,body,ev){ const b=APP_BUILDERS[tool]; if(b) b(body,ev); }
 /* --- Grafana-style metrics dashboard --- */
 function sparkPts(spike){
   let s='',n=20;

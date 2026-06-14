@@ -50,8 +50,11 @@ function enqueueDrama(gen,name){
   toast((overlayActive||dramaQ.length>1?'queued':'drama')+': '+name+(dramaQ.length>1?' ['+dramaQ.length+']':''));
 }
 function forceDrama(){
+  const boss=SCENE_REGISTRY.filter(s=>s.tags.includes('boss')).map(s=>s.id);
   const en=enabledDramas(); const base=en.length?en:['deploy','anomaly','security','auth','matrix'];
-  const type=pick(BOSS.concat(base)); enqueueDrama(DRAMAS[type],type);
+  const type=pick(boss.concat(base));
+  const scene=SCENE_REGISTRY.find(s=>s.id===type);
+  if(scene&&scene.generator) enqueueDrama(scene.generator,type);
 }
 function showBoss(){ bossActive=true; bossEl.classList.add('on'); }
 function hideBoss(){ bossActive=false; bossEl.classList.remove('on'); }
