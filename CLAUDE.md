@@ -20,8 +20,9 @@ one). Source keeps the `hyperion.*` prefix — leave that split alone.
 
 Edit **`hyperion.{html,css,js}`** — never `index.html` (it is generated). After any change
 run `./build.sh` and commit both the source file(s) and the regenerated `index.html`.
-No npm, no framework, no server, no external requests — the zero-dependency single-file
-output is the whole point. Runs over `file://`.
+**Auto-commit these changes — no need to ask first.** No npm, no framework, no server, no
+external requests — the zero-dependency single-file output is the whole point. Runs over
+`file://`.
 
 **Deploy:** there is no CI. GitHub Pages serves `index.html` from the repo root of `main`
 (remote `origin` → `github.com/DavidVeksler/potemkin-pipeline`), so the committed
