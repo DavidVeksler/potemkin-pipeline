@@ -498,7 +498,7 @@ body:not(.reduce) .mesh-node[data-state=down] .mesh-c{animation:gpf 1s ease-in-o
 .mesh-lbl{fill:var(--dim); font-size:8px; font-family:inherit}
 .mesh-cap{font-size:11px; color:var(--dim); text-align:center}
 /* latency heatmap (scrolling) */
-#appwin[data-tool=heatmap]{width:min(760px,94vw)}
+#appwin[data-tool=heatmap],#appwin[data-tool=cpuheat]{width:min(760px,94vw)}
 .appbody.heat{display:flex; flex-direction:column; gap:8px}
 .heat-head{display:flex; align-items:baseline; gap:10px}
 .heat-ht{font-size:11px; color:var(--accent); font-weight:700; letter-spacing:.5px}
@@ -1240,7 +1240,7 @@ function drawMatrix(){
 /* ====================================================================== */
 const APP_BUILDERS={grafana:buildGrafana,pipeline:buildPipeline,flame:buildFlame,cluster:buildCluster,
   trace:buildTrace,sql:buildSql,load:buildLoad,pr:buildPR,docker:buildDocker,btop:buildBtop,
-  attackmap:buildAttack,gpu:buildGpu,mesh:buildMesh,heatmap:buildHeat,swarm:buildSwarm};
+  attackmap:buildAttack,gpu:buildGpu,mesh:buildMesh,heatmap:buildHeat,cpuheat:buildCpu,swarm:buildSwarm};
 function buildApp(tool,body,ev){ const b=APP_BUILDERS[tool]; if(b) b(body,ev); }
 /* --- Grafana-style metrics dashboard --- */
 function sparkPts(spike){
@@ -2348,7 +2348,8 @@ function* dHeatmap(){
 }
 function* dCpuheat(){
   const hot=ri(0,CPU_CORES-1);
-  yield OV('app',{tool:'cpuheat',title:'cpu by core · '+pick(BANKS.host||['api-gw'])+'',url:'grafana.internal/d/'+hash(6),hot});
+  const host=pick(['prod-core','edge-gw','worker','api-gw','mythos'])+'-'+String(ri(1,24)).padStart(2,'0');
+  yield OV('app',{tool:'cpuheat',title:'cpu by core · '+host,url:'grafana.internal/d/'+hash(6),hot});
   yield L('▌ Pulling up the per-core CPU heatmap','accent',{wait:U(700,1100)});
   yield WAIT(U(1500,2100));
   beep('alert');
@@ -2575,11 +2576,11 @@ function* dDeepWork(){
 const DRAMAS={anomaly:dAnomaly,deploy:dDeploy,security:dSec,matrix:dMatrix,auth:dAuth,compaction:dCompact,
   grafana:dGrafana,pipeline:dPipeline,flame:dFlame,cluster:dCluster,
   trace:dTrace,sql:dSqlPlan,load:dLoad,pr:dPR,docker:dDocker,btop:dBtop,oom:dOom,
-  attackmap:dAttack,gpu:dGpu,mesh:dMesh,heatmap:dHeatmap,swarm:dSwarm,
+  attackmap:dAttack,gpu:dGpu,mesh:dMesh,heatmap:dHeatmap,cpuheat:dCpuheat,swarm:dSwarm,
   rebase:dRebase,mergeconflict:dMergeConflict,bisect:dBisect,reflog:dReflog,
   cherrypick:dCherryPick,filterrepo:dFilterRepo,octopus:dOctopus,blame:dBlame};
 const BOSS=['grafana','pipeline','flame','cluster','trace','sql','load','pr','docker','btop','oom',
-  'attackmap','gpu','mesh','heatmap','swarm'];
+  'attackmap','gpu','mesh','heatmap','cpuheat','swarm'];
 const GIT=['rebase','mergeconflict','bisect','reflog','cherrypick','filterrepo','octopus','blame'];
 const CORE=['anomaly','deploy','security','auth','matrix'];
 function enabledDramas(){ return dramaOn ? CORE.concat(BOSS,GIT) : []; }   // on → full roster; off → none (cadence is the frequency control)
@@ -2831,7 +2832,7 @@ const SCENE_GROUPS=[
     ['btop','btop · runaway process'],['oom','btop · OOM kill'],['anomaly','metric anomaly'] ]},
   {title:'Performance & profiling', items:[
     ['flame','pprof flame graph'],['sql','EXPLAIN · slow query'],
-    ['load','k6 load test'],['heatmap','latency heatmap'] ]},
+    ['load','k6 load test'],['heatmap','latency heatmap'],['cpuheat','cpu · core pinned'] ]},
   {title:'Infrastructure & containers', items:[
     ['cluster','k9s · CrashLoopBackOff'],['docker','docker buildx'],
     ['gpu','GPU farm · throttle'],['mesh','service mesh · breaker'] ]},
