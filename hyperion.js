@@ -1874,10 +1874,15 @@ function updateMode(){
 }
 function setTheme(t){ cfg.theme=t; document.documentElement.setAttribute('data-theme',t); cacheAccent(); toast('theme: '+t); syncURL(); }
 function setSpeed(v){ speed=clamp(v,0.25,4); toast('speed: '+speed.toFixed(2)+'×'); syncURL(); }
+const DRAMAQ_MAX=5;   // manual requests queue (auto cadence still refuses while busy); cap guards runaway
+function enqueueDrama(gen,name){
+  if(dramaQ.length>=DRAMAQ_MAX){ toast('drama queue full'); return; }
+  dramaQ.push(gen);
+  toast((overlayActive||dramaQ.length>1?'queued':'drama')+': '+name+(dramaQ.length>1?' ['+dramaQ.length+']':''));
+}
 function forceDrama(){
-  if(overlayActive||dramaQ.length){ toast('overlay busy'); return; }
   const en=enabledDramas(); const base=en.length?en:['deploy','anomaly','security','auth','matrix'];
-  const type=pick(BOSS.concat(base)); dramaQ.push(DRAMAS[type]); toast('drama: '+type);
+  const type=pick(BOSS.concat(base)); enqueueDrama(DRAMAS[type],type);
 }
 function showBoss(){ bossActive=true; bossEl.classList.add('on'); }
 function hideBoss(){ bossActive=false; bossEl.classList.remove('on'); }
@@ -1931,8 +1936,7 @@ const SCENE_GROUPS=[
 ];
 function queueDrama(name){
   if(!DRAMAS[name]){ toast('unknown scene'); return; }
-  if(overlayActive||dramaQ.length){ toast('overlay busy'); return; }
-  dramaQ.push(DRAMAS[name]); toast('scene: '+name);
+  enqueueDrama(DRAMAS[name],name);
 }
 function buildDramaPicker(){
   dramaEl.innerHTML='';
@@ -2207,6 +2211,6 @@ init();
 
 // test/debug hook — only exposed with ?debug in the URL, so production ships zero global surface
 if(cfg.debug){
-  window.__HYP={state:()=>({lines:logEl.childElementCount,counters:Object.assign({},counters),mode,paused,speed,dramas:dramaOn,freq:dramaFreq,ctx:Math.round(ctx),overlayActive,idle:idleActive,logicalNow:Math.round(logicalNow),missionId}),force:forceDrama,drama:n=>{if(DRAMAS[n]&&!overlayActive&&!dramaQ.length)dramaQ.push(DRAMAS[n]);return n;},deepwork:enterIdle,wake:markActivity,seed:cfg.seed};
+  window.__HYP={state:()=>({lines:logEl.childElementCount,counters:Object.assign({},counters),mode,paused,speed,dramas:dramaOn,freq:dramaFreq,ctx:Math.round(ctx),overlayActive,idle:idleActive,logicalNow:Math.round(logicalNow),missionId}),force:forceDrama,drama:n=>{if(DRAMAS[n])enqueueDrama(DRAMAS[n],n);return n;},deepwork:enterIdle,wake:markActivity,seed:cfg.seed};
 }
 })();
