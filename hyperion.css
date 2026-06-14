@@ -478,6 +478,25 @@ body:not(.reduce) .gpu-card[data-state=throttle]{animation:gpf 1.1s ease-in-out 
 body:not(.reduce) .mesh-node[data-state=down] .mesh-c{animation:gpf 1s ease-in-out infinite}
 .mesh-lbl{fill:var(--dim); font-size:8px; font-family:inherit}
 .mesh-cap{font-size:11px; color:var(--dim); text-align:center}
+/* DNS propagation table */
+#appwin[data-tool=dns]{width:min(620px,94vw)}
+.appbody.dns{display:flex; flex-direction:column; gap:9px}
+.dns-head .dns-ht{font-size:11px; color:var(--accent); font-weight:700; letter-spacing:.5px}
+.dns-tbl{display:flex; flex-direction:column; gap:3px}
+.dns-row{display:grid; grid-template-columns:1.5fr 1fr 6ch; gap:10px; align-items:center; font-size:11px;
+  padding:5px 9px; border-radius:5px; border:1px solid color-mix(in srgb,var(--dim) 22%,transparent);
+  background:color-mix(in srgb,var(--bg) 40%,transparent); transition:border-color .4s ease,background .4s ease}
+.dns-hr{border:none; background:none; padding:0 9px 1px; font-size:8.5px; letter-spacing:.6px}
+.dns-hr .dns-c{color:var(--dim)}
+.dns-rs{color:var(--fg); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.dns-ans{font-variant-numeric:tabular-nums; transition:color .4s ease}
+.dns-ttl{text-align:right; color:var(--dim); font-variant-numeric:tabular-nums}
+.dns-row[data-state=stale]{border-color:color-mix(in srgb,var(--err) 45%,transparent)}
+.dns-row[data-state=stale] .dns-ans{color:var(--err)}
+body:not(.reduce) .dns-row[data-state=stale]{animation:gpf 1.3s ease-in-out infinite}
+.dns-row[data-state=fresh]{border-color:color-mix(in srgb,var(--ok) 50%,transparent); background:color-mix(in srgb,var(--ok) 7%,transparent)}
+.dns-row[data-state=fresh] .dns-ans{color:var(--ok)}
+.dns-cap{font-size:11px; color:var(--dim); text-align:center}
 /* latency heatmap (scrolling) */
 #appwin[data-tool=heatmap],#appwin[data-tool=cpuheat]{width:min(760px,94vw)}
 .appbody.heat{display:flex; flex-direction:column; gap:8px}

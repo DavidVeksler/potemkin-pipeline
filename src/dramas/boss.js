@@ -345,6 +345,65 @@ function* dHeatmap(){
   yield WAIT(U(1400,2000));
   yield OV('close',{wait:U(700,1100)});
 }
+function* dDns(){
+  const sub=pick(['api','cdn','app','auth','www','edge']);
+  const domain=sub+'.'+pick(['acme','globex','initech','prod-eu','vault'])+'.'+pick(['com','io','net','dev']);
+  const oldIp='198.51.100.'+ri(2,250), newIp='203.0.113.'+ri(2,250);
+  const resolvers=dnsResolvers();
+  yield OV('app',{tool:'dns',title:'dig · '+domain,url:'',record:'A '+domain,resolvers,oldIp,newIp});
+  yield L('▌ Pushed an A-record change — now waiting on the planet to agree','accent',{wait:U(600,1000)});
+  for(let i=0;i<resolvers.length;i++) yield OV('appstep',{k:'r'+i+'-t',text:grp(ri(120,3600))+'s'});
+  yield WAIT(U(700,1100));
+  beep('alert');
+  yield OV('appstep',{k:'cap',text:'⚠ STALE RECORD — half the planet still resolves '+oldIp});
+  yield L('⚠ split brain — recursive resolvers cached the old IP, TTLs still draining','err',{wait:U(900,1500)});
+  yield THINK();
+  yield TOOL('Bash','for r in '+resolvers.slice(0,3).map(r=>r.name).join(' ')+'; do dig +short @$r '+domain+'; done');
+  yield OUT('flushing recursive caches · authoritative TTL lowered to 60s','dim',{burst:true});
+  yield WAIT(U(800,1200));
+  const order=shuffle(resolvers.map((_,i)=>i));
+  let fresh=0;
+  for(const i of order){
+    yield OV('appstep',{k:'r'+i,state:'fresh'});
+    yield OV('appstep',{k:'r'+i+'-a',text:newIp});
+    yield OV('appstep',{k:'r'+i+'-t',text:'60s'});
+    fresh++;
+    yield OV('appstep',{k:'cap',text:'propagating · '+fresh+'/'+resolvers.length+' resolvers fresh',wait:U(260,520)});
+    beep('tick');
+  }
+  yield OV('appstep',{k:'cap',text:'✓ PROPAGATED — global consensus on '+newIp});
+  beep('ok');
+  yield L('✔ it was DNS (it is always DNS) — '+domain+' converged on '+newIp,'ok',{wait:U(800,1400)});
+  yield CNT('incidents',1);
+  yield WAIT(U(1000,1500));
+  yield OV('close',{wait:U(700,1100)});
+}
+function* dChaos(){
+  const nodes=meshNodes();
+  const edges=[[0,1],[0,2],[1,3],[1,4],[2,5],[3,6],[4,6],[5,6]];
+  const fault=pick(['kill us-east-1','drop 30% of packets','inject +400ms latency','blackhole the primary db','pause the leader for 8s']);
+  const victims=shuffle([1,2,3,4,5].slice()).slice(0,ri(2,3));
+  yield OV('app',{tool:'mesh',title:'litmus · game day · prod',url:'litmus.internal/experiment/'+hash(6),nodes,edges});
+  yield L('▌ GAME DAY — injecting a fault on purpose to prove resilience','accent',{wait:U(700,1100)});
+  yield OV('appstep',{k:'cap',text:'⚂ experiment: '+fault+' · steady-state hypothesis armed'});
+  yield WAIT(U(800,1200));
+  beep('alert');
+  for(const v of victims) yield OV('appstep',{k:'n'+v,state:'down'});
+  yield OV('appstep',{k:'cap',text:'⚠ blast radius: '+victims.length+' services degraded — breakers arming'});
+  yield L('⚠ '+victims.length+' services degraded — sweating, but the circuit breakers should hold','warn',{wait:U(900,1500)});
+  yield THINK();
+  yield L('Fallbacks engaging — shedding load, serving from cache, retries capped with jitter','dim',{wait:U(800,1400)});
+  yield TOOL('Bash','litmusctl status --experiment '+hash(6));
+  yield OUT(ri(2,5)+' breakers tripped · fallbacks serving · 0 user-facing errors','dim',{burst:true});
+  yield WAIT(U(900,1400));
+  for(const v of victims) yield OV('appstep',{k:'n'+v,state:'up'});
+  yield OV('appstep',{k:'cap',text:'✓ STEADY STATE held · 0 user-facing errors · hypothesis confirmed'});
+  beep('ok');
+  yield L('✔ game day passed — the system degraded gracefully and nobody noticed','ok',{wait:U(800,1400)});
+  yield CNT('incidents',1);
+  yield WAIT(U(1000,1500));
+  yield OV('close',{wait:U(700,1100)});
+}
 function* dCpuheat(){
   const hot=ri(0,CPU_CORES-1);
   const host=pick(['prod-core','edge-gw','worker','api-gw','mythos'])+'-'+String(ri(1,24)).padStart(2,'0');

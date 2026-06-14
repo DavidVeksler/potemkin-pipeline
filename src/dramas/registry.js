@@ -24,6 +24,7 @@ const SCENE_REGISTRY=[
   {id:'btop',         label:'btop · runaway process',      category:'Observability & telemetry',   generator:dBtop,          appBuilder:buildBtop,     weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
   {id:'oom',          label:'btop · OOM kill',             category:'Observability & telemetry',   generator:dOom,           appBuilder:buildBtop,     weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
   {id:'anomaly',      label:'metric anomaly',              category:'Observability & telemetry',   generator:dAnomaly,       appBuilder:null,          weight:1,autoplay:true, requiresMotion:false,tags:['core']},
+  {id:'pager',        label:'on-call page · 03:14',        category:'Observability & telemetry',   generator:dPager,         appBuilder:null,          weight:1,autoplay:true, requiresMotion:false,tags:['core']},
   // ---- Performance & profiling ----
   {id:'flame',        label:'pprof flame graph',           category:'Performance & profiling',     generator:dFlame,         appBuilder:buildFlame,    weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
   {id:'sql',          label:'EXPLAIN · slow query',        category:'Performance & profiling',     generator:dSqlPlan,       appBuilder:buildSql,      weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
@@ -35,8 +36,11 @@ const SCENE_REGISTRY=[
   {id:'docker',       label:'docker buildx',               category:'Infrastructure & containers', generator:dDocker,        appBuilder:buildDocker,   weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
   {id:'gpu',          label:'GPU farm · throttle',         category:'Infrastructure & containers', generator:dGpu,           appBuilder:buildGpu,      weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
   {id:'mesh',         label:'service mesh · breaker',      category:'Infrastructure & containers', generator:dMesh,          appBuilder:buildMesh,     weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
+  {id:'dns',          label:'DNS propagation',             category:'Infrastructure & containers', generator:dDns,           appBuilder:buildDns,      weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
+  {id:'chaos',        label:'chaos · game day',            category:'Infrastructure & containers', generator:dChaos,         appBuilder:null,          weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
   // ---- Ship & release ----
   {id:'pipeline',     label:'CI/CD pipeline',              category:'Ship & release',              generator:dPipeline,      appBuilder:buildPipeline, weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
+  {id:'terraform',    label:'terraform plan/apply',        category:'Ship & release',              generator:dTerraform,     appBuilder:null,          weight:1,autoplay:true, requiresMotion:false,tags:['core']},
   {id:'deploy',       label:'deploy & rollout',            category:'Ship & release',              generator:dDeploy,        appBuilder:null,          weight:1,autoplay:true, requiresMotion:false,tags:['core']},
   {id:'pr',           label:'GitHub pull request',         category:'Ship & release',              generator:dPR,            appBuilder:buildPR,       weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
   // ---- Security ----

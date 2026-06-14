@@ -499,6 +499,28 @@ function buildMesh(body,ev){
   const cap=el('mesh-cap','7 services · mTLS · '+grp(ri(2000,9000))+' req/s'); cap.dataset.k='cap'; body.appendChild(cap);
 }
 
+/* --- DNS propagation table : resolver → answer → TTL, stale until it converges --- */
+function dnsResolvers(){
+  return [
+    {name:'8.8.8.8'},{name:'1.1.1.1'},{name:'9.9.9.9'},
+    {name:'ns1.authoritative'},{name:'resolver.us-east'},{name:'resolver.ap-south'},
+  ];
+}
+function buildDns(body,ev){
+  body.classList.add('dns');
+  const head=el('dns-head'); head.appendChild(spn('dns-ht','dig '+ev.record+' · propagation across resolvers')); body.appendChild(head);
+  const tbl=el('dns-tbl');
+  const hr=el('dns-row dns-hr'); ['RESOLVER','ANSWER','TTL'].forEach(h=>hr.appendChild(spn('dns-c',h))); tbl.appendChild(hr);
+  ev.resolvers.forEach((r,i)=>{
+    const row=el('dns-row'); row.dataset.k='r'+i; row.dataset.state='stale';
+    row.appendChild(spn('dns-c dns-rs',r.name));
+    const ans=spn('dns-c dns-ans',ev.oldIp); ans.dataset.k='r'+i+'-a'; row.appendChild(ans);
+    const ttl=spn('dns-c dns-ttl','—'); ttl.dataset.k='r'+i+'-t'; row.appendChild(ttl);
+    tbl.appendChild(row);
+  });
+  body.appendChild(tbl);
+  const cap=el('dns-cap','querying authoritative…'); cap.dataset.k='cap'; body.appendChild(cap);
+}
 /* --- latency heatmap (scrolling canvas) : a live ticker scene --- */
 const HEAT_BANDS=['p50','p75','p90','p95','p99','p99.9'];
 function heatColor(v){

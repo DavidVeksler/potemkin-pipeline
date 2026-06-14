@@ -1161,6 +1161,28 @@ function buildMesh(body,ev){
   const cap=el('mesh-cap','7 services · mTLS · '+grp(ri(2000,9000))+' req/s'); cap.dataset.k='cap'; body.appendChild(cap);
 }
 
+/* --- DNS propagation table : resolver → answer → TTL, stale until it converges --- */
+function dnsResolvers(){
+  return [
+    {name:'8.8.8.8'},{name:'1.1.1.1'},{name:'9.9.9.9'},
+    {name:'ns1.authoritative'},{name:'resolver.us-east'},{name:'resolver.ap-south'},
+  ];
+}
+function buildDns(body,ev){
+  body.classList.add('dns');
+  const head=el('dns-head'); head.appendChild(spn('dns-ht','dig '+ev.record+' · propagation across resolvers')); body.appendChild(head);
+  const tbl=el('dns-tbl');
+  const hr=el('dns-row dns-hr'); ['RESOLVER','ANSWER','TTL'].forEach(h=>hr.appendChild(spn('dns-c',h))); tbl.appendChild(hr);
+  ev.resolvers.forEach((r,i)=>{
+    const row=el('dns-row'); row.dataset.k='r'+i; row.dataset.state='stale';
+    row.appendChild(spn('dns-c dns-rs',r.name));
+    const ans=spn('dns-c dns-ans',ev.oldIp); ans.dataset.k='r'+i+'-a'; row.appendChild(ans);
+    const ttl=spn('dns-c dns-ttl','—'); ttl.dataset.k='r'+i+'-t'; row.appendChild(ttl);
+    tbl.appendChild(row);
+  });
+  body.appendChild(tbl);
+  const cap=el('dns-cap','querying authoritative…'); cap.dataset.k='cap'; body.appendChild(cap);
+}
 /* --- latency heatmap (scrolling canvas) : a live ticker scene --- */
 const HEAT_BANDS=['p50','p75','p90','p95','p99','p99.9'];
 function heatColor(v){
@@ -1451,6 +1473,45 @@ function* dAuth(){
   yield OV('boxline',{text:'verifying policy · MFA ok',tone:'dim',wait:U(400,800)});
   yield OV('boxline',{text:'GRANTED ✔',tone:'ok',wait:U(400,800)});
   yield OV('close',{wait:U(500,900)});
+}
+function* dTerraform(){
+  const res=pick(['aws_db_instance.prod','aws_rds_cluster.primary','google_sql_database_instance.main','azurerm_postgresql_server.core']);
+  const add=ri(28,61), chg=ri(6,22), del=ri(1,4);
+  yield OV('open',{type:'box'});
+  yield OV('box',{title:'⊹ TERRAFORM · plan',variant:'deploy',wait:U(200,400)});
+  yield OV('boxline',{text:'terraform plan -out tfplan',tone:'accent',wait:U(300,600)});
+  yield OV('boxline',{text:'Plan: +'+add+' to add, ~'+chg+' to change, -'+del+' to destroy',tone:'warn',wait:U(400,700)});
+  yield OV('boxline',{text:'  - '+res+'   (forces replacement)',tone:'err',wait:U(500,900)});
+  yield THINK();
+  yield L('that destroy line is intentional — blue/green swap, the green instance is already healthy','warn',{wait:U(800,1500)});
+  const steps=['refreshing state','creating '+res.replace(/\.\w+$/,'.green'),'shifting traffic weights','destroying '+res,'committing state'];
+  for(let i=0;i<steps.length;i++) yield OV('bar',{frac:(i+1)/steps.length,label:steps[i],wait:U(250,550)});
+  yield OV('boxline',{text:'Apply complete! Resources: '+add+' added, '+chg+' changed, '+del+' destroyed.',tone:'ok',wait:U(400,800)});
+  beep('deploy');
+  yield CNT('deploys',1);
+  yield OV('close',{wait:U(700,1200)});
+}
+function* dPager(){
+  const min=ri(10,55), sec=String(ri(10,59)).padStart(2,'0');
+  const sev=pick(['P1','P1','P2']), ackS=ri(8,40), mttr=ri(4,9);
+  const svc=pick(['api-gateway','checkout','auth','payments','ingest','search']);
+  yield OV('open',{type:'anomaly'});
+  yield OV('banner',{cls:'err pulse',text:'📟 PAGE · '+sev+' · 03:'+String(min).padStart(2,'0')+':'+sec+' — '+svc+' error budget exhausted',wait:U(400,700)});
+  beep('alert');
+  yield L('▌ Ack’d in '+ackS+'s — the agent never sleeps','accent',{wait:U(600,1100)});
+  yield TOOL('Bash','kubectl logs -l app='+svc+' --since=10m | grep -iE "5..|error" | tail');
+  yield OUT(grp(ri(400,9000))+' errors in 10m · onset 03:'+String(min).padStart(2,'0'),'dim',{burst:true,more:ri(14,90)});
+  yield THINK();
+  yield L(pick(RETHINK),'warn',{wait:U(800,1500)});
+  yield TOOL('Edit',pick(FILES));
+  yield DIFF('+',pick(FIX),{wait:U(60,160)});
+  yield OUT('hotfix rolling out · watching the error budget recover','dim',{burst:true});
+  yield WAIT(U(900,1400));
+  yield OV('banner',{cls:'ok',text:'✓ RESOLVED · 03:'+String((min+mttr)%60).padStart(2,'0')+' · MTTR '+mttr+'m · 0 customer impact',wait:U(700,1300)});
+  beep('ok');
+  yield L('✔ page resolved · '+svc+' back under SLO · postmortem auto-drafted','ok',{wait:U(600,1100)});
+  yield CNT('incidents',1);
+  yield OV('close',{wait:U(600,1000)});
 }
 
 /* ---- boss-level: the agent pulls up an external tool's GUI ---- */
@@ -1800,6 +1861,65 @@ function* dHeatmap(){
   yield WAIT(U(1400,2000));
   yield OV('close',{wait:U(700,1100)});
 }
+function* dDns(){
+  const sub=pick(['api','cdn','app','auth','www','edge']);
+  const domain=sub+'.'+pick(['acme','globex','initech','prod-eu','vault'])+'.'+pick(['com','io','net','dev']);
+  const oldIp='198.51.100.'+ri(2,250), newIp='203.0.113.'+ri(2,250);
+  const resolvers=dnsResolvers();
+  yield OV('app',{tool:'dns',title:'dig · '+domain,url:'',record:'A '+domain,resolvers,oldIp,newIp});
+  yield L('▌ Pushed an A-record change — now waiting on the planet to agree','accent',{wait:U(600,1000)});
+  for(let i=0;i<resolvers.length;i++) yield OV('appstep',{k:'r'+i+'-t',text:grp(ri(120,3600))+'s'});
+  yield WAIT(U(700,1100));
+  beep('alert');
+  yield OV('appstep',{k:'cap',text:'⚠ STALE RECORD — half the planet still resolves '+oldIp});
+  yield L('⚠ split brain — recursive resolvers cached the old IP, TTLs still draining','err',{wait:U(900,1500)});
+  yield THINK();
+  yield TOOL('Bash','for r in '+resolvers.slice(0,3).map(r=>r.name).join(' ')+'; do dig +short @$r '+domain+'; done');
+  yield OUT('flushing recursive caches · authoritative TTL lowered to 60s','dim',{burst:true});
+  yield WAIT(U(800,1200));
+  const order=shuffle(resolvers.map((_,i)=>i));
+  let fresh=0;
+  for(const i of order){
+    yield OV('appstep',{k:'r'+i,state:'fresh'});
+    yield OV('appstep',{k:'r'+i+'-a',text:newIp});
+    yield OV('appstep',{k:'r'+i+'-t',text:'60s'});
+    fresh++;
+    yield OV('appstep',{k:'cap',text:'propagating · '+fresh+'/'+resolvers.length+' resolvers fresh',wait:U(260,520)});
+    beep('tick');
+  }
+  yield OV('appstep',{k:'cap',text:'✓ PROPAGATED — global consensus on '+newIp});
+  beep('ok');
+  yield L('✔ it was DNS (it is always DNS) — '+domain+' converged on '+newIp,'ok',{wait:U(800,1400)});
+  yield CNT('incidents',1);
+  yield WAIT(U(1000,1500));
+  yield OV('close',{wait:U(700,1100)});
+}
+function* dChaos(){
+  const nodes=meshNodes();
+  const edges=[[0,1],[0,2],[1,3],[1,4],[2,5],[3,6],[4,6],[5,6]];
+  const fault=pick(['kill us-east-1','drop 30% of packets','inject +400ms latency','blackhole the primary db','pause the leader for 8s']);
+  const victims=shuffle([1,2,3,4,5].slice()).slice(0,ri(2,3));
+  yield OV('app',{tool:'mesh',title:'litmus · game day · prod',url:'litmus.internal/experiment/'+hash(6),nodes,edges});
+  yield L('▌ GAME DAY — injecting a fault on purpose to prove resilience','accent',{wait:U(700,1100)});
+  yield OV('appstep',{k:'cap',text:'⚂ experiment: '+fault+' · steady-state hypothesis armed'});
+  yield WAIT(U(800,1200));
+  beep('alert');
+  for(const v of victims) yield OV('appstep',{k:'n'+v,state:'down'});
+  yield OV('appstep',{k:'cap',text:'⚠ blast radius: '+victims.length+' services degraded — breakers arming'});
+  yield L('⚠ '+victims.length+' services degraded — sweating, but the circuit breakers should hold','warn',{wait:U(900,1500)});
+  yield THINK();
+  yield L('Fallbacks engaging — shedding load, serving from cache, retries capped with jitter','dim',{wait:U(800,1400)});
+  yield TOOL('Bash','litmusctl status --experiment '+hash(6));
+  yield OUT(ri(2,5)+' breakers tripped · fallbacks serving · 0 user-facing errors','dim',{burst:true});
+  yield WAIT(U(900,1400));
+  for(const v of victims) yield OV('appstep',{k:'n'+v,state:'up'});
+  yield OV('appstep',{k:'cap',text:'✓ STEADY STATE held · 0 user-facing errors · hypothesis confirmed'});
+  beep('ok');
+  yield L('✔ game day passed — the system degraded gracefully and nobody noticed','ok',{wait:U(800,1400)});
+  yield CNT('incidents',1);
+  yield WAIT(U(1000,1500));
+  yield OV('close',{wait:U(700,1100)});
+}
 function* dCpuheat(){
   const hot=ri(0,CPU_CORES-1);
   const host=pick(['prod-core','edge-gw','worker','api-gw','mythos'])+'-'+String(ri(1,24)).padStart(2,'0');
@@ -2057,6 +2177,7 @@ const SCENE_REGISTRY=[
   {id:'btop',         label:'btop · runaway process',      category:'Observability & telemetry',   generator:dBtop,          appBuilder:buildBtop,     weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
   {id:'oom',          label:'btop · OOM kill',             category:'Observability & telemetry',   generator:dOom,           appBuilder:buildBtop,     weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
   {id:'anomaly',      label:'metric anomaly',              category:'Observability & telemetry',   generator:dAnomaly,       appBuilder:null,          weight:1,autoplay:true, requiresMotion:false,tags:['core']},
+  {id:'pager',        label:'on-call page · 03:14',        category:'Observability & telemetry',   generator:dPager,         appBuilder:null,          weight:1,autoplay:true, requiresMotion:false,tags:['core']},
   // ---- Performance & profiling ----
   {id:'flame',        label:'pprof flame graph',           category:'Performance & profiling',     generator:dFlame,         appBuilder:buildFlame,    weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
   {id:'sql',          label:'EXPLAIN · slow query',        category:'Performance & profiling',     generator:dSqlPlan,       appBuilder:buildSql,      weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
@@ -2068,8 +2189,11 @@ const SCENE_REGISTRY=[
   {id:'docker',       label:'docker buildx',               category:'Infrastructure & containers', generator:dDocker,        appBuilder:buildDocker,   weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
   {id:'gpu',          label:'GPU farm · throttle',         category:'Infrastructure & containers', generator:dGpu,           appBuilder:buildGpu,      weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
   {id:'mesh',         label:'service mesh · breaker',      category:'Infrastructure & containers', generator:dMesh,          appBuilder:buildMesh,     weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
+  {id:'dns',          label:'DNS propagation',             category:'Infrastructure & containers', generator:dDns,           appBuilder:buildDns,      weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
+  {id:'chaos',        label:'chaos · game day',            category:'Infrastructure & containers', generator:dChaos,         appBuilder:null,          weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
   // ---- Ship & release ----
   {id:'pipeline',     label:'CI/CD pipeline',              category:'Ship & release',              generator:dPipeline,      appBuilder:buildPipeline, weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
+  {id:'terraform',    label:'terraform plan/apply',        category:'Ship & release',              generator:dTerraform,     appBuilder:null,          weight:1,autoplay:true, requiresMotion:false,tags:['core']},
   {id:'deploy',       label:'deploy & rollout',            category:'Ship & release',              generator:dDeploy,        appBuilder:null,          weight:1,autoplay:true, requiresMotion:false,tags:['core']},
   {id:'pr',           label:'GitHub pull request',         category:'Ship & release',              generator:dPR,            appBuilder:buildPR,       weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
   // ---- Security ----
