@@ -72,8 +72,10 @@ body.paused .dot{background:var(--warn);box-shadow:0 0 6px var(--warn)}
 .ln .targ{color:var(--accent)}
 .ln .tkey{color:var(--dim)}
 .ln .tval{color:var(--fg);opacity:.85}
+.ln .tns{color:var(--dim);opacity:.7}
 .ln.out{color:var(--dim); padding-left:2.5ch}
 .ln.out .br{color:var(--dim);opacity:.7}
+.ln.out.collapse{color:var(--dim); opacity:.55; padding-left:4.5ch; font-size:.92em}
 .ln.diff{padding-left:2.5ch}
 .ln.diff.add{color:var(--add)}
 .ln.diff.del{color:var(--del);opacity:.85}
@@ -107,6 +109,8 @@ body.reduce #caret{animation:none}
   scrollbar-color:var(--dim) transparent; font-size:12px;
 }
 .rail-sec{margin-bottom:16px}
+.rail-pin{position:sticky; top:-10px; z-index:2; margin:-10px -12px 16px; padding:10px 12px 8px;
+  background:var(--rail); border-bottom:1px solid color-mix(in srgb,var(--dim) 30%,transparent)}
 .rail-h{color:var(--dim); letter-spacing:1.5px; font-size:10px; margin-bottom:6px; opacity:.85}
 #tasktree li{list-style:none; margin:2px 0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
 #tasktree{margin:0;padding:0}

@@ -166,6 +166,7 @@ const CVSS=['7.1','7.5','8.2','8.8','9.1','9.8','9.8','8.8','9.1'];
 const METRICS=[['p99 latency','down','ms'],['tail latency','down','ms'],['error rate','down','%'],['memory RSS','down','MB'],['GC pause','down','ms'],['cold-start','down','ms'],['lock contention','down','%'],['allocation rate','down','/s'],['throughput','up','rps']];
 const AGENTS=['scout','mason','auditor','scribe','sentry','runner','forge','probe','warden','drake'];
 const SUBTASKS=['audit auth flow','migrate config schema','dedupe utils','port tests to vitest','tighten error types','inline hot path','purge dead exports','wire feature flags','harden input validation','backfill migrations','split god module','vendor lockfile'];
+const TASKBANK=['map the dependency multiverse','model every reachable code path','war-game all failure modes','interrogate the call graph','exhume the legacy core','triangulate the root cause','enumerate every edge case','out-think the race condition','prove correctness by exhaustion','consult the changelog oracle','vaporize a decade of tech debt','flatten the abstraction tower','negotiate with the type checker','reverse local entropy','decompile original intent','audit the full blast radius','achieve total observability','rewrite physics in the hot path','tame the monorepo','summon the missing invariant','bend the latency curve','unify all microservices','defeat the heisenbug','sharpen Occam’s razor'];
 const SCANNED=['scanned','analyzed','inspected','audited','traced'];
 const FINDING=['vulnerabilities','code smells','anti-patterns','hot spots','dead branches','data races','N+1 queries','leaks'];
 const DONETAIL=['no regressions','all gates green','p99 within SLO','coverage +2.1%','zero criticals','rollback verified','SLO budget intact'];
@@ -425,7 +426,11 @@ function render(ev){
       resolveTool();
       const d=el('ln tool');
       const dot=spn('tdot pending',SPIN[0]+' '); d.appendChild(dot);
-      d.appendChild(spn('tname',ev.tool));
+      if(ev.tool.startsWith('mcp__')){   // mcp__server__action — dim the namespace, normal action
+        const p=ev.tool.split('__');
+        d.appendChild(spn('tns','mcp__'+p[1]+'__'));
+        d.appendChild(spn('tname',p.slice(2).join('__')));
+      } else d.appendChild(spn('tname',ev.tool));
       d.appendChild(document.createTextNode('('));
       d.appendChild(spn('targ',ev.arg));
       for(const [k,v] of toolSig(ev.tool).slice(0,2)){   // key: value extra params
@@ -439,7 +444,9 @@ function render(ev){
     case 'output':{
       const d=el('ln out tone-'+(ev.tone||'dim'));
       d.appendChild(spn('br','⎿ ')); d.appendChild(document.createTextNode(ev.text));
-      appendLine(d); resolveTool(ev.tone); break;
+      appendLine(d);
+      if(ev.more) appendLine(el('ln out collapse','… +'+ev.more+' lines (ctrl+r to expand)'));
+      resolveTool(ev.tone); break;
     }
     case 'diff':{
       const add=ev.sign==='+';
@@ -1220,8 +1227,10 @@ function* pMap(m){
 function* pPlan(m){
   yield PHASE('PLAN');
   yield L('Drafting execution plan for '+m.subject+'…','accent');
-  yield TASK('scan','map deps','✔');      yield TASK('map','build model','✔');
-  yield TASK('plan','write plan','✔');     yield TASK('impl','implement '+m.short,'○');
+  const prep=shuffle(TASKBANK.slice()).slice(0,3+ri(0,2));
+  for(let i=0;i<prep.length;i++) yield TASK('p'+i,prep[i],'✔');
+  yield TASK('plan','ratify the master plan','✔');
+  yield TASK('impl','implement '+m.short,'○');
   yield TASK('test','run tests','○');      yield TASK('deploy','ship','○');
 }
 function* pImpl(m){
@@ -1262,7 +1271,7 @@ function* pTest(m,attempt){
   const pFail=clamp(0.35+0.2*(m.difficulty-1),0,0.9);
   const willFail=(m.forceFail&&attempt===0)||(attempt<2 && rng()<pFail);
   if(willFail){
-    yield OUT((total-1)+' passing, 1 failing ('+(2+rng()*3).toFixed(1)+'s)','warn',{burst:true});
+    yield OUT((total-1)+' passing, 1 failing ('+(2+rng()*3).toFixed(1)+'s)','warn',{burst:true,more:ri(12,80)});
     yield OUT('✗ '+pick(ASSERT),'err');
     yield THINK();
     yield L(pick(RETHINK),'warn',{wait:U(900,3200)});
