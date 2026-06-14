@@ -254,6 +254,25 @@ body:not(.reduce) .pl-node[data-state=running] .pl-ic::before{animation:spin 1s 
 body:not(.reduce) .cl-node[data-state=down] .cl-c{animation:gpf 1s ease-in-out infinite}
 .cl-lbl{fill:var(--dim); font-size:8px; font-family:inherit}
 .cl-cap{font-size:11px; color:var(--dim); text-align:center}
+/* subagent fleet */
+#appwin[data-tool=swarm]{width:min(560px,95vw)}
+.sw-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:8px}
+.sw-card{border:1px solid color-mix(in srgb,var(--dim) 35%,transparent); border-radius:6px;
+  padding:6px 8px; background:color-mix(in srgb,var(--bg) 40%,transparent); opacity:.35}
+body:not(.reduce) .sw-card{transition:opacity .25s ease,border-color .3s ease,background .3s ease}
+.sw-card[data-state=spawn],.sw-card[data-state=explore],.sw-card[data-state=edit]{opacity:1; border-color:var(--accent)}
+.sw-card[data-state=done]{opacity:1; border-color:color-mix(in srgb,var(--ok) 55%,transparent); background:color-mix(in srgb,var(--ok) 8%,transparent)}
+.sw-card[data-state=dead]{opacity:.55; border-color:var(--err); background:color-mix(in srgb,var(--err) 10%,transparent)}
+body:not(.reduce) .sw-card[data-state=dead]{animation:gpf 1s ease-in-out infinite}
+.sw-id{font-size:11px; font-weight:700; color:var(--accent); letter-spacing:.3px}
+.sw-card[data-state=done] .sw-id{color:var(--ok)} .sw-card[data-state=dead] .sw-id{color:var(--err)}
+.sw-task{font-size:9.5px; color:var(--dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin:2px 0}
+.sw-meta{display:flex; justify-content:space-between; font-size:9px; color:var(--dim); font-variant-numeric:tabular-nums}
+.sw-bar{height:3px; margin-top:4px; background:color-mix(in srgb,var(--dim) 14%,transparent); border-radius:2px; overflow:hidden}
+.sw-fill{height:100%; width:var(--p,0%); background:color-mix(in srgb,var(--accent) 60%,var(--rail))}
+body:not(.reduce) .sw-fill{transition:width .4s ease}
+.sw-card[data-state=done] .sw-fill{background:color-mix(in srgb,var(--ok) 60%,var(--rail))}
+.sw-cap{font-size:11px; color:var(--dim); text-align:center}
 /* trace waterfall */
 .tr{display:flex; flex-direction:column; gap:3px; margin-bottom:8px}
 .tr-row{display:flex; align-items:center; gap:8px; height:18px}

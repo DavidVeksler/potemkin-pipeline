@@ -157,6 +157,8 @@ const MODULES=['auth','cache','ledger','raft','mesh','index','queue','planner','
 const PKGS=['libssl','openssl','log4j-core','lodash','axios','protobuf-runtime','jackson-databind','urllib3','glibc','curl','zlib','xz-utils'];
 const CVSS=['7.1','7.5','8.2','8.8','9.1','9.8','9.8','8.8','9.1'];
 const METRICS=[['p99 latency','down','ms'],['tail latency','down','ms'],['error rate','down','%'],['memory RSS','down','MB'],['GC pause','down','ms'],['cold-start','down','ms'],['lock contention','down','%'],['allocation rate','down','/s'],['throughput','up','rps']];
+const AGENTS=['scout','mason','auditor','scribe','sentry','runner','forge','probe','warden','drake'];
+const SUBTASKS=['audit auth flow','migrate config schema','dedupe utils','port tests to vitest','tighten error types','inline hot path','purge dead exports','wire feature flags','harden input validation','backfill migrations','split god module','vendor lockfile'];
 const SCANNED=['scanned','analyzed','inspected','audited','traced'];
 const FINDING=['vulnerabilities','code smells','anti-patterns','hot spots','dead branches','data races','N+1 queries','leaks'];
 const DONETAIL=['no regressions','all gates green','p99 within SLO','coverage +2.1%','zero criticals','rollback verified','SLO budget intact'];
@@ -541,7 +543,7 @@ function drawMatrix(){
 /* ====================================================================== */
 const APP_BUILDERS={grafana:buildGrafana,pipeline:buildPipeline,flame:buildFlame,cluster:buildCluster,
   trace:buildTrace,sql:buildSql,load:buildLoad,pr:buildPR,docker:buildDocker,btop:buildBtop,
-  attackmap:buildAttack,gpu:buildGpu,mesh:buildMesh,heatmap:buildHeat};
+  attackmap:buildAttack,gpu:buildGpu,mesh:buildMesh,heatmap:buildHeat,swarm:buildSwarm};
 function buildApp(tool,body,ev){ const b=APP_BUILDERS[tool]; if(b) b(body,ev); }
 /* --- Grafana-style metrics dashboard --- */
 function sparkPts(spike){
@@ -630,6 +632,28 @@ function buildCluster(body,ev){
   });
   body.appendChild(svg);
   const cap=el('cl-cap','6 services · 14 pods ready'); cap.dataset.k='cap'; body.appendChild(cap);
+}
+/* --- subagent fleet board (orchestrator fan-out) --- */
+function swarmAgents(){
+  const names=shuffle(AGENTS.slice()).slice(0,6), tasks=shuffle(SUBTASKS.slice()).slice(0,6);
+  return names.map((n,i)=>({id:n,task:tasks[i]}));
+}
+function buildSwarm(body,ev){
+  const grid=el('sw-grid');
+  ev.agents.forEach((a,i)=>{
+    const card=el('sw-card'); card.dataset.k='a'+i; card.dataset.state='pending';
+    card.appendChild(spn('sw-id','◐ '+a.id));
+    card.appendChild(el('sw-task',a.task));
+    const meta=el('sw-meta');
+    const st=spn('sw-stat','idle'); st.dataset.k='a'+i+'-s'; meta.appendChild(st);
+    const tk=spn('sw-tok','0'); tk.dataset.k='a'+i+'-t'; meta.appendChild(tk);
+    card.appendChild(meta);
+    const track=el('sw-bar'); const fill=el('sw-fill'); fill.dataset.k='a'+i+'-p';
+    fill.style.setProperty('--p','0%'); track.appendChild(fill); card.appendChild(track);
+    grid.appendChild(card);
+  });
+  body.appendChild(grid);
+  const cap=el('sw-cap','orchestrator · 0/6 spawned'); cap.dataset.k='cap'; body.appendChild(cap);
 }
 /* --- distributed trace waterfall (Jaeger) --- */
 function traceSpans(){
@@ -1261,6 +1285,61 @@ function* dCluster(){
   yield L('✔ service restored','ok',{wait:U(600,1000)});
   yield OV('close',{wait:U(800,1200)});
 }
+function* dSwarm(){
+  const ag=swarmAgents(), N=ag.length;
+  const victim=ri(1,N-1);            // agent-0 is the lead and never dies
+  const heir=victim===1?2:1;         // who absorbs the orphaned subtree
+  yield OV('app',{tool:'swarm',title:'orchestrator · '+cfg.project,url:'',agents:ag});
+  yield L('▌ Task exceeds single-context budget — fanning out','accent',{wait:U(500,900)});
+  yield TOOL('Task','spawn '+N+' subagents');
+  // ---- spawn (staggered reveal) ----
+  for(let i=0;i<N;i++){
+    yield OV('appstep',{k:'a'+i,state:'spawn'});
+    yield OV('appstep',{k:'a'+i+'-s',text:'spawning'});
+    yield OV('appstep',{k:'cap',text:'orchestrator · '+(i+1)+'/'+N+' spawned',wait:U(120,220)});
+    beep('tick');
+  }
+  yield L('✓ '+N+' agents live · isolated contexts','dim',{wait:U(400,700)});
+  // ---- divergence (each agent advances at its own pace) ----
+  const PHASES=['exploring','editing','verifying'];
+  for(let r=0;r<2;r++){
+    for(let i=0;i<N;i++){
+      if(i===victim && r===1) continue;   // victim dies before round 2
+      yield OV('appstep',{k:'a'+i,state:r?'edit':'explore'});
+      yield OV('appstep',{k:'a'+i+'-s',text:PHASES[r]});
+      yield OV('appstep',{k:'a'+i+'-t',text:grp(ri(2,9)*1000+ri(0,999))});
+      yield OV('appstep',{k:'a'+i+'-p',cssVar:'--p',val:(r?55+ri(0,20):20+ri(0,20))+'%',wait:U(90,200)});
+    }
+  }
+  // ---- the death ----
+  beep('alert');
+  yield OV('appstep',{k:'a'+victim,state:'dead'});
+  yield OV('appstep',{k:'a'+victim+'-s',text:'exited · API error'});
+  yield OV('appstep',{k:'a'+victim+'-p',cssVar:'--p',val:'0%'});
+  yield L('⚠ '+ag[victim].id+' died mid-task — orphaning subtree','err',{wait:U(700,1200)});
+  yield L('↻ redistributing '+ri(2,4)+' files to '+ag[heir].id,'warn',{wait:U(500,900)});
+  yield OV('appstep',{k:'a'+heir+'-s',text:'absorbing orphan'});
+  yield OV('appstep',{k:'a'+heir+'-p',cssVar:'--p',val:'40%',wait:U(600,1000)});
+  // ---- reconvergence (survivors report back, rng order) ----
+  const order=shuffle(ag.map((_,i)=>i).filter(i=>i!==victim));
+  let back=0;
+  for(const i of order){
+    yield OV('appstep',{k:'a'+i,state:'done'});
+    yield OV('appstep',{k:'a'+i+'-s',text:'✓ returned'});
+    yield OV('appstep',{k:'a'+i+'-p',cssVar:'--p',val:'100%'});
+    back++;
+    yield OV('appstep',{k:'cap',text:'merging reports · '+back+'/'+(N-1)+' returned',wait:U(250,500)});
+    beep('tick');
+  }
+  // ---- synthesis + the brag ----
+  yield L(pick(['Synthesizing '+(N-1)+' reports','Merging subagent findings']),'accent',{wait:U(500,900)});
+  yield OUT('dedup '+ri(2,4)+' overlapping edits · 1 conflict auto-resolved','dim',{burst:true});
+  yield WAIT(U(700,1100));
+  yield OV('appstep',{k:'cap',text:'✓ '+(N-1)+' agents · '+ri(18,29)+' files · '+ri(40,70)+'k tokens'});
+  beep('ok');
+  yield L('✔ fleet converged · '+ri(6,9)+'× faster than sequential','ok',{wait:U(600,1000)});
+  yield OV('close',{wait:U(800,1200)});
+}
 function* dTrace(){
   const t=traceSpans();
   yield OV('app',{tool:'trace',title:'Jaeger · trace '+hash(8),url:'jaeger/trace/'+hash(8),spans:t.spans,total:t.total});
@@ -1665,11 +1744,11 @@ function* dDeepWork(){
 const DRAMAS={anomaly:dAnomaly,deploy:dDeploy,security:dSec,matrix:dMatrix,auth:dAuth,compaction:dCompact,
   grafana:dGrafana,pipeline:dPipeline,flame:dFlame,cluster:dCluster,
   trace:dTrace,sql:dSqlPlan,load:dLoad,pr:dPR,docker:dDocker,btop:dBtop,
-  attackmap:dAttack,gpu:dGpu,mesh:dMesh,heatmap:dHeatmap,
+  attackmap:dAttack,gpu:dGpu,mesh:dMesh,heatmap:dHeatmap,swarm:dSwarm,
   rebase:dRebase,mergeconflict:dMergeConflict,bisect:dBisect,reflog:dReflog,
   cherrypick:dCherryPick,filterrepo:dFilterRepo,octopus:dOctopus,blame:dBlame};
 const BOSS=['grafana','pipeline','flame','cluster','trace','sql','load','pr','docker','btop',
-  'attackmap','gpu','mesh','heatmap'];
+  'attackmap','gpu','mesh','heatmap','swarm'];
 const GIT=['rebase','mergeconflict','bisect','reflog','cherrypick','filterrepo','octopus','blame'];
 const CORE=['anomaly','deploy','security','auth','matrix'];
 function enabledDramas(){ return dramaOn ? CORE.concat(BOSS,GIT) : []; }   // on → full roster; off → none (cadence is the frequency control)
@@ -1934,7 +2013,7 @@ const SCENE_GROUPS=[
     ['reflog','reflog recovery'],['cherrypick','cherry-pick backport'],['filterrepo','purge leaked secret'],
     ['octopus','octopus merge'],['blame','pickaxe archaeology'] ]},
   {title:'Agent & session', items:[
-    ['matrix','matrix cascade'],['compaction','context compaction'],['deepwork','deep work · away mode'] ]},
+    ['swarm','subagent fleet'],['matrix','matrix cascade'],['compaction','context compaction'],['deepwork','deep work · away mode'] ]},
 ];
 function queueDrama(name){
   if(!DRAMAS[name]){ toast('unknown scene'); return; }

@@ -34,7 +34,7 @@ someone who has never once been on call. Here's the highlight reel:
 
 ## The full roster
 
-Fourteen distinct dramas, each a tidy crisis → the-agent-acts → recovery arc that
+Fifteen distinct dramas, each a tidy crisis → the-agent-acts → recovery arc that
 always, always ends in green.
 
 <table>
@@ -82,8 +82,8 @@ framework). The interesting parts:
 - **The script is a generator.** Every mission and boss drama is a JS generator
   (`function*`) that *yields* typed events — `TOOL('Bash', …)`, `DIFF('+', …)`,
   `THINK()`, `WAIT(900)`, `OV('app', …)`. A scheduler pumps each event when the clock
-  passes its due time. ~14 event constructors compose **20 scripted dramas** (6 ambient
-  + 14 boss) on top of a never-ending stream of fake missions.
+  passes its due time. ~14 event constructors compose **21 scripted dramas** (6 ambient
+  + 15 boss) on top of a never-ending stream of fake missions.
 - **Determinism by seed.** A 32-bit `mulberry32` PRNG seeds everything narratively
   load-bearing: the procedurally generated file tree, the project, the agent's codename,
   which crisis strikes and how bad it gets. `?seed=N` reproduces a run to the beat.
