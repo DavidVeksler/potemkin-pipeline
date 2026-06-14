@@ -345,6 +345,114 @@ function* dHeatmap(){
   yield WAIT(U(1400,2000));
   yield OV('close',{wait:U(700,1100)});
 }
+function* dKafka(){
+  const topic=pick(['orders.v2','payments.events','clickstream','user.activity','ledger.cdc','telemetry.spans']);
+  const group=pick(['checkout-consumers','billing-workers','analytics-sink','search-indexer','fraud-scoring']);
+  yield OV('app',{tool:'kafka',title:'kafka · consumer lag · '+topic,url:'',topic});
+  yield L('▌ Checking consumer-group lag — the sink feels behind','accent',{wait:U(700,1100)});
+  yield WAIT(U(900,1400));
+  beep('alert');
+  yield OV('livefx',{phase:'spike'});
+  yield WAIT(U(900,1400));
+  const lag=ri(2,9)+'.'+ri(1,9)+'M';
+  yield OV('appstep',{k:'cap',text:'⚠ '+group+' falling behind — lag past '+lag+' on '+ri(3,4)+' partitions'});
+  yield L('⚠ consumer lag exploding — a few partitions stuck while the rest keep up','err',{wait:U(1000,1600)});
+  yield THINK();
+  yield L(pick(['A slow consumer pinned a partition — rebalancing the group.','One sink instance wedged — kicking it out of the group.','Hot-key skew on a partition — scaling consumers and reassigning.']),'warn',{wait:U(800,1500)});
+  yield TOOL('Bash','kafka-consumer-groups --group '+group+' --topic '+topic+' --reset-offsets --to-latest --execute');
+  yield OUT('triggering rebalance · '+ri(3,9)+' consumers · reassigning partitions','dim',{burst:true});
+  yield WAIT(U(1100,1600));
+  yield OV('livefx',{phase:'recover'});
+  yield OV('appstep',{k:'cap',text:'✓ group rebalanced · lag draining · all partitions back under 1k'});
+  beep('ok');
+  yield L('✔ consumer lag drained — '+group+' caught up to the log head','ok',{wait:U(1000,1600)});
+  yield CNT('incidents',1);
+  yield WAIT(U(1200,1800));
+  yield OV('close',{wait:U(700,1100)});
+}
+function* dVim(){
+  const wild = idleActive && rng()<0.5;
+  const file = wild?'~/.vimrc':pick(FILES);
+  yield OV('app',{tool:'vim',title:'vim · '+file,url:'',file:wild?pick(FILES):file});
+  yield L('▌ Dropping into the editor — '+ri(2,9)+(wild?' keybindings to optimize':' files need surgery'),'accent',{wait:U(500,900)});
+  // navigate — search and jump matches
+  const needle=pick(['TODO','panic(','== nil','catch','any']);
+  yield OV('appstep',{k:'cmd',text:'/'+needle});
+  for(let j=0;j<ri(2,4);j++){
+    const row=ri(1,12);
+    yield OV('appstep',{k:'cur',cssVar:'--row',val:row,wait:U(180,360)});
+    yield OV('appstep',{k:'ruler',text:(row+1)+','+ri(1,30)+'   '+ri(8,80)+'%'});
+    yield OV('appstep',{k:'cmd',text:'n   next match'});
+  }
+  // visual select + yank
+  yield OV('appstep',{k:'mode',text:'-- VISUAL --',state:'visual'});
+  yield OV('appstep',{k:'cmd',text:'vap   "ay'});
+  yield OUT(ri(4,30)+' lines yanked to register a','dim',{wait:U(300,600)});
+  // the macro — the centerpiece: counter ticks under a replaying macro
+  yield OV('appstep',{k:'mode',text:'-- NORMAL --',state:'normal'});
+  yield L('Recording a macro — qa … q, then @a across the buffer','warn',{wait:U(400,800)});
+  const reps=ri(4,9);
+  for(let i=0;i<reps;i++){
+    const row=ri(0,12);
+    yield OV('appstep',{k:'cur',cssVar:'--row',val:row});
+    yield OV('appstep',{k:'cmd',text:'@a   ('+(i+1)+'/'+reps+')'});
+    yield OV('appstep',{k:'ruler',text:(row+1)+','+ri(1,40)+'   '+ri(8,92)+'%'});
+    yield DIFF(rng()<0.72?'+':'-',rng()<0.72?pick(ADD):pick(DEL),{wait:U(120,300)});
+    yield CNT('lines',ri(3,40));
+  }
+  // the substitute — live count
+  const oldT=pick(['oldLock','await ','any','== nil','retryOnce']);
+  const newT=pick(['acquireLock','await guard ','unknown','=== null','retryWithJitter']);
+  yield OV('appstep',{k:'mode',text:':'});
+  yield OV('appstep',{k:'cmd',text:':%s/'+oldT+'/'+newT+'/gc'});
+  yield OUT(grp(ri(60,4000))+' substitutions on '+ri(20,400)+' lines','dim',{burst:true});
+  // reindent the whole buffer
+  yield OV('appstep',{k:'cmd',text:'gg=G'});
+  yield OUT('reindented buffer · '+ri(40,900)+' lines reformatted','dim',{wait:U(300,600)});
+  // write + exit — the punchline is exiting vim on the first try
+  const lines=ri(80,600), bytes=grp(ri(2000,40000));
+  yield OV('appstep',{k:'mode',text:':'});
+  yield OV('appstep',{k:'cmd',text:':wq'});
+  yield OV('appstep',{k:'cmd',text:'"'+file+'" '+grp(lines)+'L, '+bytes+'B written',wait:U(300,600)});
+  beep('ok');
+  yield L('✔ exited vim on the first try','ok',{wait:U(700,1200)});
+  yield CNT('files',1); yield CNT('lines',lines);
+  yield WAIT(U(900,1400));
+  yield OV('close',{wait:U(800,1200)});
+}
+function* dTmux(){
+  const panes=[
+    {name:'logs', lines:['▸ tail -f app.log','200 GET  /health   4ms','200 POST /charge  38ms','200 GET  /orders  12ms'], stat:'streaming…'},
+    {name:'build',lines:['$ go build ./...','ok  api     0.4s','ok  worker  0.6s'], stat:'watching for changes'},
+    {name:'htop', lines:['CPU [|||      12%]','MEM [||||     41%]','load 1.2 0.9 0.8'], stat:'12 tasks · 3 running'},
+    {name:'test', lines:['$ go test ./...','ok  cache','ok  ledger'], stat:'RUN  saga…'},
+  ];
+  const session=(cfg.project||'core').slice(0,12);
+  yield OV('app',{tool:'tmux',title:'tmux · '+session,url:'',session,panes});
+  yield L('▌ Tiling the war room — logs, build, htop, tests','accent',{wait:U(600,1000)});
+  yield WAIT(U(800,1200));
+  beep('alert');
+  const bad=3, pkg=pick(['saga','ledger','cache','quorum']);
+  yield OV('appstep',{k:'p0',state:'idle'});
+  yield OV('appstep',{k:'p'+bad,state:'err'});
+  yield OV('appstep',{k:'p'+bad+'-s',text:'✗ FAIL '+pkg+'_test.go:'+ri(11,140)});
+  yield OV('appstep',{k:'tabs',text:panes.map((p,i)=>i+':'+p.name+(i===bad?'!':'')).join('  ')});
+  yield L('⚠ pane '+bad+' (test) red — Ctrl-b '+bad+' to jump','err',{wait:U(800,1300)});
+  yield THINK();
+  yield L(pick(RETHINK),'warn',{wait:U(700,1200)});
+  yield TOOL('Edit',pick(FILES));
+  yield DIFF('+',pick(FIX),{wait:U(80,160)});
+  yield OUT('re-running the failing package','dim',{burst:true});
+  yield WAIT(U(900,1400));
+  yield OV('appstep',{k:'p'+bad,state:'ok'});
+  yield OV('appstep',{k:'p'+bad+'-s',text:'✓ ok  '+pkg+'  '+U(0.2,0.9).toFixed(1)+'s'});
+  yield OV('appstep',{k:'tabs',text:panes.map((p,i)=>i+':'+p.name).join('  ')});
+  beep('ok');
+  yield L('✔ all panes green — the war room is quiet again','ok',{wait:U(700,1200)});
+  yield CNT('tests',ri(1,4));
+  yield WAIT(U(1000,1500));
+  yield OV('close',{wait:U(700,1100)});
+}
 function* dDns(){
   const sub=pick(['api','cdn','app','auth','www','edge']);
   const domain=sub+'.'+pick(['acme','globex','initech','prod-eu','vault'])+'.'+pick(['com','io','net','dev']);

@@ -499,6 +499,81 @@ function buildMesh(body,ev){
   const cap=el('mesh-cap','7 services · mTLS · '+grp(ri(2000,9000))+' req/s'); cap.dataset.k='cap'; body.appendChild(cap);
 }
 
+/* --- kafka consumer-group lag : a bar-per-partition live ticker (spike localizes to a few partitions) --- */
+const KAFKA_PARTS=12;
+function buildKafka(body,ev){
+  body.classList.add('kafka');
+  const head=el('kafka-head'); head.appendChild(spn('kafka-ht','CONSUMER LAG · '+ev.topic+' · '+KAFKA_PARTS+' partitions'));
+  const lag=spn('kafka-lag','— lag'); lag.dataset.k='thr'; head.appendChild(lag); body.appendChild(head);
+  const grid=el('kafka-grid'); const rows=[];
+  for(let i=0;i<KAFKA_PARTS;i++){
+    const r=el('kafka-row'); r.appendChild(spn('kafka-pl','P'+i));
+    const bar=el('kafka-bar'); const fill=el('kafka-fill'); bar.appendChild(fill); r.appendChild(bar);
+    const v=spn('kafka-pv','0'); r.appendChild(v); grid.appendChild(r);
+    rows.push({fill,v,lag:U(20,300),base:U(20,300),tgt:U(20,300)});
+  }
+  body.appendChild(grid);
+  const cap=el('kafka-cap','all partitions caught up · lag < 1k'); cap.dataset.k='cap'; body.appendChild(cap);
+  const hotIdx=shuffle(rows.map((_,i)=>i)).slice(0,ri(3,4));
+  liveState={kind:'kafka',last:0,rows,hot:0,hotIdx,lagEl:lag,maxLag:6000,
+    tick(ts){ if(ts-this.last<320)return; this.last=ts; let sum=0;
+      this.rows.forEach((r,i)=>{
+        if(this.hot && this.hotIdx.includes(i)) r.tgt=U(0.6,0.98)*this.maxLag;
+        else if(Math.random()<0.3) r.tgt=r.base*(0.5+Math.random());
+        r.lag+=(r.tgt-r.lag)*0.25; r.lag=Math.max(0,r.lag);
+        const frac=clamp(r.lag/this.maxLag,0,1);
+        setW(r.fill,frac*100); r.fill.dataset.lvl=frac>0.66?'hi':frac>0.33?'mid':'lo';
+        r.v.textContent=compactNum(Math.round(r.lag)); sum+=r.lag;
+      });
+      this.lagEl.textContent=compactNum(Math.round(sum))+' lag';
+    },
+    phase(p){
+      if(p==='spike'){ this.maxLag=ri(2000000,9000000); this.hot=1; }
+      else if(p==='recover'){ this.hot=0; this.maxLag=6000; this.rows.forEach(r=>{ r.base=U(20,300); r.tgt=r.base; }); }
+    }
+  };
+}
+/* --- vim hero session : a faux terminal-vim the agent flies through (writes nothing) --- */
+function buildVim(body,ev){
+  body.classList.add('vim');
+  const pane=el('vim-pane');
+  let src=genSnippet(ev.file).lines.slice();
+  while(src.length<15) src=src.concat(['','  // '+pick(['TODO: handle the empty batch','guard against negative TTL','fence the stale read','retry with jitter'])],genSnippet(ev.file).lines);
+  src=src.slice(0,15);
+  src.forEach((line,i)=>{
+    const vl=el('vl');
+    const ln=spn('vim-ln',String(i+1)); ln.dataset.k='ln-'+i; vl.appendChild(ln);
+    const code=spn('vim-src'); code.dataset.k='src-'+i; code.appendChild(hiCode(line)); vl.appendChild(code);
+    pane.appendChild(vl);
+  });
+  for(let i=0;i<3;i++){ const vl=el('vl vim-tilde'); vl.appendChild(spn('vim-ln','~')); pane.appendChild(vl); }
+  const cur=el('vim-cur'); cur.dataset.k='cur'; cur.style.setProperty('--row',0); pane.appendChild(cur);
+  body.appendChild(pane);
+  const st=el('vim-status');
+  const mode=spn('vim-mode','-- NORMAL --'); mode.dataset.k='mode'; st.appendChild(mode);
+  const cmd=spn('vim-cmd',''); cmd.dataset.k='cmd'; st.appendChild(cmd);
+  const ruler=spn('vim-ruler','1,1   Top'); ruler.dataset.k='ruler'; st.appendChild(ruler);
+  body.appendChild(st);
+}
+/* --- tmux split-pane war room : 2×2 panes, one goes red, the agent jumps to it --- */
+function buildTmux(body,ev){
+  body.classList.add('tmux');
+  const grid=el('tmux-grid');
+  ev.panes.forEach((p,i)=>{
+    const pane=el('tmux-pane'); pane.dataset.k='p'+i; pane.dataset.state=i===0?'active':'idle';
+    const hd=el('tmux-ph',i+':'+p.name); pane.appendChild(hd);
+    const bd=el('tmux-pb');
+    p.lines.forEach(l=>bd.appendChild(el('tmux-l',l)));
+    const stat=el('tmux-l tmux-ps',p.stat||'…'); stat.dataset.k='p'+i+'-s'; bd.appendChild(stat);
+    pane.appendChild(bd); grid.appendChild(pane);
+  });
+  body.appendChild(grid);
+  const bar=el('tmux-bar');
+  bar.appendChild(spn('tmux-sess','['+ev.session+']'));
+  const tabs=spn('tmux-tabs',ev.panes.map((p,i)=>i+':'+p.name+(i===0?'*':'')).join('  ')); tabs.dataset.k='tabs'; bar.appendChild(tabs);
+  bar.appendChild(spn('tmux-clock','03:'+String(ri(10,59)).padStart(2,'0')));
+  body.appendChild(bar);
+}
 /* --- DNS propagation table : resolver → answer → TTL, stale until it converges --- */
 function dnsResolvers(){
   return [

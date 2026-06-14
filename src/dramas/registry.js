@@ -38,6 +38,10 @@ const SCENE_REGISTRY=[
   {id:'mesh',         label:'service mesh · breaker',      category:'Infrastructure & containers', generator:dMesh,          appBuilder:buildMesh,     weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
   {id:'dns',          label:'DNS propagation',             category:'Infrastructure & containers', generator:dDns,           appBuilder:buildDns,      weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
   {id:'chaos',        label:'chaos · game day',            category:'Infrastructure & containers', generator:dChaos,         appBuilder:null,          weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
+  {id:'kafka',        label:'kafka · consumer lag',        category:'Infrastructure & containers', generator:dKafka,         appBuilder:buildKafka,    weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
+  // ---- Editor & terminal ----
+  {id:'vim',          label:'vim · hero edit session',     category:'Editor & terminal',           generator:dVim,           appBuilder:buildVim,      weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
+  {id:'tmux',         label:'tmux · split-pane war room',  category:'Editor & terminal',           generator:dTmux,          appBuilder:buildTmux,     weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
   // ---- Ship & release ----
   {id:'pipeline',     label:'CI/CD pipeline',              category:'Ship & release',              generator:dPipeline,      appBuilder:buildPipeline, weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
   {id:'terraform',    label:'terraform plan/apply',        category:'Ship & release',              generator:dTerraform,     appBuilder:null,          weight:1,autoplay:true, requiresMotion:false,tags:['core']},

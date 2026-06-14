@@ -1161,6 +1161,81 @@ function buildMesh(body,ev){
   const cap=el('mesh-cap','7 services · mTLS · '+grp(ri(2000,9000))+' req/s'); cap.dataset.k='cap'; body.appendChild(cap);
 }
 
+/* --- kafka consumer-group lag : a bar-per-partition live ticker (spike localizes to a few partitions) --- */
+const KAFKA_PARTS=12;
+function buildKafka(body,ev){
+  body.classList.add('kafka');
+  const head=el('kafka-head'); head.appendChild(spn('kafka-ht','CONSUMER LAG · '+ev.topic+' · '+KAFKA_PARTS+' partitions'));
+  const lag=spn('kafka-lag','— lag'); lag.dataset.k='thr'; head.appendChild(lag); body.appendChild(head);
+  const grid=el('kafka-grid'); const rows=[];
+  for(let i=0;i<KAFKA_PARTS;i++){
+    const r=el('kafka-row'); r.appendChild(spn('kafka-pl','P'+i));
+    const bar=el('kafka-bar'); const fill=el('kafka-fill'); bar.appendChild(fill); r.appendChild(bar);
+    const v=spn('kafka-pv','0'); r.appendChild(v); grid.appendChild(r);
+    rows.push({fill,v,lag:U(20,300),base:U(20,300),tgt:U(20,300)});
+  }
+  body.appendChild(grid);
+  const cap=el('kafka-cap','all partitions caught up · lag < 1k'); cap.dataset.k='cap'; body.appendChild(cap);
+  const hotIdx=shuffle(rows.map((_,i)=>i)).slice(0,ri(3,4));
+  liveState={kind:'kafka',last:0,rows,hot:0,hotIdx,lagEl:lag,maxLag:6000,
+    tick(ts){ if(ts-this.last<320)return; this.last=ts; let sum=0;
+      this.rows.forEach((r,i)=>{
+        if(this.hot && this.hotIdx.includes(i)) r.tgt=U(0.6,0.98)*this.maxLag;
+        else if(Math.random()<0.3) r.tgt=r.base*(0.5+Math.random());
+        r.lag+=(r.tgt-r.lag)*0.25; r.lag=Math.max(0,r.lag);
+        const frac=clamp(r.lag/this.maxLag,0,1);
+        setW(r.fill,frac*100); r.fill.dataset.lvl=frac>0.66?'hi':frac>0.33?'mid':'lo';
+        r.v.textContent=compactNum(Math.round(r.lag)); sum+=r.lag;
+      });
+      this.lagEl.textContent=compactNum(Math.round(sum))+' lag';
+    },
+    phase(p){
+      if(p==='spike'){ this.maxLag=ri(2000000,9000000); this.hot=1; }
+      else if(p==='recover'){ this.hot=0; this.maxLag=6000; this.rows.forEach(r=>{ r.base=U(20,300); r.tgt=r.base; }); }
+    }
+  };
+}
+/* --- vim hero session : a faux terminal-vim the agent flies through (writes nothing) --- */
+function buildVim(body,ev){
+  body.classList.add('vim');
+  const pane=el('vim-pane');
+  let src=genSnippet(ev.file).lines.slice();
+  while(src.length<15) src=src.concat(['','  // '+pick(['TODO: handle the empty batch','guard against negative TTL','fence the stale read','retry with jitter'])],genSnippet(ev.file).lines);
+  src=src.slice(0,15);
+  src.forEach((line,i)=>{
+    const vl=el('vl');
+    const ln=spn('vim-ln',String(i+1)); ln.dataset.k='ln-'+i; vl.appendChild(ln);
+    const code=spn('vim-src'); code.dataset.k='src-'+i; code.appendChild(hiCode(line)); vl.appendChild(code);
+    pane.appendChild(vl);
+  });
+  for(let i=0;i<3;i++){ const vl=el('vl vim-tilde'); vl.appendChild(spn('vim-ln','~')); pane.appendChild(vl); }
+  const cur=el('vim-cur'); cur.dataset.k='cur'; cur.style.setProperty('--row',0); pane.appendChild(cur);
+  body.appendChild(pane);
+  const st=el('vim-status');
+  const mode=spn('vim-mode','-- NORMAL --'); mode.dataset.k='mode'; st.appendChild(mode);
+  const cmd=spn('vim-cmd',''); cmd.dataset.k='cmd'; st.appendChild(cmd);
+  const ruler=spn('vim-ruler','1,1   Top'); ruler.dataset.k='ruler'; st.appendChild(ruler);
+  body.appendChild(st);
+}
+/* --- tmux split-pane war room : 2×2 panes, one goes red, the agent jumps to it --- */
+function buildTmux(body,ev){
+  body.classList.add('tmux');
+  const grid=el('tmux-grid');
+  ev.panes.forEach((p,i)=>{
+    const pane=el('tmux-pane'); pane.dataset.k='p'+i; pane.dataset.state=i===0?'active':'idle';
+    const hd=el('tmux-ph',i+':'+p.name); pane.appendChild(hd);
+    const bd=el('tmux-pb');
+    p.lines.forEach(l=>bd.appendChild(el('tmux-l',l)));
+    const stat=el('tmux-l tmux-ps',p.stat||'…'); stat.dataset.k='p'+i+'-s'; bd.appendChild(stat);
+    pane.appendChild(bd); grid.appendChild(pane);
+  });
+  body.appendChild(grid);
+  const bar=el('tmux-bar');
+  bar.appendChild(spn('tmux-sess','['+ev.session+']'));
+  const tabs=spn('tmux-tabs',ev.panes.map((p,i)=>i+':'+p.name+(i===0?'*':'')).join('  ')); tabs.dataset.k='tabs'; bar.appendChild(tabs);
+  bar.appendChild(spn('tmux-clock','03:'+String(ri(10,59)).padStart(2,'0')));
+  body.appendChild(bar);
+}
 /* --- DNS propagation table : resolver → answer → TTL, stale until it converges --- */
 function dnsResolvers(){
   return [
@@ -1861,6 +1936,114 @@ function* dHeatmap(){
   yield WAIT(U(1400,2000));
   yield OV('close',{wait:U(700,1100)});
 }
+function* dKafka(){
+  const topic=pick(['orders.v2','payments.events','clickstream','user.activity','ledger.cdc','telemetry.spans']);
+  const group=pick(['checkout-consumers','billing-workers','analytics-sink','search-indexer','fraud-scoring']);
+  yield OV('app',{tool:'kafka',title:'kafka · consumer lag · '+topic,url:'',topic});
+  yield L('▌ Checking consumer-group lag — the sink feels behind','accent',{wait:U(700,1100)});
+  yield WAIT(U(900,1400));
+  beep('alert');
+  yield OV('livefx',{phase:'spike'});
+  yield WAIT(U(900,1400));
+  const lag=ri(2,9)+'.'+ri(1,9)+'M';
+  yield OV('appstep',{k:'cap',text:'⚠ '+group+' falling behind — lag past '+lag+' on '+ri(3,4)+' partitions'});
+  yield L('⚠ consumer lag exploding — a few partitions stuck while the rest keep up','err',{wait:U(1000,1600)});
+  yield THINK();
+  yield L(pick(['A slow consumer pinned a partition — rebalancing the group.','One sink instance wedged — kicking it out of the group.','Hot-key skew on a partition — scaling consumers and reassigning.']),'warn',{wait:U(800,1500)});
+  yield TOOL('Bash','kafka-consumer-groups --group '+group+' --topic '+topic+' --reset-offsets --to-latest --execute');
+  yield OUT('triggering rebalance · '+ri(3,9)+' consumers · reassigning partitions','dim',{burst:true});
+  yield WAIT(U(1100,1600));
+  yield OV('livefx',{phase:'recover'});
+  yield OV('appstep',{k:'cap',text:'✓ group rebalanced · lag draining · all partitions back under 1k'});
+  beep('ok');
+  yield L('✔ consumer lag drained — '+group+' caught up to the log head','ok',{wait:U(1000,1600)});
+  yield CNT('incidents',1);
+  yield WAIT(U(1200,1800));
+  yield OV('close',{wait:U(700,1100)});
+}
+function* dVim(){
+  const wild = idleActive && rng()<0.5;
+  const file = wild?'~/.vimrc':pick(FILES);
+  yield OV('app',{tool:'vim',title:'vim · '+file,url:'',file:wild?pick(FILES):file});
+  yield L('▌ Dropping into the editor — '+ri(2,9)+(wild?' keybindings to optimize':' files need surgery'),'accent',{wait:U(500,900)});
+  // navigate — search and jump matches
+  const needle=pick(['TODO','panic(','== nil','catch','any']);
+  yield OV('appstep',{k:'cmd',text:'/'+needle});
+  for(let j=0;j<ri(2,4);j++){
+    const row=ri(1,12);
+    yield OV('appstep',{k:'cur',cssVar:'--row',val:row,wait:U(180,360)});
+    yield OV('appstep',{k:'ruler',text:(row+1)+','+ri(1,30)+'   '+ri(8,80)+'%'});
+    yield OV('appstep',{k:'cmd',text:'n   next match'});
+  }
+  // visual select + yank
+  yield OV('appstep',{k:'mode',text:'-- VISUAL --',state:'visual'});
+  yield OV('appstep',{k:'cmd',text:'vap   "ay'});
+  yield OUT(ri(4,30)+' lines yanked to register a','dim',{wait:U(300,600)});
+  // the macro — the centerpiece: counter ticks under a replaying macro
+  yield OV('appstep',{k:'mode',text:'-- NORMAL --',state:'normal'});
+  yield L('Recording a macro — qa … q, then @a across the buffer','warn',{wait:U(400,800)});
+  const reps=ri(4,9);
+  for(let i=0;i<reps;i++){
+    const row=ri(0,12);
+    yield OV('appstep',{k:'cur',cssVar:'--row',val:row});
+    yield OV('appstep',{k:'cmd',text:'@a   ('+(i+1)+'/'+reps+')'});
+    yield OV('appstep',{k:'ruler',text:(row+1)+','+ri(1,40)+'   '+ri(8,92)+'%'});
+    yield DIFF(rng()<0.72?'+':'-',rng()<0.72?pick(ADD):pick(DEL),{wait:U(120,300)});
+    yield CNT('lines',ri(3,40));
+  }
+  // the substitute — live count
+  const oldT=pick(['oldLock','await ','any','== nil','retryOnce']);
+  const newT=pick(['acquireLock','await guard ','unknown','=== null','retryWithJitter']);
+  yield OV('appstep',{k:'mode',text:':'});
+  yield OV('appstep',{k:'cmd',text:':%s/'+oldT+'/'+newT+'/gc'});
+  yield OUT(grp(ri(60,4000))+' substitutions on '+ri(20,400)+' lines','dim',{burst:true});
+  // reindent the whole buffer
+  yield OV('appstep',{k:'cmd',text:'gg=G'});
+  yield OUT('reindented buffer · '+ri(40,900)+' lines reformatted','dim',{wait:U(300,600)});
+  // write + exit — the punchline is exiting vim on the first try
+  const lines=ri(80,600), bytes=grp(ri(2000,40000));
+  yield OV('appstep',{k:'mode',text:':'});
+  yield OV('appstep',{k:'cmd',text:':wq'});
+  yield OV('appstep',{k:'cmd',text:'"'+file+'" '+grp(lines)+'L, '+bytes+'B written',wait:U(300,600)});
+  beep('ok');
+  yield L('✔ exited vim on the first try','ok',{wait:U(700,1200)});
+  yield CNT('files',1); yield CNT('lines',lines);
+  yield WAIT(U(900,1400));
+  yield OV('close',{wait:U(800,1200)});
+}
+function* dTmux(){
+  const panes=[
+    {name:'logs', lines:['▸ tail -f app.log','200 GET  /health   4ms','200 POST /charge  38ms','200 GET  /orders  12ms'], stat:'streaming…'},
+    {name:'build',lines:['$ go build ./...','ok  api     0.4s','ok  worker  0.6s'], stat:'watching for changes'},
+    {name:'htop', lines:['CPU [|||      12%]','MEM [||||     41%]','load 1.2 0.9 0.8'], stat:'12 tasks · 3 running'},
+    {name:'test', lines:['$ go test ./...','ok  cache','ok  ledger'], stat:'RUN  saga…'},
+  ];
+  const session=(cfg.project||'core').slice(0,12);
+  yield OV('app',{tool:'tmux',title:'tmux · '+session,url:'',session,panes});
+  yield L('▌ Tiling the war room — logs, build, htop, tests','accent',{wait:U(600,1000)});
+  yield WAIT(U(800,1200));
+  beep('alert');
+  const bad=3, pkg=pick(['saga','ledger','cache','quorum']);
+  yield OV('appstep',{k:'p0',state:'idle'});
+  yield OV('appstep',{k:'p'+bad,state:'err'});
+  yield OV('appstep',{k:'p'+bad+'-s',text:'✗ FAIL '+pkg+'_test.go:'+ri(11,140)});
+  yield OV('appstep',{k:'tabs',text:panes.map((p,i)=>i+':'+p.name+(i===bad?'!':'')).join('  ')});
+  yield L('⚠ pane '+bad+' (test) red — Ctrl-b '+bad+' to jump','err',{wait:U(800,1300)});
+  yield THINK();
+  yield L(pick(RETHINK),'warn',{wait:U(700,1200)});
+  yield TOOL('Edit',pick(FILES));
+  yield DIFF('+',pick(FIX),{wait:U(80,160)});
+  yield OUT('re-running the failing package','dim',{burst:true});
+  yield WAIT(U(900,1400));
+  yield OV('appstep',{k:'p'+bad,state:'ok'});
+  yield OV('appstep',{k:'p'+bad+'-s',text:'✓ ok  '+pkg+'  '+U(0.2,0.9).toFixed(1)+'s'});
+  yield OV('appstep',{k:'tabs',text:panes.map((p,i)=>i+':'+p.name).join('  ')});
+  beep('ok');
+  yield L('✔ all panes green — the war room is quiet again','ok',{wait:U(700,1200)});
+  yield CNT('tests',ri(1,4));
+  yield WAIT(U(1000,1500));
+  yield OV('close',{wait:U(700,1100)});
+}
 function* dDns(){
   const sub=pick(['api','cdn','app','auth','www','edge']);
   const domain=sub+'.'+pick(['acme','globex','initech','prod-eu','vault'])+'.'+pick(['com','io','net','dev']);
@@ -2191,6 +2374,10 @@ const SCENE_REGISTRY=[
   {id:'mesh',         label:'service mesh · breaker',      category:'Infrastructure & containers', generator:dMesh,          appBuilder:buildMesh,     weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
   {id:'dns',          label:'DNS propagation',             category:'Infrastructure & containers', generator:dDns,           appBuilder:buildDns,      weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
   {id:'chaos',        label:'chaos · game day',            category:'Infrastructure & containers', generator:dChaos,         appBuilder:null,          weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
+  {id:'kafka',        label:'kafka · consumer lag',        category:'Infrastructure & containers', generator:dKafka,         appBuilder:buildKafka,    weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
+  // ---- Editor & terminal ----
+  {id:'vim',          label:'vim · hero edit session',     category:'Editor & terminal',           generator:dVim,           appBuilder:buildVim,      weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
+  {id:'tmux',         label:'tmux · split-pane war room',  category:'Editor & terminal',           generator:dTmux,          appBuilder:buildTmux,     weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
   // ---- Ship & release ----
   {id:'pipeline',     label:'CI/CD pipeline',              category:'Ship & release',              generator:dPipeline,      appBuilder:buildPipeline, weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
   {id:'terraform',    label:'terraform plan/apply',        category:'Ship & release',              generator:dTerraform,     appBuilder:null,          weight:1,autoplay:true, requiresMotion:false,tags:['core']},

@@ -478,6 +478,62 @@ body:not(.reduce) .gpu-card[data-state=throttle]{animation:gpf 1.1s ease-in-out 
 body:not(.reduce) .mesh-node[data-state=down] .mesh-c{animation:gpf 1s ease-in-out infinite}
 .mesh-lbl{fill:var(--dim); font-size:8px; font-family:inherit}
 .mesh-cap{font-size:11px; color:var(--dim); text-align:center}
+/* kafka consumer-group lag (bar per partition) */
+#appwin[data-tool=kafka]{width:min(720px,94vw)}
+.appbody.kafka{display:flex; flex-direction:column; gap:8px}
+.kafka-head{display:flex; align-items:baseline; gap:10px}
+.kafka-ht{font-size:11px; color:var(--accent); font-weight:700; letter-spacing:.5px}
+.kafka-lag{margin-left:auto; font-size:12px; color:var(--ok); font-weight:700; font-variant-numeric:tabular-nums}
+.kafka-grid{display:flex; flex-direction:column; gap:4px}
+.kafka-row{display:flex; align-items:center; gap:8px; font-size:10px}
+.kafka-pl{flex:0 0 3ch; color:var(--dim); font-variant-numeric:tabular-nums}
+.kafka-bar{position:relative; flex:1; height:10px; border-radius:2px; background:color-mix(in srgb,var(--dim) 16%,transparent); overflow:hidden}
+.kafka-fill{height:100%; width:0; background:var(--ok); transition:width .4s linear, background .4s ease}
+.kafka-fill[data-lvl=mid]{background:var(--warn)} .kafka-fill[data-lvl=hi]{background:var(--err)}
+.kafka-pv{flex:0 0 6ch; text-align:right; color:var(--fg); font-variant-numeric:tabular-nums}
+.kafka-cap{font-size:11px; color:var(--dim); text-align:center}
+/* vim hero session */
+#appwin[data-tool=vim]{width:min(680px,94vw)}
+.appbody.vim{padding:0; display:flex; flex-direction:column; background:color-mix(in srgb,#000 38%,var(--rail))}
+.vim-pane{position:relative; padding:6px 0; flex:1; overflow:hidden; line-height:17px; font-size:11.5px}
+.vl{display:flex; height:17px; align-items:center; white-space:pre}
+.vim-ln{flex:0 0 4ch; text-align:right; padding-right:1ch; color:color-mix(in srgb,var(--dim) 75%,transparent); user-select:none}
+.vim-tilde .vim-ln{color:color-mix(in srgb,var(--accent) 40%,transparent)}
+.vim-src{flex:1; color:color-mix(in srgb,var(--fg) 88%,transparent); padding-left:.5ch; overflow:hidden}
+.vim-src .tk-kw{color:var(--accent)} .vim-src .tk-str{color:var(--ok)} .vim-src .tk-cmt{color:var(--dim); font-style:italic} .vim-src .tk-num{color:color-mix(in srgb,var(--fg) 55%,var(--accent))}
+.vim-cur{position:absolute; left:5ch; top:calc(6px + var(--row,0)*17px); width:1ch; height:15px; background:var(--accent); opacity:.5}
+body:not(.reduce) .vim-cur{animation:vimblink 1.1s steps(1) infinite; transition:top .12s ease}
+@keyframes vimblink{50%{opacity:.16}}
+body.reduce .vim-cur{animation:none}
+.vim-status{display:flex; align-items:center; gap:14px; padding:3px 10px; font-size:11px;
+  background:color-mix(in srgb,var(--accent) 16%,var(--rail)); border-top:1px solid color-mix(in srgb,var(--dim) 30%,transparent)}
+.vim-mode{font-weight:700; color:var(--accent); letter-spacing:.5px}
+.vim-mode[data-state=visual]{color:var(--warn)}
+.vim-cmd{flex:1; color:var(--fg); font-variant-numeric:tabular-nums; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.vim-ruler{margin-left:auto; color:var(--dim); font-variant-numeric:tabular-nums}
+/* tmux split-pane war room */
+#appwin[data-tool=tmux]{width:min(720px,94vw)}
+.appbody.tmux{padding:0; display:flex; flex-direction:column}
+.tmux-grid{flex:1; display:grid; grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr; gap:1px;
+  background:color-mix(in srgb,var(--dim) 30%,transparent); min-height:300px}
+.tmux-pane{background:color-mix(in srgb,#000 32%,var(--rail)); display:flex; flex-direction:column; overflow:hidden;
+  border:1px solid transparent; transition:border-color .3s ease}
+.tmux-pane[data-state=active]{border-color:var(--accent)}
+.tmux-pane[data-state=err]{border-color:var(--err)}
+body:not(.reduce) .tmux-pane[data-state=err]{animation:gpf 1.1s ease-in-out infinite}
+.tmux-pane[data-state=ok]{border-color:color-mix(in srgb,var(--ok) 55%,transparent)}
+.tmux-ph{font-size:8.5px; color:var(--dim); padding:2px 7px; letter-spacing:.5px;
+  background:color-mix(in srgb,#000 30%,transparent)}
+.tmux-pb{flex:1; padding:4px 7px; font-size:10px; line-height:1.45; overflow:hidden; color:color-mix(in srgb,var(--fg) 82%,transparent)}
+.tmux-l{white-space:pre; overflow:hidden; text-overflow:ellipsis}
+.tmux-ps{color:var(--dim)}
+.tmux-pane[data-state=err] .tmux-ps{color:var(--err); font-weight:700}
+.tmux-pane[data-state=ok] .tmux-ps{color:var(--ok)}
+.tmux-bar{display:flex; align-items:center; gap:12px; padding:3px 9px; font-size:10px;
+  background:color-mix(in srgb,var(--accent) 18%,var(--rail)); border-top:1px solid color-mix(in srgb,var(--dim) 30%,transparent)}
+.tmux-sess{color:var(--accent); font-weight:700}
+.tmux-tabs{flex:1; color:var(--fg); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.tmux-clock{margin-left:auto; color:var(--dim); font-variant-numeric:tabular-nums}
 /* DNS propagation table */
 #appwin[data-tool=dns]{width:min(620px,94vw)}
 .appbody.dns{display:flex; flex-direction:column; gap:9px}
