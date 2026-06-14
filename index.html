@@ -140,13 +140,34 @@ body.reduce #caret{animation:none}
 body.reduce .tk-prog .tk-mk{animation:none}
 @keyframes spin{to{transform:rotate(360deg)}}
 #filetree{font-size:11.5px; line-height:1.55}
-.ft-row{white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:var(--dim)}
+.ft-row{display:flex; align-items:center; white-space:nowrap; overflow:hidden; color:var(--dim)}
 .ft-dir{color:var(--fg);opacity:.8}
 .ft-file{color:var(--dim)}
-.ft-file.hl{color:var(--accent)}
-.ft-file.hl::after{content:" ◀"; color:var(--accent)}
-.ft-file.glow{text-shadow:0 0 8px var(--accent)}
-body.reduce .ft-file.glow{text-shadow:none}
+.ft-nm{overflow:hidden; text-overflow:ellipsis}
+.ft-dot::before{content:"●"; font-size:.62em; opacity:.85; margin-right:.55ch; color:var(--dim); vertical-align:middle}
+.ft-gut{flex:none; margin-left:auto; padding-left:.7ch; font-weight:700; font-size:.92em}
+.ft-file.hl{box-shadow:inset 2px 0 0 var(--accent)}
+.ft-file.hl .ft-nm{color:var(--accent)}
+.ft-file.glow .ft-nm{text-shadow:0 0 8px var(--accent)}
+body.reduce .ft-file.glow .ft-nm{text-shadow:none}
+/* git status: M modified · A added */
+.ft-file[data-st="M"]{color:var(--warn)}  .ft-file[data-st="M"] .ft-gut{color:var(--warn)}
+.ft-file[data-st="A"]{color:var(--add)}   .ft-file[data-st="A"] .ft-gut{color:var(--add)}
+/* file-type tint on the leading dot */
+.ft-file[data-ext="ts"] .ft-dot::before,.ft-file[data-ext="tsx"] .ft-dot::before{color:#3178c6}
+.ft-file[data-ext="go"] .ft-dot::before{color:#00add8}
+.ft-file[data-ext="rs"] .ft-dot::before{color:#dea584}
+.ft-file[data-ext="py"] .ft-dot::before{color:#ffd343}
+.ft-file[data-ext="sql"] .ft-dot::before{color:#e38c00}
+.ft-file[data-ext="yaml"] .ft-dot::before,.ft-file[data-ext="yml"] .ft-dot::before{color:#cb171e}
+.ft-file[data-ext="json"] .ft-dot::before{color:#cbcb41}
+.ft-file[data-ext="toml"] .ft-dot::before{color:#9c4221}
+.ft-file[data-ext="md"] .ft-dot::before{color:#519aba}
+.ft-file[data-ext="cs"] .ft-dot::before{color:#178600}
+.ft-file[data-ext="graphql"] .ft-dot::before{color:#e10098}
+.ft-file.ft-new{animation:ftIn .5s ease}
+@keyframes ftIn{from{opacity:0; transform:translateX(-5px)} to{opacity:1; transform:none}}
+body.reduce .ft-file.ft-new{animation:none}
 /* ============================== FOOTER ============================== */
 #ftr{
   display:flex; align-items:center; gap:.6ch; flex-wrap:wrap;
@@ -396,6 +417,22 @@ body:not(.reduce) .dk-r[data-state=running] .dk-ic::before{animation:spin 1s lin
 .bt-prow.bt-dead{opacity:.4}
 .bt-prow.bt-dead .pn{text-decoration:line-through; color:var(--dim); font-weight:400}
 .bt-prow.bt-dead .pc{color:var(--dim); font-weight:400}
+.bt-prow.bt-oom .pn{color:var(--err)}
+body:not(.reduce) .bt-prow.bt-oom{animation:btoom .42s steps(2,end) 4}
+@keyframes btoom{50%{background:color-mix(in srgb,var(--err) 32%,transparent)}}
+/* net + disk panels */
+.bt-net,.bt-disk{flex:0 0 auto}
+.bt-nrow{display:flex; align-items:center; gap:9px; font-size:11px; padding:1px 0}
+.bt-nico{flex:0 0 2ch; font-weight:700}
+.bt-nico.dn{color:var(--accent)} .bt-nico.up{color:var(--warn)}
+.bt-nspd{flex:0 0 12ch; color:var(--fg); font-variant-numeric:tabular-nums}
+.bt-nmbps{flex:1; color:var(--dim); font-variant-numeric:tabular-nums}
+.bt-ntot{flex:0 0 11ch; text-align:right; color:var(--dim); font-variant-numeric:tabular-nums}
+.bt-drow{display:grid; grid-template-columns:5ch 1fr 8ch 5ch; gap:9px; align-items:center; font-size:11px; padding:1px 0}
+.bt-dnm{color:var(--accent); font-weight:700}
+.bt-dgb{text-align:right; color:var(--fg); font-variant-numeric:tabular-nums}
+.bt-dio{text-align:right; color:var(--dim); font-variant-numeric:tabular-nums}
+.bt-dio[data-lvl=mid]{color:var(--warn)} .bt-dio[data-lvl=hi]{color:var(--err)}
 /* global threat map (DDoS) */
 #appwin[data-tool=attackmap]{width:min(840px,95vw)}
 .appbody.am{padding:12px 14px}
@@ -765,6 +802,13 @@ function genFiles(){
   }
   return [...new Set(head.concat(src))];
 }
+/* a plausible new path inside an existing source dir — seeded, so a run reproduces */
+function newFilePath(){
+  const src=FILES.filter(p=>/\.(ts|go|rs|py|cs)$/.test(p)); if(!src.length)return null;
+  const base=pick(src), dir=base.replace(/\/[^/]*$/,''), ext=base.split('.').pop();
+  for(let i=0;i<8;i++){ const p=dir+'/'+pick(BASES)+'.'+ext; if(!FILES.includes(p))return p; }
+  return null;
+}
 const ADD=['acquire distributed lock before debit',"await pool.withTransaction(tx => …)","retry({ attempts: 5, backoff: 'exp', jitter: true })",'assert invariant: sum(entries) == ledger.total','if (!idempotencyKey) throw new ConflictError()','span.setStatus(OK); span.end()','memoize via WeakMap keyed on request id','guard against negative TTL','debounce flush on 16ms frame boundary','coalesce duplicate in-flight requests','pin connection to primary during write','emit OTEL span for slow path','batch writes behind a bounded channel','add compare-and-swap on the counter'];
 const DEL=['balance -= amount            // race under concurrency','O(n²) nested scan','synchronous fs.readFileSync on hot path','unbounded retry without backoff','mutate shared state without lock','swallow error silently','blocking call inside event loop','double-counted on retry'];
 const FIX=['acquire distributed lock before debit','add idempotency key to retry path','fence stale read with version check','reorder lock acquisition to avoid deadlock','guard empty batch before flush','wrap debit + credit in one transaction','clamp TTL to non-negative','use compare-and-swap on the counter','add backoff with jitter to retry loop','hold read-lock across the projection rebuild'];
@@ -905,7 +949,7 @@ function OUT(text,tone,o){return Object.assign({kind:'output',text:text,tone:ton
 function DIFF(sign,text,o){return Object.assign({kind:'diff',sign:sign,text:text},o);}
 function THINK(o){return Object.assign({kind:'thinking'},o);}
 function TASK(id,label,state){return {kind:'task',id:id,label:label,state:state};}
-function FILE(path){return {kind:'filehl',path:path};}
+function FILE(path,st){return {kind:'filehl',path:path,st:st};}
 function SNIP(path,write){return Object.assign(genSnippet(path),{write:!!write});}
 function CNT(field,delta){return {kind:'counter',field:field,delta:delta};}
 function CLR(){return {kind:'clear'};}
@@ -946,6 +990,18 @@ const SPIN=['⠋','⠙','⠹','⠸','⠼','⠴','⠦','⠧','⠇','⠏'];
 /* ====================================================================== */
 /* FILE TREE                                                               */
 /* ====================================================================== */
+function extOf(name){const m=name.match(/\.([^.]+)$/);return m?m[1].toLowerCase():'';}
+function dirOf(p){return p.replace(/\/[^/]*$/,'');}
+function mkFileRow(name,path,depth){
+  const el=document.createElement('div');
+  el.className='ft-row ft-file'; el.style.paddingLeft=(depth*1.2)+'ch';
+  el.dataset.path=path; el.dataset.ext=extOf(name);
+  const dot=document.createElement('span');dot.className='ft-dot';
+  const nm=document.createElement('span');nm.className='ft-nm';nm.textContent=name;
+  const gut=document.createElement('span');gut.className='ft-gut';
+  el.append(dot,nm,gut);
+  fileEls[path]=el; return el;
+}
 function buildFileTree(){
   const root={};
   FILES.forEach(p=>{const parts=p.split('/');let n=root;parts.forEach((part,i)=>{const leaf=i===parts.length-1;if(leaf){(n.__files||(n.__files=[])).push({name:part,path:p});}else{n=n[part]||(n[part]={});}});});
@@ -955,17 +1011,35 @@ function buildFileTree(){
       const d=document.createElement('div');d.className='ft-row ft-dir';d.style.paddingLeft=(depth*1.2)+'ch';d.textContent=dir+'/';fileTreeEl.appendChild(d);
       walk(node[dir],depth+1);
     });
-    (node.__files||[]).forEach(f=>{
-      const el=document.createElement('div');el.className='ft-row ft-file';el.style.paddingLeft=(depth*1.2)+'ch';el.textContent=f.name;el.dataset.path=f.path;fileTreeEl.appendChild(el);fileEls[f.path]=el;
-    });
+    (node.__files||[]).forEach(f=>{ fileTreeEl.appendChild(mkFileRow(f.name,f.path,depth)); });
   })(root,0);
 }
-function highlightFile(path){
-  const el=fileEls[path]; if(!el)return;
+/* insert a newly-"created" file beside an existing sibling in the same dir; null if no home */
+function insertFileRow(path){
+  if(FILES.length>48) return null;
+  const name=path.split('/').pop(), dir=dirOf(path);
+  let after=null; for(const p in fileEls){ if(dirOf(p)===dir) after=fileEls[p]; }
+  if(!after) return null;
+  const el=mkFileRow(name,path,0); el.style.paddingLeft=after.style.paddingLeft;
+  after.parentNode.insertBefore(el,after.nextSibling);
+  FILES.push(path); return el;
+}
+function setStatus(el,st){
+  if(!st)return; if(el.dataset.st==='A')return;   // added stays added through later edits
+  el.dataset.st=st; const g=el.querySelector('.ft-gut'); if(g)g.textContent=st;
+}
+function highlightFile(path,st){
+  let el=fileEls[path];
+  if(!el){ if(st!=='A')return; el=insertFileRow(path); if(!el)return; el.classList.add('ft-new'); }
   if(lastFileHl && lastFileHl!==el){lastFileHl.classList.remove('hl');}
-  el.classList.add('hl','glow'); lastFileHl=el;
+  el.classList.add('hl','glow'); lastFileHl=el; setStatus(el,st);
   el.scrollIntoView({block:'nearest'});
   setTimeout(()=>el.classList.remove('glow'),900);
+}
+/* new mission = committed working tree: clear M/A decorations, keep added files */
+function clearFileStatus(){
+  for(const p in fileEls){ const el=fileEls[p]; delete el.dataset.st; el.classList.remove('hl','ft-new'); const g=el.querySelector('.ft-gut'); if(g)g.textContent=''; }
+  lastFileHl=null;
 }
 
 /* ====================================================================== */
@@ -1025,9 +1099,9 @@ function render(ev){
       appendLine(box); ctxBump(1.1); break;
     }
     case 'task': renderTask(ev); break;
-    case 'filehl': highlightFile(ev.path); break;
+    case 'filehl': highlightFile(ev.path,ev.st); break;
     case 'counter': bumpCounter(ev.field,ev.delta); break;
-    case 'clear': railTasks.innerHTML=''; for(const k in taskEls)delete taskEls[k]; break;
+    case 'clear': railTasks.innerHTML=''; for(const k in taskEls)delete taskEls[k]; clearFileStatus(); break;
     case 'ov': renderOverlay(ev); break;
     case 'wait': break;
   }
@@ -1381,7 +1455,7 @@ const BT_PROCS=['systemd','dockerd','containerd','kubelet','etcd','postgres','re
 function setBar(elm,pct){ const p=Math.max(0,Math.min(100,pct)); elm.style.width=p+'%'; elm.dataset.lvl=p>80?'hi':p>50?'mid':'lo'; }
 function buildBtop(body,ev){
   body.classList.add('bt');
-  const S={phase:'normal', cores:[], procs:[], hist:[], histN:80, villain:null, pegList:[]};
+  const S={phase:'normal', cores:[], procs:[], hist:[], histN:80, villain:null, pegList:[], disks:[], net:null};
   /* CPU section */
   const cpu=el('bt-sec bt-cpu');
   const top=el('bt-line'); top.appendChild(spn('bt-lbl','CPU'));
@@ -1407,6 +1481,29 @@ function buildBtop(body,ev){
   S.memGb=spn('bt-tmp','—'); S.memGb.style.width='8ch'; mrow.appendChild(S.memGb);
   mem.appendChild(mrow);
   S.memCur=0.45; S.memTgt=0.45; body.appendChild(mem);
+  /* NET section */
+  const net=el('bt-sec bt-net');
+  const dn=el('bt-nrow'); dn.appendChild(spn('bt-nico dn','▼'));
+  S.netDn=spn('bt-nspd','0 KiB/s'); dn.appendChild(S.netDn);
+  S.netDnM=spn('bt-nmbps','0 Mbps'); dn.appendChild(S.netDnM);
+  S.netDnT=spn('bt-ntot','0 GiB'); dn.appendChild(S.netDnT); net.appendChild(dn);
+  const up=el('bt-nrow'); up.appendChild(spn('bt-nico up','▲'));
+  S.netUp=spn('bt-nspd','0 KiB/s'); up.appendChild(S.netUp);
+  S.netUpM=spn('bt-nmbps','0 Mbps'); up.appendChild(S.netUpM);
+  S.netUpT=spn('bt-ntot','0 GiB'); up.appendChild(S.netUpT); net.appendChild(up);
+  S.net={dn:U(2,9), up:U(0.5,3), dnTgt:U(2,9), upTgt:U(0.5,3), dnTot:U(420,1900), upTot:U(30,180)};
+  body.appendChild(net);
+  /* DISK section */
+  const disk=el('bt-sec bt-disk');
+  [['root',428,93],['var',512,71],['swap',8,18],['boot',1,46]].forEach(d=>{
+    const r=el('bt-drow'); r.appendChild(spn('bt-dnm',d[0]));
+    const db=el('bt-bar'); const df=el('bt-fill'); db.appendChild(df); r.appendChild(db);
+    const gb=spn('bt-dgb',''); r.appendChild(gb);
+    const io=spn('bt-dio','0%'); r.appendChild(io); disk.appendChild(r);
+    S.disks.push({name:d[0],size:d[1],used:d[2]/100,usedTgt:d[2]/100,io:U(0,6),ioTgt:U(0,6),
+      isSwap:d[0]==='swap',fill:df,gb:gb,ioEl:io});
+  });
+  body.appendChild(disk);
   /* PROC section */
   const proc=el('bt-sec bt-proc');
   const head=el('bt-phead'); ['Pid','Program','Cpu%','Mem'].forEach(h=>head.appendChild(spn('',h))); proc.appendChild(head);
@@ -1429,14 +1526,23 @@ function mkProc(name,pid,cpu,mem,villain){
 function renderProcs(S){ S.procWrap.innerHTML=''; S.procs.forEach(p=>S.procWrap.appendChild(p.row)); }
 function sizeBtop(){ const S=btopState; if(!S||!S.graph)return; const cv=S.graph;
   cv.width=cv.clientWidth||600; cv.height=cv.clientHeight||70; S.histN=Math.max(20,(cv.width/5)|0); S.ctx=cv.getContext('2d'); }
+function btSwap(S){ return S.disks.find(d=>d.isSwap); }
 function applyBtopPhase(S){
   if(S.phase==='spike'){
     S.pegList.forEach(i=>S.cores[i].peg=true);
-    S.memTgt=U(0.82,0.92);
+    S.memTgt=U(0.82,0.92); S.netHot=true;
     if(S.villain){ S.villain.spike=true; S.villain.spikeCpu=ri(380,760); }
   } else if(S.phase==='recover'){
-    S.cores.forEach(c=>c.peg=false); S.memTgt=U(0.46,0.56);
+    S.cores.forEach(c=>c.peg=false); S.memTgt=U(0.46,0.56); S.netHot=false;
     if(S.villain){ S.villain.spike=false; S.villain.killed=true; S.villain.row.classList.add('bt-dead'); }
+  } else if(S.phase==='oom'){
+    S.memTgt=U(0.93,0.97); S.swapHot=true;
+    const sw=btSwap(S); if(sw) sw.usedTgt=U(0.74,0.96);
+    if(S.villain){ S.villain.spike=true; S.villain.spikeCpu=ri(90,220); S.villain.mem=ri(6200,11800); S.villain.row.querySelector('.pm').textContent=(S.villain.mem/1024).toFixed(1)+'G'; }
+  } else if(S.phase==='oomkill'){
+    S.memTgt=U(0.40,0.52); S.swapHot=false;
+    const sw=btSwap(S); if(sw) sw.usedTgt=U(0.10,0.22);
+    if(S.villain){ S.villain.spike=false; S.villain.killed=true; S.villain.row.classList.add('bt-dead','bt-oom'); S.villain.row.querySelector('.pn').textContent=S.villain.name+' [OOM killed]'; }
   }
 }
 function tickBtop(ts){
@@ -1456,7 +1562,8 @@ function tickBtop(ts){
   S.hist.push(overall/100); while(S.hist.length>S.histN)S.hist.shift();
   drawBtopGraph(S);
   S.memCur+=(S.memTgt-S.memCur)*0.35; setBar(S.memFill,S.memCur*100);
-  S.memPct.textContent=Math.round(S.memCur*100)+'%'; S.memGb.textContent=(S.memCur*16).toFixed(1)+'G';
+  S.memPct.textContent=Math.round(S.memCur*100)+'%'; S.memGb.textContent=(S.memCur*16).toFixed(1)+'/16G';
+  tickNet(S); tickDisks(S);
   S.procs.forEach(p=>{
     const tgt=p.killed?0:p.spike?p.spikeCpu:(p.base*(0.6+Math.random()*0.9));
     p.cpu+=(tgt-p.cpu)*0.4; p.cpuEl.textContent=p.cpu.toFixed(1);
@@ -1464,6 +1571,23 @@ function tickBtop(ts){
   const before=S.procs.map(p=>p.pid).join();
   S.procs.sort((a,b)=>b.cpu-a.cpu);
   if(S.procs.map(p=>p.pid).join()!==before) renderProcs(S);
+}
+function btSpd(mib){ return mib>=1 ? mib.toFixed(1)+' MiB/s' : Math.round(mib*1024)+' KiB/s'; }
+function btTot(gib){ return gib>=1024 ? (gib/1024).toFixed(2)+' TiB' : Math.round(gib)+' GiB'; }
+function tickNet(S){ const N=S.net; if(!N)return;
+  if(Math.random()<0.30){ N.dnTgt=S.netHot?U(45,135):U(1.5,11); N.upTgt=S.netHot?U(30,110):U(0.4,3.5); }
+  N.dn+=(N.dnTgt-N.dn)*0.4; N.up+=(N.upTgt-N.up)*0.4;
+  N.dnTot+=N.dn*0.0011; N.upTot+=N.up*0.0011;
+  S.netDn.textContent=btSpd(N.dn); S.netDnM.textContent=(N.dn*8.39).toFixed(1)+' Mbps'; S.netDnT.textContent=btTot(N.dnTot);
+  S.netUp.textContent=btSpd(N.up); S.netUpM.textContent=(N.up*8.39).toFixed(1)+' Mbps'; S.netUpT.textContent=btTot(N.upTot);
+}
+function tickDisks(S){ S.disks.forEach(d=>{
+    if(Math.random()<0.35) d.ioTgt=(d.isSwap&&S.swapHot)?U(55,98):(d.name==='root'&&Math.random()<0.2?U(20,70):U(0,7));
+    d.io+=(d.ioTgt-d.io)*0.45; d.used+=(d.usedTgt-d.used)*0.10;
+    setBar(d.fill,d.used*100);
+    d.gb.textContent=(d.used*d.size).toFixed(d.size<10?2:0)+'/'+d.size+'G';
+    const iv=Math.round(d.io); d.ioEl.textContent=iv+'%'; d.ioEl.dataset.lvl=iv>80?'hi':iv>45?'mid':'lo';
+  });
 }
 function drawBtopGraph(S){
   const x=S.ctx; if(!x)return; const W=S.graph.width,H=S.graph.height;
@@ -1654,6 +1778,39 @@ function buildHeat(body,ev){
     phase(p){ this.hot = p==='spike'?1:0; }
   };
 }
+/* --- cpu utilization by core (scrolling canvas) : noisy-neighbor scene --- */
+const CPU_CORES=16;
+function buildCpu(body,ev){
+  body.classList.add('heat');
+  const head=el('heat-head'); head.appendChild(spn('heat-ht','CPU UTILIZATION · per-core · '+CPU_CORES+' threads'));
+  head.appendChild(spn('heat-sub','last 90s')); body.appendChild(head);
+  const wrap=el('heat-wrap');
+  const yax=el('heat-y'); for(let i=CPU_CORES-1;i>=0;i--) yax.appendChild(el('heat-yl','c'+i));
+  wrap.appendChild(yax);
+  const cv=document.createElement('canvas'); cv.className='heat-cv'; wrap.appendChild(cv);
+  body.appendChild(wrap);
+  const cap=el('heat-cap','all cores nominal'); cap.dataset.k='cap'; body.appendChild(cap);
+  const base=[]; for(let r=0;r<CPU_CORES;r++) base.push(0.06+rng()*0.1);
+  for(let k=0;k<2;k++) base[(rng()*CPU_CORES)|0]=0.22+rng()*0.12;   // a couple of cores look alive
+  liveState={kind:'cpu',last:0,cv,ctx:null,cols:[],nCols:64,rows:CPU_CORES,hot:0,hotRow:(ev.hot!=null?ev.hot:0),base,
+    tick(ts){ if(ts-this.last<150)return; this.last=ts;
+      if(!this.ctx||this.cv.width===0){ this.cv.width=this.cv.clientWidth||640; this.cv.height=this.cv.clientHeight||152; this.ctx=this.cv.getContext('2d'); this.nCols=Math.max(28,(this.cv.width/9)|0); }
+      const col=[];
+      for(let r=0;r<this.rows;r++){
+        let v = this.hot&&r===this.hotRow ? 0.93+Math.random()*0.07 : this.base[r]+Math.random()*0.12;   // one core pinned, rest idle
+        col.push(clamp(v,0,1));
+      }
+      this.cols.push(col); while(this.cols.length>this.nCols)this.cols.shift();
+      this.draw();
+    },
+    draw(){ const x=this.ctx,W=this.cv.width,H=this.cv.height; x.clearRect(0,0,W,H);
+      const cw=W/this.nCols, ch=H/this.rows;
+      for(let i=0;i<this.cols.length;i++){ const c=this.cols[i];
+        for(let r=0;r<this.rows;r++){ x.fillStyle=heatColor(c[r]); x.fillRect(i*cw,H-(r+1)*ch,Math.ceil(cw),Math.ceil(ch)-1); } }
+    },
+    phase(p){ this.hot = p==='spike'?1:0; }
+  };
+}
 
 /* ====================================================================== */
 /* MISSION GENERATORS                                                      */
@@ -1702,9 +1859,11 @@ function* pImpl(m){
   yield FILE(m.rootFile);
   const edits=2+ri(0,3);
   for(let i=0;i<edits;i++){
-    const f=i===0?m.rootFile:pick(FILES);
+    let f=i===0?m.rootFile:pick(FILES);
     const write=rng()<0.3;
-    yield TOOL(write?'Write':'Edit',f); yield FILE(f);
+    let st='M';
+    if(write && i>0 && rng()<0.45){ const nf=newFilePath(); if(nf){ f=nf; st='A'; } }
+    yield TOOL(write?'Write':'Edit',f); yield FILE(f,st);
     if(write){ yield SNIP(f,true); }
     else{
       const dl=2+ri(0,4);
@@ -1728,7 +1887,7 @@ function* pTest(m,attempt){
     yield THINK();
     yield L(pick(RETHINK),'warn',{wait:U(900,3200)});
     yield L(pick(DIAG),'dim');
-    yield TOOL('Edit',m.rootFile); yield FILE(m.rootFile);
+    yield TOOL('Edit',m.rootFile); yield FILE(m.rootFile,'M');
     const dl=2+ri(0,2);
     for(let j=0;j<dl;j++){ const a=rng()<0.82; yield DIFF(a?'+':'-',a?pickNR(FIX,'fix'):pickNR(DEL,'del'),{wait:U(40,140)}); }
     yield* pTest(m,attempt+1);
@@ -2061,6 +2220,31 @@ function* dBtop(){
   yield WAIT(U(1400,2000));
   yield OV('close',{wait:U(700,1100)});
 }
+function* dOom(){
+  const vn=pick(['java','python3','node','gunicorn','postgres','spark-executor','clickhouse','jvm-worker']);
+  const host=pick(['prod-core','cache','db-primary','worker','mythos'])+'-'+String(ri(1,9)).padStart(2,'0');
+  const pid=ri(10000,99999), gb=U(9.2,13.4).toFixed(1);
+  yield OV('app',{tool:'btop',title:'btop · '+host,url:'',villain:{name:vn,pid:pid},peg:2});
+  yield L('▌ Pulling up btop — memory pressure alert','accent',{wait:U(900,1400)});
+  yield WAIT(U(1100,1600));
+  beep('alert');
+  yield OV('btopfx',{phase:'oom'});
+  yield L('⚠ '+vn+' (pid '+pid+') leaking — RSS '+gb+'G, swap thrashing','err',{wait:U(1100,1700)});
+  yield THINK();
+  yield L(pick(['Checking the OOM score… cgroup is over its limit.','Watching swap — page-out storm, load climbing.','Memory cliff incoming, kernel will reap soon.']),'warn',{wait:U(900,1500)});
+  yield WAIT(U(1000,1500));
+  beep('alert');
+  yield TOOL('Bash','dmesg -T | tail -3');
+  yield OUT('kernel: Out of memory: Killed process '+pid+' ('+vn+') total-vm:'+ri(11,18)+'G, anon-rss:'+gb+'G','dim',{burst:true});
+  yield WAIT(U(900,1400));
+  yield OV('btopfx',{phase:'oomkill'});
+  beep('ok');
+  yield L('✔ OOM killer reaped '+vn+' · swap draining, RSS reclaimed','ok',{wait:U(1000,1600)});
+  yield L(pick(['Bumped the cgroup memory.high and added a restart backoff.','Filed the leak — heap dump captured before the kill.','Memory back to baseline, pod rescheduled clean.']),'dim',{wait:U(900,1500)});
+  yield CNT('incidents',1);
+  yield WAIT(U(1400,2000));
+  yield OV('close',{wait:U(700,1100)});
+}
 function* dAttack(){
   const allSrc=[[10,5],[33,5],[51,6],[46,8],[36,11],[20,13],[57,15],[48,3]];
   const sources=shuffle(allSrc.slice()).slice(0,ri(6,8));
@@ -2158,6 +2342,30 @@ function* dHeatmap(){
   yield OV('appstep',{k:'cap',text:'✓ p99.9 '+ri(90,160)+'ms · tail back under SLO'});
   beep('ok');
   yield L('✔ tail latency tamed — hedging cut the long pole','ok',{wait:U(1000,1600)});
+  yield CNT('incidents',1);
+  yield WAIT(U(1400,2000));
+  yield OV('close',{wait:U(700,1100)});
+}
+function* dCpuheat(){
+  const hot=ri(0,CPU_CORES-1);
+  yield OV('app',{tool:'cpuheat',title:'cpu by core · '+pick(BANKS.host||['api-gw'])+'',url:'grafana.internal/d/'+hash(6),hot});
+  yield L('▌ Pulling up the per-core CPU heatmap','accent',{wait:U(700,1100)});
+  yield WAIT(U(1500,2100));
+  beep('alert');
+  yield OV('livefx',{phase:'spike'});
+  yield WAIT(U(900,1400));
+  yield OV('appstep',{k:'cap',text:'⚠ core '+hot+' pinned at 100% — one thread hot, '+(CPU_CORES-1)+' cores idle'});
+  yield L('⚠ core '+hot+' saturated — a thread busy-spinning while the box sits idle','err',{wait:U(1000,1600)});
+  yield THINK();
+  yield L(pick(RETHINK),'warn',{wait:U(800,1500)});
+  yield TOOL('Edit',pick(FILES));
+  yield DIFF('+','add backoff jitter to the retry loop; yield instead of spinning on the lock',{wait:U(80,160)});
+  yield OUT('rolling out · watching per-core utilization','dim',{burst:true});
+  yield WAIT(U(1500,2100));
+  yield OV('livefx',{phase:'recover'});
+  yield OV('appstep',{k:'cap',text:'✓ load spread across '+CPU_CORES+' cores · core '+hot+' back to '+ri(3,12)+'%'});
+  beep('ok');
+  yield L('✔ busy-loop tamed — work rebalanced, no single core pinned','ok',{wait:U(1000,1600)});
   yield CNT('incidents',1);
   yield WAIT(U(1400,2000));
   yield OV('close',{wait:U(700,1100)});
@@ -2346,7 +2554,7 @@ function* dDeepWork(){
     for(let b=1;b<=beats && idleActive;b++){
       done=b===beats?total:Math.min(total,Math.round(total*(b/beats)*U(0.9,1.06)));
       const frac=done/total, r=rng();
-      if(r<0.4){ yield TOOL(pick(['Edit','Edit','MultiEdit','Bash','Read']),pick(FILES)); if(rng()<0.5) yield FILE(pick(FILES)); }
+      if(r<0.4){ yield TOOL(pick(['Edit','Edit','MultiEdit','Bash','Read']),pick(FILES)); if(rng()<0.5) yield FILE(pick(FILES),'M'); }
       else if(r<0.55){ yield THINK(); yield L(pick(RETHINK),'warn',{wait:U(500,1200)}); }
       yield L(barStr(frac)+' '+goal.label+' · '+Math.round(frac*100)+'% · '+grp(done)+' / '+grp(total)+' '+goal.unit, frac>=1?'ok':'accent',{wait:U(1500,3300)});
       if(rng()<0.5) yield CNT('lines',ri(40,900));
@@ -2366,11 +2574,11 @@ function* dDeepWork(){
 }
 const DRAMAS={anomaly:dAnomaly,deploy:dDeploy,security:dSec,matrix:dMatrix,auth:dAuth,compaction:dCompact,
   grafana:dGrafana,pipeline:dPipeline,flame:dFlame,cluster:dCluster,
-  trace:dTrace,sql:dSqlPlan,load:dLoad,pr:dPR,docker:dDocker,btop:dBtop,
+  trace:dTrace,sql:dSqlPlan,load:dLoad,pr:dPR,docker:dDocker,btop:dBtop,oom:dOom,
   attackmap:dAttack,gpu:dGpu,mesh:dMesh,heatmap:dHeatmap,swarm:dSwarm,
   rebase:dRebase,mergeconflict:dMergeConflict,bisect:dBisect,reflog:dReflog,
   cherrypick:dCherryPick,filterrepo:dFilterRepo,octopus:dOctopus,blame:dBlame};
-const BOSS=['grafana','pipeline','flame','cluster','trace','sql','load','pr','docker','btop',
+const BOSS=['grafana','pipeline','flame','cluster','trace','sql','load','pr','docker','btop','oom',
   'attackmap','gpu','mesh','heatmap','swarm'];
 const GIT=['rebase','mergeconflict','bisect','reflog','cherrypick','filterrepo','octopus','blame'];
 const CORE=['anomaly','deploy','security','auth','matrix'];
@@ -2620,7 +2828,7 @@ function tickIdle(ts){
 const SCENE_GROUPS=[
   {title:'Observability & telemetry', items:[
     ['grafana','Grafana · SLO breach'],['trace','Jaeger slow trace'],
-    ['btop','btop · runaway process'],['anomaly','metric anomaly'] ]},
+    ['btop','btop · runaway process'],['oom','btop · OOM kill'],['anomaly','metric anomaly'] ]},
   {title:'Performance & profiling', items:[
     ['flame','pprof flame graph'],['sql','EXPLAIN · slow query'],
     ['load','k6 load test'],['heatmap','latency heatmap'] ]},

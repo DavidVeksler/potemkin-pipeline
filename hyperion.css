@@ -111,13 +111,34 @@ body.reduce #caret{animation:none}
 body.reduce .tk-prog .tk-mk{animation:none}
 @keyframes spin{to{transform:rotate(360deg)}}
 #filetree{font-size:11.5px; line-height:1.55}
-.ft-row{white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:var(--dim)}
+.ft-row{display:flex; align-items:center; white-space:nowrap; overflow:hidden; color:var(--dim)}
 .ft-dir{color:var(--fg);opacity:.8}
 .ft-file{color:var(--dim)}
-.ft-file.hl{color:var(--accent)}
-.ft-file.hl::after{content:" ◀"; color:var(--accent)}
-.ft-file.glow{text-shadow:0 0 8px var(--accent)}
-body.reduce .ft-file.glow{text-shadow:none}
+.ft-nm{overflow:hidden; text-overflow:ellipsis}
+.ft-dot::before{content:"●"; font-size:.62em; opacity:.85; margin-right:.55ch; color:var(--dim); vertical-align:middle}
+.ft-gut{flex:none; margin-left:auto; padding-left:.7ch; font-weight:700; font-size:.92em}
+.ft-file.hl{box-shadow:inset 2px 0 0 var(--accent)}
+.ft-file.hl .ft-nm{color:var(--accent)}
+.ft-file.glow .ft-nm{text-shadow:0 0 8px var(--accent)}
+body.reduce .ft-file.glow .ft-nm{text-shadow:none}
+/* git status: M modified · A added */
+.ft-file[data-st="M"]{color:var(--warn)}  .ft-file[data-st="M"] .ft-gut{color:var(--warn)}
+.ft-file[data-st="A"]{color:var(--add)}   .ft-file[data-st="A"] .ft-gut{color:var(--add)}
+/* file-type tint on the leading dot */
+.ft-file[data-ext="ts"] .ft-dot::before,.ft-file[data-ext="tsx"] .ft-dot::before{color:#3178c6}
+.ft-file[data-ext="go"] .ft-dot::before{color:#00add8}
+.ft-file[data-ext="rs"] .ft-dot::before{color:#dea584}
+.ft-file[data-ext="py"] .ft-dot::before{color:#ffd343}
+.ft-file[data-ext="sql"] .ft-dot::before{color:#e38c00}
+.ft-file[data-ext="yaml"] .ft-dot::before,.ft-file[data-ext="yml"] .ft-dot::before{color:#cb171e}
+.ft-file[data-ext="json"] .ft-dot::before{color:#cbcb41}
+.ft-file[data-ext="toml"] .ft-dot::before{color:#9c4221}
+.ft-file[data-ext="md"] .ft-dot::before{color:#519aba}
+.ft-file[data-ext="cs"] .ft-dot::before{color:#178600}
+.ft-file[data-ext="graphql"] .ft-dot::before{color:#e10098}
+.ft-file.ft-new{animation:ftIn .5s ease}
+@keyframes ftIn{from{opacity:0; transform:translateX(-5px)} to{opacity:1; transform:none}}
+body.reduce .ft-file.ft-new{animation:none}
 /* ============================== FOOTER ============================== */
 #ftr{
   display:flex; align-items:center; gap:.6ch; flex-wrap:wrap;
@@ -367,6 +388,22 @@ body:not(.reduce) .dk-r[data-state=running] .dk-ic::before{animation:spin 1s lin
 .bt-prow.bt-dead{opacity:.4}
 .bt-prow.bt-dead .pn{text-decoration:line-through; color:var(--dim); font-weight:400}
 .bt-prow.bt-dead .pc{color:var(--dim); font-weight:400}
+.bt-prow.bt-oom .pn{color:var(--err)}
+body:not(.reduce) .bt-prow.bt-oom{animation:btoom .42s steps(2,end) 4}
+@keyframes btoom{50%{background:color-mix(in srgb,var(--err) 32%,transparent)}}
+/* net + disk panels */
+.bt-net,.bt-disk{flex:0 0 auto}
+.bt-nrow{display:flex; align-items:center; gap:9px; font-size:11px; padding:1px 0}
+.bt-nico{flex:0 0 2ch; font-weight:700}
+.bt-nico.dn{color:var(--accent)} .bt-nico.up{color:var(--warn)}
+.bt-nspd{flex:0 0 12ch; color:var(--fg); font-variant-numeric:tabular-nums}
+.bt-nmbps{flex:1; color:var(--dim); font-variant-numeric:tabular-nums}
+.bt-ntot{flex:0 0 11ch; text-align:right; color:var(--dim); font-variant-numeric:tabular-nums}
+.bt-drow{display:grid; grid-template-columns:5ch 1fr 8ch 5ch; gap:9px; align-items:center; font-size:11px; padding:1px 0}
+.bt-dnm{color:var(--accent); font-weight:700}
+.bt-dgb{text-align:right; color:var(--fg); font-variant-numeric:tabular-nums}
+.bt-dio{text-align:right; color:var(--dim); font-variant-numeric:tabular-nums}
+.bt-dio[data-lvl=mid]{color:var(--warn)} .bt-dio[data-lvl=hi]{color:var(--err)}
 /* global threat map (DDoS) */
 #appwin[data-tool=attackmap]{width:min(840px,95vw)}
 .appbody.am{padding:12px 14px}
@@ -432,7 +469,7 @@ body:not(.reduce) .mesh-node[data-state=down] .mesh-c{animation:gpf 1s ease-in-o
 .mesh-lbl{fill:var(--dim); font-size:8px; font-family:inherit}
 .mesh-cap{font-size:11px; color:var(--dim); text-align:center}
 /* latency heatmap (scrolling) */
-#appwin[data-tool=heatmap]{width:min(760px,94vw)}
+#appwin[data-tool=heatmap],#appwin[data-tool=cpuheat]{width:min(760px,94vw)}
 .appbody.heat{display:flex; flex-direction:column; gap:8px}
 .heat-head{display:flex; align-items:baseline; gap:10px}
 .heat-ht{font-size:11px; color:var(--accent); font-weight:700; letter-spacing:.5px}
