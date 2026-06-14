@@ -2,3 +2,6 @@
 .playwright-mcp/
 boss-*.png
 *.log
+
+# macOS screensaver build artifact
+Potemkin Pipeline.saver/
