@@ -77,6 +77,10 @@ body.paused .dot{background:var(--warn);box-shadow:0 0 6px var(--warn)}
 .ln.out{color:var(--dim); padding-left:2.5ch}
 .ln.out .br{color:var(--dim);opacity:.7}
 .ln.out.collapse{color:var(--dim); opacity:.55; padding-left:4.5ch; font-size:.92em}
+/* nested sub-tool calls — subagent children indent one level under their Task parent (#21) */
+.ln.nest{margin-left:2.4ch; border-left:1px solid color-mix(in srgb,var(--dim) 26%,transparent); padding-left:1.3ch}
+.ln.out.nest,.ln.diff.nest{padding-left:1.3ch}
+.ln.out.collapse.nest{padding-left:3ch}
 .ln.diff{padding-left:2.5ch}
 .ln.diff.add{color:var(--add)}
 .ln.diff.del{color:var(--del);opacity:.85}

@@ -59,7 +59,7 @@ function render(ev){
     case 'phase':{ appendLine(el('ln phase',ev.text)); break; }
     case 'tool':{
       resolveTool();
-      const d=el('ln tool');
+      const d=el('ln tool'+(ev.nest?' nest':''));   // subagent child calls indent under their Task parent (#21)
       const dot=spn('tdot pending',SPIN[0]+' '); d.appendChild(dot);
       if(ev.tool.startsWith('mcp__')){   // mcp__server__action — dim the namespace, normal action
         const p=ev.tool.split('__');
@@ -79,15 +79,15 @@ function render(ev){
       appendLine(d); activeTool={dot:dot,start:logicalNow}; ctxBump(1.3); burnTick(tk); break;
     }
     case 'output':{
-      const d=el('ln out tone-'+(ev.tone||'dim'));
+      const d=el('ln out tone-'+(ev.tone||'dim')+(ev.nest?' nest':''));
       d.appendChild(spn('br','⎿ ')); d.appendChild(document.createTextNode(ev.text));
       appendLine(d);
-      if(ev.more) appendLine(el('ln out collapse','… +'+ev.more+' lines (ctrl+r to expand)'));
+      if(ev.more) appendLine(el('ln out collapse'+(ev.nest?' nest':''),'… +'+ev.more+' lines (ctrl+r to expand)'));
       resolveTool(ev.tone); break;
     }
     case 'diff':{
       const add=ev.sign==='+';
-      appendLine(el('ln diff '+(add?'add':'del'),(add?'+ ':'- ')+ev.text)); break;
+      appendLine(el('ln diff '+(add?'add':'del')+(ev.nest?' nest':''),(add?'+ ':'- ')+ev.text)); break;
     }
     case 'thinking':{
       finalizeThinker();

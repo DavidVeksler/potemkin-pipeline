@@ -22,7 +22,21 @@ function* pScan(m){
     else if(rng()<0.4) yield FILE(pick(FILES));
   }
   if(rng()<0.4) yield* mcpScan(m);
+  if(rng()<0.3) yield* taskBeat();
   yield L(T1(),'fg'); yield L(T10(),'dim');
+}
+// a Task spawns a subagent whose own tool calls render indented one level beneath it (#21)
+function* taskBeat(){
+  const desc=pick(['scan repo for races','map service boundaries','enumerate retry paths','audit lock ordering','find N+1 queries','trace the hot path']);
+  const sub=pick(['Explore','general-purpose','code-reviewer','Plan']);
+  yield TOOL('Task',desc);
+  const n=2+ri(0,2);
+  for(let i=0;i<n;i++){
+    const t=pick(['Grep','Read','Glob','Read']);
+    yield TOOL(t,t==='Read'?pick(FILES):toolArg(t),{nest:1});
+    yield OUT(scanOut(t),'dim',{nest:1,wait:U(220,520)});
+  }
+  yield OUT('subagent ('+sub+') returned · '+ri(2,9)+' findings synthesized','dim',{wait:U(300,640)});
 }
 function* pMap(m){
   yield PHASE('MAP');

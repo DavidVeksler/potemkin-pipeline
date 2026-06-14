@@ -62,8 +62,10 @@ realism-per-byte work in the project.
 20. ✅ **Per-call token cost** — _shipped_. A faint trailing `· 1.2k tokens` on
     heavier calls (Math.random flavor, untouched seeded stream), feeding
     `burnTick` so the cost meter ticks come *from* visible work.
-21. **Nested sub-tool indentation** — `Task`/subagent child calls indent one level
-    under their parent (the swarm drama already has the fiction).
+21. ✅ **Nested sub-tool indentation** — _shipped_. A `Task` beat (`taskBeat`,
+    ~30% of SCAN phases) spawns a subagent whose own Grep/Read/Glob calls render
+    indented one level beneath it (`.ln.nest`: margin + a left subtree guide),
+    then a "subagent returned · N findings" line.
 22. ✅ **MCP-flavored calls** — _shipped_. Purpose-driven beats: `mcpScan`
     (Sentry/Datadog query during SCAN) and `mcpShip` (Linear/Slack/GitHub after
     deploy). The `mcp__server__action` namespace renders with the `mcp__server__`
