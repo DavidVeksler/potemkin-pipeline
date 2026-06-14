@@ -2482,21 +2482,25 @@ function tickIdle(ts){
 /* SCENE PICKER (hotkey 'd') — fire any drama on demand for testing        */
 /* ====================================================================== */
 const SCENE_GROUPS=[
-  {title:'Boss scenes', items:[
-    ['btop','btop · runaway process'],['grafana','Grafana · SLO breach'],['pipeline','CI/CD pipeline'],
-    ['flame','pprof flame graph'],['cluster','k9s · CrashLoopBackOff'],['trace','Jaeger slow trace'],
-    ['sql','EXPLAIN · slow query'],['load','k6 load test'],['pr','GitHub pull request'],
-    ['docker','docker buildx'],['attackmap','threat map · DDoS'],['gpu','GPU farm · throttle'],
-    ['mesh','service mesh · breaker'],['heatmap','latency heatmap'] ]},
-  {title:'Ambient drama', items:[
-    ['deploy','deploy & rollout'],['security','CVE patch'],['auth','auth / secret rotation'],
-    ['anomaly','metric anomaly'],['matrix','matrix cascade'],['compaction','context compaction'] ]},
-  {title:'Git operations', items:[
+  {title:'Observability & telemetry', items:[
+    ['grafana','Grafana · SLO breach'],['trace','Jaeger slow trace'],
+    ['btop','btop · runaway process'],['anomaly','metric anomaly'] ]},
+  {title:'Performance & profiling', items:[
+    ['flame','pprof flame graph'],['sql','EXPLAIN · slow query'],
+    ['load','k6 load test'],['heatmap','latency heatmap'] ]},
+  {title:'Infrastructure & containers', items:[
+    ['cluster','k9s · CrashLoopBackOff'],['docker','docker buildx'],
+    ['gpu','GPU farm · throttle'],['mesh','service mesh · breaker'] ]},
+  {title:'Ship & release', items:[
+    ['pipeline','CI/CD pipeline'],['deploy','deploy & rollout'],['pr','GitHub pull request'] ]},
+  {title:'Security', items:[
+    ['attackmap','threat map · DDoS'],['security','CVE patch'],['auth','auth / secret rotation'] ]},
+  {title:'Version control', items:[
     ['rebase','interactive rebase'],['mergeconflict','merge conflict'],['bisect','git bisect hunt'],
     ['reflog','reflog recovery'],['cherrypick','cherry-pick backport'],['filterrepo','purge leaked secret'],
     ['octopus','octopus merge'],['blame','pickaxe archaeology'] ]},
-  {title:'Special', items:[
-    ['deepwork','deep work · away mode'] ]},
+  {title:'Agent & session', items:[
+    ['matrix','matrix cascade'],['compaction','context compaction'],['deepwork','deep work · away mode'] ]},
 ];
 function queueDrama(name){
   if(!DRAMAS[name]){ toast('unknown scene'); return; }
