@@ -195,10 +195,12 @@ function toolArg(t){
   return pick(FILES);
 }
 function commitMsg(m){return pick(['fix: race in '+m.short,'feat: harden '+m.subject,'perf: optimize '+m.short,'fix: idempotent '+m.short+' retries','refactor: simplify '+m.subject,'fix: fence stale read in '+m.short]);}
+function plur(n,w){return n+' '+w+(n===1?'':'s');}
+// impact result line for a read-shaped tool — reports what the call returned, not flavor
 function scanOut(t){
-  if(t==='Glob')return ri(3,240)+' files';
-  if(t==='Grep')return ri(0,80)+' matches in '+ri(1,40)+' files';
-  return grp(ri(40,1200))+' lines, '+ri(2,40)+' symbols';
+  if(t==='Glob')return plur(ri(3,240),'file');
+  if(t==='Grep'){ const m=ri(0,80); return m===0?'No matches found':'Found '+m+' match'+(m===1?'':'es')+' in '+plur(ri(1,Math.min(m,40)),'file'); }
+  return 'Read '+plur(ri(40,1200),'line');
 }
 
 /* ---- code/config snippet generators (seeded, plausible-but-fictional) ---- */
@@ -314,7 +316,7 @@ let logicalNow=0, nextAt=320, pending=null, lastTs=0, rafId=0, hidden=false;
 let paused=false, mode=cfg.mode, speed=cfg.speed, dramaOn=(cfg.dramas!=='off'), dramaFreq=cfg.freq;
 let releaseTokens=0, lastRelease=0;
 let overlayActive=false, dramaQ=[], nextDramaAt=U(45000,75000)/cfg.freq, firstDrama=true, lastCompact=-99999;
-let activeThinker=null, lastEmit=0, lastVisible='';
+let activeThinker=null, activeTool=null, lastEmit=0, lastVisible='';
 let bossActive=false, bossFrame=0, settingsOpen=false, helpOpen=false, dramaOpen=false;
 let idleActive=false, idleThreshold=cfg.idle, lastActivityTs=0;   // deep-work "away" mode
 let tok=82, ctx=58, ctxAnim=null;
@@ -402,23 +404,26 @@ function svgEl(tag,attrs){const e=document.createElementNS('http://www.w3.org/20
 
 function render(ev){
   if(VISIBLE[ev.kind] && ev.kind!=='thinking') finalizeThinker();
+  if(VISIBLE[ev.kind] && ev.kind!=='tool' && ev.kind!=='output') resolveTool();
   switch(ev.kind){
     case 'line':{
       appendLine(el('ln '+(ev.cls?ev.cls+' ':'')+'tone-'+(ev.tone||'fg'),ev.text)); break;
     }
     case 'phase':{ appendLine(el('ln phase',ev.text)); break; }
     case 'tool':{
+      resolveTool();
       const d=el('ln tool');
-      d.appendChild(spn('tdot','⏺ ')); d.appendChild(spn('tname',ev.tool));
+      const dot=spn('tdot pending',SPIN[0]+' '); d.appendChild(dot);
+      d.appendChild(spn('tname',ev.tool));
       d.appendChild(document.createTextNode('('));
       d.appendChild(spn('targ',ev.arg));
       d.appendChild(document.createTextNode(')'));
-      appendLine(d); ctxBump(1.3); burnTick(); break;
+      appendLine(d); activeTool={dot:dot,start:logicalNow}; ctxBump(1.3); burnTick(); break;
     }
     case 'output':{
       const d=el('ln out tone-'+(ev.tone||'dim'));
       d.appendChild(spn('br','⎿ ')); d.appendChild(document.createTextNode(ev.text));
-      appendLine(d); break;
+      appendLine(d); resolveTool(ev.tone); break;
     }
     case 'diff':{
       const add=ev.sign==='+';
@@ -451,6 +456,17 @@ function updateThinker(){
   if(!activeThinker)return;
   if(!activeThinker.el.isConnected){activeThinker=null;return;}
   activeThinker.span.textContent=((logicalNow-activeThinker.start)/1000).toFixed(1)+'s';
+}
+function resolveTool(tone){   // swap pending spinner → solid dot; tone colors the dot (err/warn/ok)
+  if(!activeTool)return;
+  const dot=activeTool.dot; activeTool=null;
+  if(!dot.isConnected)return;
+  dot.textContent='⏺ '; dot.className='tdot'+(tone&&tone!=='dim'?' tone-'+tone:'');
+}
+function updateTools(){   // animate the pending spinner char
+  if(!activeTool)return;
+  if(!activeTool.dot.isConnected){activeTool=null;return;}
+  activeTool.dot.textContent=SPIN[Math.floor((logicalNow-activeTool.start)/80)%SPIN.length]+' ';
 }
 function renderTask(ev){
   let li=taskEls[ev.id];
@@ -1171,8 +1187,7 @@ function* pScan(m){
     const t=pick(['Glob','Grep','Read','Read']);
     const f=t==='Read'?pick(FILES):toolArg(t);
     yield TOOL(t,f);
-    const outs=1+ri(0,2);
-    for(let j=0;j<outs;j++) yield OUT(scanOut(t),'dim',{burst:true});
+    yield OUT(scanOut(t),'dim',{wait:U(260,620)});   // wait = the call "running" before its result lands
     if(t==='Read'){ yield FILE(f); if(rng()<0.45) yield SNIP(f,false); }
     else if(rng()<0.4) yield FILE(pick(FILES));
   }
@@ -1204,10 +1219,19 @@ function* pImpl(m){
     let st='M';
     if(write && i>0 && rng()<0.45){ const nf=newFilePath(); if(nf){ f=nf; st='A'; } }
     yield TOOL(write?'Write':'Edit',f); yield FILE(f,st);
-    if(write){ yield SNIP(f,true); }
+    if(write){
+      const wl=ri(18,140);
+      yield OUT((st==='A'?'Created ':'Wrote ')+shortName(f)+' ('+plur(wl,'line')+')','dim',{wait:U(300,680)});
+      yield CNT('lines',wl);
+      yield SNIP(f,true);
+    }
     else{
-      const dl=2+ri(0,4);
-      for(let j=0;j<dl;j++){ const a=rng()<0.72; yield DIFF(a?'+':'-',a?pickNR(ADD,'add'):pickNR(DEL,'del'),{wait:U(40,140)}); }
+      const signs=[]; const dl=2+ri(0,4);
+      for(let j=0;j<dl;j++) signs.push(rng()<0.72?'+':'-');
+      const add=signs.filter(s=>s==='+').length, del=dl-add;
+      yield OUT('Updated '+shortName(f)+' with '+plur(add,'addition')+' and '+plur(del,'removal'),'dim',{wait:U(300,680)});
+      for(const s of signs) yield DIFF(s,s==='+'?pickNR(ADD,'add'):pickNR(DEL,'del'),{wait:U(40,140)});
+      if(add>del) yield CNT('lines',add-del);
       if(rng()<0.35) yield SNIP(f,true);
     }
     if(rng()<0.4) yield L(T1(),'dim');
@@ -1997,6 +2021,7 @@ function frame(ts){
   // visuals always
   updateHeader(ts,dt);
   updateThinker();
+  updateTools();
   if(mxActive) drawMatrix();
   if(btopActive) tickBtop(ts);
   if(liveState) liveState.tick(ts);

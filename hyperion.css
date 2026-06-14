@@ -64,6 +64,10 @@ body.paused .dot{background:var(--warn);box-shadow:0 0 6px var(--warn)}
 .ln{margin:0; padding:0 0 0 0}
 .ln.tool{margin-top:3px}
 .ln .tdot{color:var(--accent)}
+.ln .tdot.pending{color:var(--dim)}
+.ln .tdot.tone-ok{color:var(--ok)}
+.ln .tdot.tone-warn{color:var(--warn)}
+.ln .tdot.tone-err{color:var(--err)}
 .ln .tname{color:var(--fg);font-weight:600}
 .ln .targ{color:var(--accent)}
 .ln.out{color:var(--dim); padding-left:2.5ch}
