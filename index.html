@@ -998,7 +998,7 @@ let mxActive=false, mx={cols:[],fs:14}, accentCache='#ff9d2f';
 let btopActive=false, btopState=null, btopLast=0;
 let liveState=null;   // generic per-frame ticker for live boss scenes (gpu/heatmap)
 const startEpoch=Date.now();
-const counters={files:ri(80,250),lines:ri(200,800)*1000,tests:ri(800,2500),cves:7,deploys:0,commits:0,incidents:0};
+const counters={files:ri(80,250),lines:ri(80,600)*1000,tests:ri(800,2500),cves:ri(2,12),deploys:0,commits:0,incidents:0};
 const taskEls={}; const fileEls={}; let lastFileHl=null;
 const SPIN=['⠋','⠙','⠹','⠸','⠼','⠴','⠦','⠧','⠇','⠏'];
 
@@ -1923,6 +1923,7 @@ function* pImpl(m){
       const wl=ri(18,140);
       yield OUT((st==='A'?'Created ':'Wrote ')+shortName(f)+' ('+plur(wl,'line')+')','dim',{wait:U(300,680)});
       yield CNT('lines',wl);
+      if(st==='A') yield CNT('files',1);
       yield SNIP(f,true);
     }
     else{
@@ -2099,6 +2100,7 @@ function* dGrafana(){
   yield OV('appstep',{k:'err-s',text:'0.0'+ri(1,9)});
   beep('ok');
   yield L('✔ error rate back within SLO','ok',{wait:U(600,1000)});
+  yield CNT('incidents',1);
   yield OV('close',{wait:U(700,1100)});
 }
 function* dPipeline(){
@@ -2650,6 +2652,7 @@ function* dDeepWork(){
     if(done>=total && idleActive){
       yield BANNER('✔ '+goal.label+' — '+grp(total)+' '+goal.unit+' · '+pick(DONETAIL));
       yield CNT('tests',ri(2,9));
+      yield CNT('commits',ri(1,3));
       yield L('Idle — scanning for the next big lever…','dim',{wait:U(1600,3200)});
     }
   }
