@@ -998,7 +998,7 @@ let mxActive=false, mx={cols:[],fs:14}, accentCache='#ff9d2f';
 let btopActive=false, btopState=null, btopLast=0;
 let liveState=null;   // generic per-frame ticker for live boss scenes (gpu/heatmap)
 const startEpoch=Date.now();
-const counters={files:128,lines:412000,tests:1204,cves:7,deploys:0,commits:0,incidents:0};
+const counters={files:ri(80,250),lines:ri(200,800)*1000,tests:ri(800,2500),cves:7,deploys:0,commits:0,incidents:0};
 const taskEls={}; const fileEls={}; let lastFileHl=null;
 const SPIN=['⠋','⠙','⠹','⠸','⠼','⠴','⠦','⠧','⠇','⠏'];
 
