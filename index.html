@@ -481,6 +481,12 @@ body:not(.reduce) dialog#settings[open]{animation:cfgpop .18s ease}
 .cfg-x:hover{color:var(--fg); border-color:var(--dim)}
 .cfg-bd{padding:14px 18px; overflow-y:auto; max-height:64vh; scrollbar-width:thin;
   scrollbar-color:var(--dim) transparent}
+/* always-visible scrollbar (macOS hides overlay bars, hiding that there's more below) */
+.cfg-bd::-webkit-scrollbar{width:10px}
+.cfg-bd::-webkit-scrollbar-track{background:color-mix(in srgb,var(--dim) 12%,transparent); border-radius:6px}
+.cfg-bd::-webkit-scrollbar-thumb{background:color-mix(in srgb,var(--dim) 70%,transparent); border-radius:6px;
+  border:2px solid transparent; background-clip:padding-box}
+.cfg-bd::-webkit-scrollbar-thumb:hover{background:var(--accent); background-clip:padding-box}
 .cfg-sec{margin:0 0 14px}
 .cfg-sech{color:var(--dim); font-size:10px; letter-spacing:2px; text-transform:uppercase; margin-bottom:7px; opacity:.85}
 .cfg-grid{display:grid; grid-template-columns:1fr 1fr; gap:8px 16px}
