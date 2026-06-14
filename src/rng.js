@@ -5,6 +5,8 @@ let _seed=cfg.seed>>>0;
 function hashU32(s){ s=Math.imul(s^(s>>>16),0x45d9f3b)>>>0; s=Math.imul(s^(s>>>16),0x45d9f3b)>>>0; return (s^(s>>>16))>>>0; }
 function pickCodename(seed){ return CODENAMES[hashU32(seed>>>0)%CODENAMES.length]; }
 if(!cfg.agent) cfg.agent=pickCodename(cfg.seed);   // seed-derived; independent of the main RNG stream so the story is unchanged
+let agentProfile=AGENT_PROFILES[cfg.agent]||NEUTRAL_PROFILE;   // behavioral temperament (#5); recomputed on live agent/seed change
+function resolveAgentProfile(){ agentProfile=AGENT_PROFILES[cfg.agent||pickCodename(cfg.seed)]||NEUTRAL_PROFILE; }
 function rng(){ // mulberry32
   _seed=(_seed+0x6D2B79F5)|0; let t=_seed;
   t=Math.imul(t^(t>>>15),1|t); t=(t+Math.imul(t^(t>>>7),61|t))^t;

@@ -54,6 +54,31 @@ const VIBES={
   'security-incident':    {speed:1.2, freq:2.3, seed:31337,   bias:['attackmap','security','auth','filterrepo','pager','anomaly','dns','postmortem']},
 };
 const VIBE = VIBES[QS.get('vibe')] || null;
+/* agent temperaments — a codename isn't just a label, it's a behavioral profile.
+   bias[] tilts scene probability; rethink[] colors the agent's voice; boot opens
+   mission #1. Codenames without an entry (NOVA/FLUX/VECTOR/ORBIT) and any custom
+   ?agent= fall back to NEUTRAL_PROFILE. Seed-derived → deterministic per seed. */
+const AGENT_PROFILES={
+  'KERNEL':  {boot:'low-level mode — syscalls, perf, and the kernel are the whole job',
+    bias:['btop','oom','cpuheat','flame','gpu','thermal'],
+    rethink:['That syscall is on the hot path — going lock-free.','Cache-miss storm — repacking the struct for locality.','This allocates every frame. Pooling it.','Branch misprediction here — making it branchless.']},
+  'PRISM':   {boot:'observability-first — if it isn’t traced, it didn’t happen',
+    bias:['grafana','trace','heatmap','anomaly','sql','pager'],
+    rethink:['The trace says otherwise — re-reading the span tree.','p99 hides the truth; checking p99.9.','Correlating the metric with the deploy marker.','No span for this path — instrumenting it first.']},
+  'FORGE':   {boot:'move fast — edit, commit, ship, repeat',
+    bias:['deploy','pipeline','pr','docker','rebase','octopus','terraform'],
+    rethink:['Good enough — shipping it behind a flag.','Reverting and re-forging from main.','Force-pushing the cleaner history.','Squashing this into one tidy commit.']},
+  'PILOT':   {boot:'cautious by default — tests, guards, and a rollback plan first',
+    bias:['security','auth','pr','bisect','reflog','postmortem'],
+    rethink:['Writing a regression test before I touch this.','Need a rollback guard here.','Requesting the elevated scope explicitly.','Bisecting to be sure of the culprit.']},
+  'RELAY':   {boot:'distributed-systems brain — queues, retries, and consensus',
+    bias:['mesh','cluster','kafka','dns','chaos','anomaly'],
+    rethink:['The retry isn’t idempotent — adding a key.','Quorum can’t be reached under partition.','Dead-lettering and replaying the batch.','Fencing the stale read with a version check.']},
+  'CURSOR-X':{boot:'uncanny coding-agent mode — spawn subagents, spam tools, look busy',
+    bias:['swarm','chatter','vim','tmux','matrix','pr'],
+    rethink:['Spawning a subagent to double-check.','Fanning this out across the fleet.','One more tool call should settle it.','Asking a peer agent to review the diff.']},
+};
+const NEUTRAL_PROFILE={boot:null,bias:[],rethink:[]};
 const cfg={
   agent: QS.get('agent')||null,
   project: QS.get('project')||'',

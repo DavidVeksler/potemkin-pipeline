@@ -59,6 +59,10 @@ function checkDrama(){
       const bias=VIBES[cfg.vibe].bias.filter(id=>en.indexOf(id)>=0);
       type=bias.length?pick(bias):pick(en); firstDrama=false;
     }
+    else if(agentProfile.bias.length && rng()<0.45){      // agent temperament tilts scene odds (#5)
+      const bias=agentProfile.bias.filter(id=>en.indexOf(id)>=0);
+      type=bias.length?pick(bias):pick(en); firstDrama=false;
+    }
     else { type=pick(en); firstDrama=false; }
     if(type&&DRAMAS[type]) dramaQ.push(DRAMAS[type]);
     // clustered cadence: squared draw biases the gap toward ~0 (bursts fire back-to-back, gated only by play time)

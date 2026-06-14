@@ -116,6 +116,28 @@ the **cost/burn meter** (#2)._
 
 ---
 
+## Engine & behavior
+
+### ✅ A. Behavioral agent codenames — _shipped_
+Make codenames affect behavior, not just the header label. Each codename implies an
+"agent temperament" that influences scene weights, language style, and the opening
+tagline (`AGENT_PROFILES` in `src/config.js`, resolved to `agentProfile` in `rng.js`):
+`KERNEL` (perf/syscall/kernel), `PRISM` (observability), `FORGE` (aggressive
+ship/git), `PILOT` (cautious tests/auth), `RELAY` (distributed/queues),
+`CURSOR-X` (subagent/tool-spam parody). The scheduler favors a profile's signature
+scenes (~45% when no `?vibe=` override); `rethink()` mixes in profile-flavored
+second-guesses; a boot tagline opens mission #1. Seed-derived and deterministic;
+`?agent=` maps to a known profile or falls back neutral (NOVA/FLUX/VECTOR/ORBIT and
+any custom name are neutral).
+
+### ✅ B. Batched DOM rendering — _shipped_
+Reduce layout churn: `appendLine` queues nodes instead of inserting per event; the
+frame loop flushes the whole batch through one `DocumentFragment`, prunes once, and
+autoscrolls once per frame. File-highlight `scrollIntoView` is coalesced to a single
+call per frame. `MAX_PER_FRAME` still caps logical emission.
+
+---
+
 ## HEATMAP DRAMAS
 
 **What the heatmap actually is** ([hyperion.js:1041](hyperion.js:1041)): a `liveState` canvas ticker — `rows × scrolling time-columns`, each cell color-mapped by intensity, columns push left every 150ms, and a single `phase('spike'|'recover')` flag re-shapes the value distribution (the bottom rows stay flat, top rows blow up via `tail*tail`). The drama arc ([dHeatmap:1557](hyperion.js:1557)) is just: pull up dashboard → calm baseline → `beep('alert')` → spike → agent edits → recover → resolved.

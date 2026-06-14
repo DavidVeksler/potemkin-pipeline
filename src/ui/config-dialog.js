@@ -26,7 +26,7 @@ function buildConfig(){
 
   let g;
   g=sec('Identity');
-  fld(g,'agent',txt(cfg.agent,v=>{cfg.agent=v;agentExplicit=!!v;hAgent.textContent=v||pickCodename(cfg.seed);syncURL();}),true);
+  fld(g,'agent',txt(cfg.agent,v=>{cfg.agent=v;agentExplicit=!!v;hAgent.textContent=v||pickCodename(cfg.seed);resolveAgentProfile();syncURL();}),true);
   fld(g,'project',txt(cfg.project,v=>{cfg.project=v;hProj.textContent=v;syncURL();}));
   fld(g,'model',txt(cfg.model,v=>{cfg.model=v;hModel.textContent=v;syncURL();}));
 
@@ -97,7 +97,7 @@ function resetConfig(){
   cfg.idle=90; idleThreshold=90; exitIdle();
   speed=1; dramaOn=true; cfg.dramas='on'; dramaFreq=1; cfg.freq=1; mode='auto'; cfg.project=PROJECTS[(rng()*PROJECTS.length)|0];
   cfg.seed=(Math.random()*4294967296)>>>0; _seed=cfg.seed; seedExplicit=false;
-  cfg.agent=pickCodename(cfg.seed); agentExplicit=false;
+  cfg.agent=pickCodename(cfg.seed); agentExplicit=false; resolveAgentProfile();
   reduceFlash=prefersRM; reduceMotion=prefersRM;
   document.body.classList.toggle('crt',false); document.body.classList.toggle('reduce',reduceFlash);
   hAgent.textContent=cfg.agent; hProj.textContent=cfg.project; hModel.textContent=cfg.model;

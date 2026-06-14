@@ -83,7 +83,7 @@ function* pTest(m,attempt){
     yield OUT((total-1)+' passing, 1 failing ('+(2+rng()*3).toFixed(1)+'s)','warn',{burst:true,more:ri(12,80)});
     yield OUT('✗ '+pick(ASSERT),'err');
     yield THINK();
-    yield L(pick(RETHINK),'warn',{wait:U(900,3200)});
+    yield L(rethink(),'warn',{wait:U(900,3200)});
     yield L(pick(DIAG),'dim');
     yield TOOL('Edit',m.rootFile); yield FILE(m.rootFile,'M');
     const dl=2+ri(0,2);
@@ -159,6 +159,7 @@ function* missionStream(){
     const m=newMission();
     yield CLR();
     yield BANNER('▌ Mission #'+m.id+' — '+m.subject);
+    if(m.id===1 && agentProfile.boot) yield L('▸ '+cfg.agent+' · '+agentProfile.boot,'dim',{wait:U(300,600)});
     yield L('root: '+m.rootFile+'  · difficulty '+m.difficulty,'dim');
     yield* pScan(m); yield* pMap(m); yield* pPlan(m);
     if(rng()<0.18) yield* typoBeat();

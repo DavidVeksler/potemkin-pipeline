@@ -26,7 +26,7 @@ function* dDeepWork(){
       done=b===beats?total:Math.min(total,Math.round(total*(b/beats)*U(0.9,1.06)));
       const frac=done/total, r=rng();
       if(r<0.4){ yield TOOL(pick(['Edit','Edit','MultiEdit','Bash','Read']),pick(FILES)); if(rng()<0.5) yield FILE(pick(FILES),'M'); }
-      else if(r<0.55){ yield THINK(); yield L(pick(RETHINK),'warn',{wait:U(500,1200)}); }
+      else if(r<0.55){ yield THINK(); yield L(rethink(),'warn',{wait:U(500,1200)}); }
       yield L(barStr(frac)+' '+goal.label+' · '+Math.round(frac*100)+'% · '+grp(done)+' / '+grp(total)+' '+goal.unit, frac>=1?'ok':'accent',{wait:U(1500,3300)});
       if(rng()<0.5) yield CNT('lines',ri(40,900));
       if(rng()<0.3) yield CNT('files',ri(1,6));

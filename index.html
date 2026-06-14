@@ -805,6 +805,31 @@ const VIBES={
   'security-incident':    {speed:1.2, freq:2.3, seed:31337,   bias:['attackmap','security','auth','filterrepo','pager','anomaly','dns','postmortem']},
 };
 const VIBE = VIBES[QS.get('vibe')] || null;
+/* agent temperaments — a codename isn't just a label, it's a behavioral profile.
+   bias[] tilts scene probability; rethink[] colors the agent's voice; boot opens
+   mission #1. Codenames without an entry (NOVA/FLUX/VECTOR/ORBIT) and any custom
+   ?agent= fall back to NEUTRAL_PROFILE. Seed-derived → deterministic per seed. */
+const AGENT_PROFILES={
+  'KERNEL':  {boot:'low-level mode — syscalls, perf, and the kernel are the whole job',
+    bias:['btop','oom','cpuheat','flame','gpu','thermal'],
+    rethink:['That syscall is on the hot path — going lock-free.','Cache-miss storm — repacking the struct for locality.','This allocates every frame. Pooling it.','Branch misprediction here — making it branchless.']},
+  'PRISM':   {boot:'observability-first — if it isn’t traced, it didn’t happen',
+    bias:['grafana','trace','heatmap','anomaly','sql','pager'],
+    rethink:['The trace says otherwise — re-reading the span tree.','p99 hides the truth; checking p99.9.','Correlating the metric with the deploy marker.','No span for this path — instrumenting it first.']},
+  'FORGE':   {boot:'move fast — edit, commit, ship, repeat',
+    bias:['deploy','pipeline','pr','docker','rebase','octopus','terraform'],
+    rethink:['Good enough — shipping it behind a flag.','Reverting and re-forging from main.','Force-pushing the cleaner history.','Squashing this into one tidy commit.']},
+  'PILOT':   {boot:'cautious by default — tests, guards, and a rollback plan first',
+    bias:['security','auth','pr','bisect','reflog','postmortem'],
+    rethink:['Writing a regression test before I touch this.','Need a rollback guard here.','Requesting the elevated scope explicitly.','Bisecting to be sure of the culprit.']},
+  'RELAY':   {boot:'distributed-systems brain — queues, retries, and consensus',
+    bias:['mesh','cluster','kafka','dns','chaos','anomaly'],
+    rethink:['The retry isn’t idempotent — adding a key.','Quorum can’t be reached under partition.','Dead-lettering and replaying the batch.','Fencing the stale read with a version check.']},
+  'CURSOR-X':{boot:'uncanny coding-agent mode — spawn subagents, spam tools, look busy',
+    bias:['swarm','chatter','vim','tmux','matrix','pr'],
+    rethink:['Spawning a subagent to double-check.','Fanning this out across the fleet.','One more tool call should settle it.','Asking a peer agent to review the diff.']},
+};
+const NEUTRAL_PROFILE={boot:null,bias:[],rethink:[]};
 const cfg={
   agent: QS.get('agent')||null,
   project: QS.get('project')||'',
@@ -835,6 +860,8 @@ let _seed=cfg.seed>>>0;
 function hashU32(s){ s=Math.imul(s^(s>>>16),0x45d9f3b)>>>0; s=Math.imul(s^(s>>>16),0x45d9f3b)>>>0; return (s^(s>>>16))>>>0; }
 function pickCodename(seed){ return CODENAMES[hashU32(seed>>>0)%CODENAMES.length]; }
 if(!cfg.agent) cfg.agent=pickCodename(cfg.seed);   // seed-derived; independent of the main RNG stream so the story is unchanged
+let agentProfile=AGENT_PROFILES[cfg.agent]||NEUTRAL_PROFILE;   // behavioral temperament (#5); recomputed on live agent/seed change
+function resolveAgentProfile(){ agentProfile=AGENT_PROFILES[cfg.agent||pickCodename(cfg.seed)]||NEUTRAL_PROFILE; }
 function rng(){ // mulberry32
   _seed=(_seed+0x6D2B79F5)|0; let t=_seed;
   t=Math.imul(t^(t>>>15),1|t); t=(t+Math.imul(t^(t>>>7),61|t))^t;
@@ -955,6 +982,8 @@ const ADD=['acquire distributed lock before debit',"await pool.withTransaction(t
 const DEL=['balance -= amount            // race under concurrency','O(n²) nested scan','synchronous fs.readFileSync on hot path','unbounded retry without backoff','mutate shared state without lock','swallow error silently','blocking call inside event loop','double-counted on retry'];
 const FIX=['acquire distributed lock before debit','add idempotency key to retry path','fence stale read with version check','reorder lock acquisition to avoid deadlock','guard empty batch before flush','wrap debit + credit in one transaction','clamp TTL to non-negative','use compare-and-swap on the counter','add backoff with jitter to retry loop','hold read-lock across the projection rebuild'];
 const RETHINK=["Hmm — that's not right.","Wait, there's a race on concurrent writes.","The invariant doesn't hold under partition.","Off-by-one in the boundary condition.","This allocates on the hot path — reconsidering.","The lock ordering can deadlock. Reordering.","That regression came from the cache. Reverting.","Edge case: empty batch slips through.","The retry isn't idempotent. Adding a key.","Stale read — need a fence here."];
+/* agent-voiced second-guess: ~half the time a profile-flavored line, else the shared bank (#5) */
+function rethink(){ return (agentProfile.rethink.length && rng()<0.5) ? pick(agentProfile.rethink) : pick(RETHINK); }
 const DIAG=['Root cause: two writers, no fence.','Reproduced locally under -race.','Bisected to the cache layer change.','Confirmed: missing happens-before edge.','Narrowed to the compensation path.','Trace shows duplicate delivery.'];
 const ASSERT=['assertion failed: balance != expected','expected 200 OK, got 500','timeout after 5000ms waiting for lock','AssertionError: sum(entries) != ledger.total','panic: nil map write','FAIL: data race detected on shared counter','expected idempotent retry, got duplicate','deadlock: goroutine 41 stuck on mu.Lock'];
 const TOOLS=['Bash','Bash','Bash','Read','Read','Read','Edit','Edit','Write','Grep','Glob','WebFetch','Task','MultiEdit'];
@@ -2215,7 +2244,7 @@ function* pTest(m,attempt){
     yield OUT((total-1)+' passing, 1 failing ('+(2+rng()*3).toFixed(1)+'s)','warn',{burst:true,more:ri(12,80)});
     yield OUT('✗ '+pick(ASSERT),'err');
     yield THINK();
-    yield L(pick(RETHINK),'warn',{wait:U(900,3200)});
+    yield L(rethink(),'warn',{wait:U(900,3200)});
     yield L(pick(DIAG),'dim');
     yield TOOL('Edit',m.rootFile); yield FILE(m.rootFile,'M');
     const dl=2+ri(0,2);
@@ -2291,6 +2320,7 @@ function* missionStream(){
     const m=newMission();
     yield CLR();
     yield BANNER('▌ Mission #'+m.id+' — '+m.subject);
+    if(m.id===1 && agentProfile.boot) yield L('▸ '+cfg.agent+' · '+agentProfile.boot,'dim',{wait:U(300,600)});
     yield L('root: '+m.rootFile+'  · difficulty '+m.difficulty,'dim');
     yield* pScan(m); yield* pMap(m); yield* pPlan(m);
     if(rng()<0.18) yield* typoBeat();
@@ -2314,7 +2344,7 @@ function* dAnomaly(){
   yield OUT('spike correlates with deploy '+hash(),'dim',{burst:true,more:ri(20,140)});
   yield OUT(ri(120,9000)+' anomalous spans in '+region,'dim',{burst:true});
   yield THINK();
-  yield L(pick(RETHINK),'warn',{wait:U(800,1800)});
+  yield L(rethink(),'warn',{wait:U(800,1800)});
   yield TOOL('Edit',pick(FILES));
   yield DIFF('+',pick(FIX),{wait:U(60,160)});
   yield OUT('hotfix applied · rolling forward','dim');
@@ -2409,7 +2439,7 @@ function* dChatter(){
   yield L(a+': PR #'+pr+' is up — can you review '+topic+'?','dim',{wait:U(500,1000)});
   yield L(b+': looking… I’d push back on '+pick(['the unbounded retry','the global lock','the 5m TTL','the in-place migration','the Seq Scan']),'warn',{wait:U(700,1300)});
   yield THINK();
-  yield L(a+': fair — '+pick(RETHINK),'dim',{wait:U(600,1200)});
+  yield L(a+': fair — '+rethink(),'dim',{wait:U(600,1200)});
   yield L(b+': '+pick(['ship it with a jittered backoff','gate it behind a flag','add a fence and we’re good','split it into two PRs','LGTM once tests are green']),'dim',{wait:U(600,1200)});
   yield L('✔ consensus reached — '+b+' approved PR #'+pr+' · merging','ok',{wait:U(500,1000)});
   yield CNT('commits',1);
@@ -2425,7 +2455,7 @@ function* dPager(){
   yield TOOL('Bash','kubectl logs -l app='+svc+' --since=10m | grep -iE "5..|error" | tail');
   yield OUT(grp(ri(400,9000))+' errors in 10m · onset 03:'+String(min).padStart(2,'0'),'dim',{burst:true,more:ri(14,90)});
   yield THINK();
-  yield L(pick(RETHINK),'warn',{wait:U(800,1500)});
+  yield L(rethink(),'warn',{wait:U(800,1500)});
   yield TOOL('Edit',pick(FILES));
   yield DIFF('+',pick(FIX),{wait:U(60,160)});
   yield OUT('hotfix rolling out · watching the error budget recover','dim',{burst:true});
@@ -2475,7 +2505,7 @@ function* dFlame(){
   yield OV('app',{tool:'flame',title:'pprof · cpu profile (30s)',url:'pprof/ui/flamegraph',rows:flameRows()});
   yield L('▌ Profiling hot path','accent',{wait:U(500,900)});
   yield OV('appstep',{k:'cap',text:'self: json.Marshal '+ri(38,59)+'% · GC pressure high',wait:U(800,1300)});
-  yield L(pick(RETHINK),'warn',{wait:U(700,1400)});
+  yield L(rethink(),'warn',{wait:U(700,1400)});
   yield TOOL('Edit',pick(FILES));
   yield DIFF('+','reuse encoder via sync.Pool; drop reflection path',{wait:U(80,160)});
   yield OUT('re-profiling…','dim',{burst:true});
@@ -2566,7 +2596,7 @@ function* dTrace(){
   yield OV('app',{tool:'trace',title:'Jaeger · trace '+hash(8),url:'jaeger/trace/'+hash(8),spans:t.spans,total:t.total});
   yield L('▌ Tracing slow request path','accent',{wait:U(500,900)});
   yield OV('appstep',{k:'cap',text:'⚠ serialize.json 312ms · 64% of trace',wait:U(800,1300)});
-  yield L(pick(RETHINK),'warn',{wait:U(700,1400)});
+  yield L(rethink(),'warn',{wait:U(700,1400)});
   yield TOOL('Edit',pick(FILES));
   yield DIFF('+','stream response via buffered encoder; drop deep copy',{wait:U(80,160)});
   yield OUT('replaying trace…','dim',{burst:true});
@@ -2648,7 +2678,7 @@ function* dBtop(){
   yield OV('btopfx',{phase:'spike'});
   yield L('⚠ runaway '+vn+' (pid '+pid+') pinning '+ncore+' cores at 99%','err',{wait:U(1000,1600)});
   yield THINK();
-  yield L(pick(RETHINK),'warn',{wait:U(800,1500)});
+  yield L(rethink(),'warn',{wait:U(800,1500)});
   yield TOOL('Bash','kill -9 '+pid);
   yield OUT('SIGKILL sent · reaping process','dim',{burst:true});
   yield WAIT(U(1000,1500));
@@ -2723,7 +2753,7 @@ function* dGpu(){
   yield OV('appstep',{k:'cap',text:'⚠ GPU'+hot+' thermal throttling at 89°C · throughput degraded'});
   yield L('⚠ GPU'+hot+' overheating — throttled, dragging the all-reduce','err',{wait:U(1000,1600)});
   yield THINK();
-  yield L(pick(RETHINK),'warn',{wait:U(800,1500)});
+  yield L(rethink(),'warn',{wait:U(800,1500)});
   yield TOOL('Bash','kubectl drain '+host+'-gpu'+hot+' --ignore-daemonsets && scheduler reshard');
   yield OUT('migrating shard off GPU'+hot+' · rebalancing pipeline','dim',{burst:true});
   yield WAIT(U(1100,1600));
@@ -2748,7 +2778,7 @@ function* dMesh(){
   yield OV('appstep',{k:'cap',text:'⚠ '+nodes[bn].l+' 5xx '+(28+ri(0,20))+'% · circuit breaker open'});
   yield L('⚠ '+nodes[bn].l+' failing — breaker tripped, retries storming','err',{wait:U(900,1500)});
   yield THINK();
-  yield L(pick(RETHINK),'warn',{wait:U(800,1500)});
+  yield L(rethink(),'warn',{wait:U(800,1500)});
   yield TOOL('Bash','istioctl apply -f outlier-detection.yaml');
   yield OUT('ejecting unhealthy endpoints · shifting traffic','dim',{burst:true});
   yield WAIT(U(1000,1500));
@@ -2772,7 +2802,7 @@ function* dHeatmap(){
   yield OV('appstep',{k:'cap',text:'⚠ p99.9 '+p999+'ms — tail-latency blowout in the top percentiles'});
   yield L('⚠ tail latency exploding — p99.9 '+p999+'ms while p50 stays flat','err',{wait:U(1000,1600)});
   yield THINK();
-  yield L(pick(RETHINK),'warn',{wait:U(800,1500)});
+  yield L(rethink(),'warn',{wait:U(800,1500)});
   yield TOOL('Edit',pick(FILES));
   yield DIFF('+','hedge slow requests after 200ms; cap tail with a deadline',{wait:U(80,160)});
   yield OUT('rolling out · watching percentiles','dim',{burst:true});
@@ -2798,7 +2828,7 @@ function* dThermal(){
   yield OV('appstep',{k:'cap',text:'⚠ die'+hot+' '+t+'°C — thermal throttle engaged, clocks dropping'});
   yield L('⚠ a column of dies redlining at '+t+'°C — throttling, throughput sagging','err',{wait:U(1000,1600)});
   yield THINK();
-  yield L(pick(RETHINK),'warn',{wait:U(800,1500)});
+  yield L(rethink(),'warn',{wait:U(800,1500)});
   yield TOOL('Bash','ipmitool raw 0x30 0x30 0x02 0xff 0x64 && nvidia-smi -pl 250');
   yield OUT('fan curve to 100% · capping power limit · migrating the hot shard','dim',{burst:true});
   yield WAIT(U(1400,2000));
@@ -2904,7 +2934,7 @@ function* dTmux(){
   yield OV('appstep',{k:'tabs',text:panes.map((p,i)=>i+':'+p.name+(i===bad?'!':'')).join('  ')});
   yield L('⚠ pane '+bad+' (test) red — Ctrl-b '+bad+' to jump','err',{wait:U(800,1300)});
   yield THINK();
-  yield L(pick(RETHINK),'warn',{wait:U(700,1200)});
+  yield L(rethink(),'warn',{wait:U(700,1200)});
   yield TOOL('Edit',pick(FILES));
   yield DIFF('+',pick(FIX),{wait:U(80,160)});
   yield OUT('re-running the failing package','dim',{burst:true});
@@ -2989,7 +3019,7 @@ function* dCpuheat(){
   yield OV('appstep',{k:'cap',text:'⚠ core '+hot+' pinned at 100% — one thread hot, '+(CPU_CORES-1)+' cores idle'});
   yield L('⚠ core '+hot+' saturated — a thread busy-spinning while the box sits idle','err',{wait:U(1000,1600)});
   yield THINK();
-  yield L(pick(RETHINK),'warn',{wait:U(800,1500)});
+  yield L(rethink(),'warn',{wait:U(800,1500)});
   yield TOOL('Edit',pick(FILES));
   yield DIFF('+','add backoff jitter to the retry loop; yield instead of spinning on the lock',{wait:U(80,160)});
   yield OUT('rolling out · watching per-core utilization','dim',{burst:true});
@@ -3151,7 +3181,7 @@ function* dBlame(){
   yield THINK();
   yield TOOL('Bash','git blame -L '+ri(40,400)+',+8 '+pick(FILES));
   yield OUT(culprit+' ('+pick(['a.chen','j.park','m.silva','intern-2019'])+' '+(2026-yrs)+') the line that lied','dim',{burst:true});
-  yield L(pick(RETHINK),'warn',{wait:U(700,1400)});
+  yield L(rethink(),'warn',{wait:U(700,1400)});
   yield TOOL('Edit',pick(FILES));
   yield DIFF('+',pick(FIX),{wait:U(60,160)});
   yield OV('banner',{cls:'ok',text:'✓ FIXED — '+yrs+'-year-old bug finally evicted',wait:U(700,1400)});
@@ -3189,7 +3219,7 @@ function* dDeepWork(){
       done=b===beats?total:Math.min(total,Math.round(total*(b/beats)*U(0.9,1.06)));
       const frac=done/total, r=rng();
       if(r<0.4){ yield TOOL(pick(['Edit','Edit','MultiEdit','Bash','Read']),pick(FILES)); if(rng()<0.5) yield FILE(pick(FILES),'M'); }
-      else if(r<0.55){ yield THINK(); yield L(pick(RETHINK),'warn',{wait:U(500,1200)}); }
+      else if(r<0.55){ yield THINK(); yield L(rethink(),'warn',{wait:U(500,1200)}); }
       yield L(barStr(frac)+' '+goal.label+' · '+Math.round(frac*100)+'% · '+grp(done)+' / '+grp(total)+' '+goal.unit, frac>=1?'ok':'accent',{wait:U(1500,3300)});
       if(rng()<0.5) yield CNT('lines',ri(40,900));
       if(rng()<0.3) yield CNT('files',ri(1,6));
@@ -3358,6 +3388,10 @@ function checkDrama(){
     if(firstDrama && en.indexOf('anomaly')>=0){ type='anomaly'; firstDrama=false; }
     else if(cfg.vibe && VIBES[cfg.vibe] && rng()<0.62){   // vibe presets favor their signature scenes
       const bias=VIBES[cfg.vibe].bias.filter(id=>en.indexOf(id)>=0);
+      type=bias.length?pick(bias):pick(en); firstDrama=false;
+    }
+    else if(agentProfile.bias.length && rng()<0.45){      // agent temperament tilts scene odds (#5)
+      const bias=agentProfile.bias.filter(id=>en.indexOf(id)>=0);
       type=bias.length?pick(bias):pick(en); firstDrama=false;
     }
     else { type=pick(en); firstDrama=false; }
@@ -3617,7 +3651,7 @@ function buildConfig(){
 
   let g;
   g=sec('Identity');
-  fld(g,'agent',txt(cfg.agent,v=>{cfg.agent=v;agentExplicit=!!v;hAgent.textContent=v||pickCodename(cfg.seed);syncURL();}),true);
+  fld(g,'agent',txt(cfg.agent,v=>{cfg.agent=v;agentExplicit=!!v;hAgent.textContent=v||pickCodename(cfg.seed);resolveAgentProfile();syncURL();}),true);
   fld(g,'project',txt(cfg.project,v=>{cfg.project=v;hProj.textContent=v;syncURL();}));
   fld(g,'model',txt(cfg.model,v=>{cfg.model=v;hModel.textContent=v;syncURL();}));
 
@@ -3688,7 +3722,7 @@ function resetConfig(){
   cfg.idle=90; idleThreshold=90; exitIdle();
   speed=1; dramaOn=true; cfg.dramas='on'; dramaFreq=1; cfg.freq=1; mode='auto'; cfg.project=PROJECTS[(rng()*PROJECTS.length)|0];
   cfg.seed=(Math.random()*4294967296)>>>0; _seed=cfg.seed; seedExplicit=false;
-  cfg.agent=pickCodename(cfg.seed); agentExplicit=false;
+  cfg.agent=pickCodename(cfg.seed); agentExplicit=false; resolveAgentProfile();
   reduceFlash=prefersRM; reduceMotion=prefersRM;
   document.body.classList.toggle('crt',false); document.body.classList.toggle('reduce',reduceFlash);
   hAgent.textContent=cfg.agent; hProj.textContent=cfg.project; hModel.textContent=cfg.model;
@@ -3852,7 +3886,7 @@ init();
 
 // test/debug hook — only exposed with ?debug in the URL, so production ships zero global surface
 if(cfg.debug){
-  window.__HYP={state:()=>({lines:logEl.childElementCount,counters:Object.assign({},counters),mode,paused,speed,dramas:dramaOn,freq:dramaFreq,ctx:Math.round(ctx),overlayActive,idle:idleActive,logicalNow:Math.round(logicalNow),missionId}),force:forceDrama,drama:n=>{if(DRAMAS[n])enqueueDrama(DRAMAS[n],n);return n;},deepwork:enterIdle,wake:markActivity,seed:cfg.seed};
+  window.__HYP={state:()=>({lines:logEl.childElementCount,counters:Object.assign({},counters),mode,paused,speed,dramas:dramaOn,freq:dramaFreq,ctx:Math.round(ctx),overlayActive,idle:idleActive,logicalNow:Math.round(logicalNow),missionId,agent:cfg.agent,profile:agentProfile===NEUTRAL_PROFILE?'neutral':cfg.agent,profileBias:agentProfile.bias}),force:forceDrama,drama:n=>{if(DRAMAS[n])enqueueDrama(DRAMAS[n],n);return n;},deepwork:enterIdle,wake:markActivity,seed:cfg.seed};
 }
 
 })();

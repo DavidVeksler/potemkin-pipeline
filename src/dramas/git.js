@@ -146,7 +146,7 @@ function* dBlame(){
   yield THINK();
   yield TOOL('Bash','git blame -L '+ri(40,400)+',+8 '+pick(FILES));
   yield OUT(culprit+' ('+pick(['a.chen','j.park','m.silva','intern-2019'])+' '+(2026-yrs)+') the line that lied','dim',{burst:true});
-  yield L(pick(RETHINK),'warn',{wait:U(700,1400)});
+  yield L(rethink(),'warn',{wait:U(700,1400)});
   yield TOOL('Edit',pick(FILES));
   yield DIFF('+',pick(FIX),{wait:U(60,160)});
   yield OV('banner',{cls:'ok',text:'✓ FIXED — '+yrs+'-year-old bug finally evicted',wait:U(700,1400)});

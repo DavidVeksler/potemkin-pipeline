@@ -35,7 +35,7 @@ function* dFlame(){
   yield OV('app',{tool:'flame',title:'pprof · cpu profile (30s)',url:'pprof/ui/flamegraph',rows:flameRows()});
   yield L('▌ Profiling hot path','accent',{wait:U(500,900)});
   yield OV('appstep',{k:'cap',text:'self: json.Marshal '+ri(38,59)+'% · GC pressure high',wait:U(800,1300)});
-  yield L(pick(RETHINK),'warn',{wait:U(700,1400)});
+  yield L(rethink(),'warn',{wait:U(700,1400)});
   yield TOOL('Edit',pick(FILES));
   yield DIFF('+','reuse encoder via sync.Pool; drop reflection path',{wait:U(80,160)});
   yield OUT('re-profiling…','dim',{burst:true});
@@ -126,7 +126,7 @@ function* dTrace(){
   yield OV('app',{tool:'trace',title:'Jaeger · trace '+hash(8),url:'jaeger/trace/'+hash(8),spans:t.spans,total:t.total});
   yield L('▌ Tracing slow request path','accent',{wait:U(500,900)});
   yield OV('appstep',{k:'cap',text:'⚠ serialize.json 312ms · 64% of trace',wait:U(800,1300)});
-  yield L(pick(RETHINK),'warn',{wait:U(700,1400)});
+  yield L(rethink(),'warn',{wait:U(700,1400)});
   yield TOOL('Edit',pick(FILES));
   yield DIFF('+','stream response via buffered encoder; drop deep copy',{wait:U(80,160)});
   yield OUT('replaying trace…','dim',{burst:true});
@@ -208,7 +208,7 @@ function* dBtop(){
   yield OV('btopfx',{phase:'spike'});
   yield L('⚠ runaway '+vn+' (pid '+pid+') pinning '+ncore+' cores at 99%','err',{wait:U(1000,1600)});
   yield THINK();
-  yield L(pick(RETHINK),'warn',{wait:U(800,1500)});
+  yield L(rethink(),'warn',{wait:U(800,1500)});
   yield TOOL('Bash','kill -9 '+pid);
   yield OUT('SIGKILL sent · reaping process','dim',{burst:true});
   yield WAIT(U(1000,1500));
@@ -283,7 +283,7 @@ function* dGpu(){
   yield OV('appstep',{k:'cap',text:'⚠ GPU'+hot+' thermal throttling at 89°C · throughput degraded'});
   yield L('⚠ GPU'+hot+' overheating — throttled, dragging the all-reduce','err',{wait:U(1000,1600)});
   yield THINK();
-  yield L(pick(RETHINK),'warn',{wait:U(800,1500)});
+  yield L(rethink(),'warn',{wait:U(800,1500)});
   yield TOOL('Bash','kubectl drain '+host+'-gpu'+hot+' --ignore-daemonsets && scheduler reshard');
   yield OUT('migrating shard off GPU'+hot+' · rebalancing pipeline','dim',{burst:true});
   yield WAIT(U(1100,1600));
@@ -308,7 +308,7 @@ function* dMesh(){
   yield OV('appstep',{k:'cap',text:'⚠ '+nodes[bn].l+' 5xx '+(28+ri(0,20))+'% · circuit breaker open'});
   yield L('⚠ '+nodes[bn].l+' failing — breaker tripped, retries storming','err',{wait:U(900,1500)});
   yield THINK();
-  yield L(pick(RETHINK),'warn',{wait:U(800,1500)});
+  yield L(rethink(),'warn',{wait:U(800,1500)});
   yield TOOL('Bash','istioctl apply -f outlier-detection.yaml');
   yield OUT('ejecting unhealthy endpoints · shifting traffic','dim',{burst:true});
   yield WAIT(U(1000,1500));
@@ -332,7 +332,7 @@ function* dHeatmap(){
   yield OV('appstep',{k:'cap',text:'⚠ p99.9 '+p999+'ms — tail-latency blowout in the top percentiles'});
   yield L('⚠ tail latency exploding — p99.9 '+p999+'ms while p50 stays flat','err',{wait:U(1000,1600)});
   yield THINK();
-  yield L(pick(RETHINK),'warn',{wait:U(800,1500)});
+  yield L(rethink(),'warn',{wait:U(800,1500)});
   yield TOOL('Edit',pick(FILES));
   yield DIFF('+','hedge slow requests after 200ms; cap tail with a deadline',{wait:U(80,160)});
   yield OUT('rolling out · watching percentiles','dim',{burst:true});
@@ -358,7 +358,7 @@ function* dThermal(){
   yield OV('appstep',{k:'cap',text:'⚠ die'+hot+' '+t+'°C — thermal throttle engaged, clocks dropping'});
   yield L('⚠ a column of dies redlining at '+t+'°C — throttling, throughput sagging','err',{wait:U(1000,1600)});
   yield THINK();
-  yield L(pick(RETHINK),'warn',{wait:U(800,1500)});
+  yield L(rethink(),'warn',{wait:U(800,1500)});
   yield TOOL('Bash','ipmitool raw 0x30 0x30 0x02 0xff 0x64 && nvidia-smi -pl 250');
   yield OUT('fan curve to 100% · capping power limit · migrating the hot shard','dim',{burst:true});
   yield WAIT(U(1400,2000));
@@ -464,7 +464,7 @@ function* dTmux(){
   yield OV('appstep',{k:'tabs',text:panes.map((p,i)=>i+':'+p.name+(i===bad?'!':'')).join('  ')});
   yield L('⚠ pane '+bad+' (test) red — Ctrl-b '+bad+' to jump','err',{wait:U(800,1300)});
   yield THINK();
-  yield L(pick(RETHINK),'warn',{wait:U(700,1200)});
+  yield L(rethink(),'warn',{wait:U(700,1200)});
   yield TOOL('Edit',pick(FILES));
   yield DIFF('+',pick(FIX),{wait:U(80,160)});
   yield OUT('re-running the failing package','dim',{burst:true});
@@ -549,7 +549,7 @@ function* dCpuheat(){
   yield OV('appstep',{k:'cap',text:'⚠ core '+hot+' pinned at 100% — one thread hot, '+(CPU_CORES-1)+' cores idle'});
   yield L('⚠ core '+hot+' saturated — a thread busy-spinning while the box sits idle','err',{wait:U(1000,1600)});
   yield THINK();
-  yield L(pick(RETHINK),'warn',{wait:U(800,1500)});
+  yield L(rethink(),'warn',{wait:U(800,1500)});
   yield TOOL('Edit',pick(FILES));
   yield DIFF('+','add backoff jitter to the retry loop; yield instead of spinning on the lock',{wait:U(80,160)});
   yield OUT('rolling out · watching per-core utilization','dim',{burst:true});

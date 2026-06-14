@@ -13,7 +13,7 @@ function* dAnomaly(){
   yield OUT('spike correlates with deploy '+hash(),'dim',{burst:true,more:ri(20,140)});
   yield OUT(ri(120,9000)+' anomalous spans in '+region,'dim',{burst:true});
   yield THINK();
-  yield L(pick(RETHINK),'warn',{wait:U(800,1800)});
+  yield L(rethink(),'warn',{wait:U(800,1800)});
   yield TOOL('Edit',pick(FILES));
   yield DIFF('+',pick(FIX),{wait:U(60,160)});
   yield OUT('hotfix applied · rolling forward','dim');
@@ -108,7 +108,7 @@ function* dChatter(){
   yield L(a+': PR #'+pr+' is up — can you review '+topic+'?','dim',{wait:U(500,1000)});
   yield L(b+': looking… I’d push back on '+pick(['the unbounded retry','the global lock','the 5m TTL','the in-place migration','the Seq Scan']),'warn',{wait:U(700,1300)});
   yield THINK();
-  yield L(a+': fair — '+pick(RETHINK),'dim',{wait:U(600,1200)});
+  yield L(a+': fair — '+rethink(),'dim',{wait:U(600,1200)});
   yield L(b+': '+pick(['ship it with a jittered backoff','gate it behind a flag','add a fence and we’re good','split it into two PRs','LGTM once tests are green']),'dim',{wait:U(600,1200)});
   yield L('✔ consensus reached — '+b+' approved PR #'+pr+' · merging','ok',{wait:U(500,1000)});
   yield CNT('commits',1);
@@ -124,7 +124,7 @@ function* dPager(){
   yield TOOL('Bash','kubectl logs -l app='+svc+' --since=10m | grep -iE "5..|error" | tail');
   yield OUT(grp(ri(400,9000))+' errors in 10m · onset 03:'+String(min).padStart(2,'0'),'dim',{burst:true,more:ri(14,90)});
   yield THINK();
-  yield L(pick(RETHINK),'warn',{wait:U(800,1500)});
+  yield L(rethink(),'warn',{wait:U(800,1500)});
   yield TOOL('Edit',pick(FILES));
   yield DIFF('+',pick(FIX),{wait:U(60,160)});
   yield OUT('hotfix rolling out · watching the error budget recover','dim',{burst:true});
