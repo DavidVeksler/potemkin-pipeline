@@ -402,6 +402,17 @@ function el(cls,text){const d=document.createElement('div');d.className=cls;if(t
 function spn(cls,text){const s=document.createElement('span');s.className=cls;if(text!=null)s.textContent=text;return s;}
 function svgEl(tag,attrs){const e=document.createElementNS('http://www.w3.org/2000/svg',tag);for(const k in attrs)e.setAttribute(k,attrs[k]);return e;}
 
+// cosmetic key:value tool params — Math.random (flavor, not seeded/load-bearing; mustn't touch the rng stream)
+function toolSig(t){
+  const R=Math.random, P=a=>a[Math.floor(R()*a.length)], ps=[];
+  if(t==='Read'){ if(R()<0.45){ if(R()<0.6) ps.push(['offset',1+Math.floor(R()*1600)]); ps.push(['limit',P([40,60,80,100,120,200])]); } }
+  else if(t==='Grep'){ if(R()<0.7) ps.push(['glob',JSON.stringify(P(['*.ts','*.js','**/*.go','*.py','*.rs','src/**']))]); if(R()<0.5) ps.push(['output_mode',JSON.stringify(P(['content','files_with_matches']))]); else if(R()<0.3) ps.push(['-n','true']); }
+  else if(t==='Bash'){ if(R()<0.35) ps.push(['timeout',P([60000,120000,300000])]); }
+  else if(t==='Glob'){ if(R()<0.4) ps.push(['path',JSON.stringify(P(['src','app','.','packages/core','services']))]); }
+  else if(t==='Task'){ ps.push(['subagent_type',JSON.stringify(P(['Explore','general-purpose','code-reviewer','Plan']))]); }
+  else if(t==='WebFetch'){ if(R()<0.5) ps.push(['prompt',JSON.stringify(P(['summarize advisory','extract CVSS vector','affected versions?']))]); }
+  return ps;
+}
 function render(ev){
   if(VISIBLE[ev.kind] && ev.kind!=='thinking') finalizeThinker();
   if(VISIBLE[ev.kind] && ev.kind!=='tool' && ev.kind!=='output') resolveTool();
@@ -417,6 +428,11 @@ function render(ev){
       d.appendChild(spn('tname',ev.tool));
       d.appendChild(document.createTextNode('('));
       d.appendChild(spn('targ',ev.arg));
+      for(const [k,v] of toolSig(ev.tool).slice(0,2)){   // key: value extra params
+        d.appendChild(document.createTextNode(', '));
+        d.appendChild(spn('tkey',k)); d.appendChild(document.createTextNode(': '));
+        d.appendChild(spn('tval',String(v)));
+      }
       d.appendChild(document.createTextNode(')'));
       appendLine(d); activeTool={dot:dot,start:logicalNow}; ctxBump(1.3); burnTick(); break;
     }

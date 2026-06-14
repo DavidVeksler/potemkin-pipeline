@@ -51,10 +51,12 @@ realism-per-byte work in the project.
     flavor: `Read 248 lines`, `Updated app.ts with 3 additions and 1 removal`,
     `Found 12 matches in 4 files`, `41 files`. The lines counter bumps by the same
     additions number the Edit result just claimed — honest to the call that made it.
-18. **Structured arg signatures** — args read like real ones: `Read(file,
-    offset:240, limit:80)`, `Grep(pat, glob:"*.ts", output_mode:"content")`,
-    `Bash(cmd, timeout:120000)`. Param keys dim, values normal — pure CSS, big
-    fidelity jump. (Next.)
+18. ✅ **Structured arg signatures** — _shipped_. Args read like real ones:
+    `Read(file, offset: 240, limit: 80)`, `Grep(pat, glob: "*.ts",
+    output_mode: "content")`, `Bash(cmd, timeout: 120000)`,
+    `Task(desc, subagent_type: "Explore")`. Param keys dim, values normal;
+    generated per-tool at render with `Math.random` (cosmetic flavor — leaves
+    the seeded rng stream untouched, like the jitter rule).
 19. **Collapsed long output** — `⎿ … +37 lines (ctrl+r to expand)`. Instantly
     recognizable CC affordance; signals the call did a lot without showing it.
 20. **Per-call token cost** — a faint trailing `· 1.2k tokens` on heavier calls,

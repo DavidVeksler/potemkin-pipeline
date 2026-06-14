@@ -70,6 +70,8 @@ body.paused .dot{background:var(--warn);box-shadow:0 0 6px var(--warn)}
 .ln .tdot.tone-err{color:var(--err)}
 .ln .tname{color:var(--fg);font-weight:600}
 .ln .targ{color:var(--accent)}
+.ln .tkey{color:var(--dim)}
+.ln .tval{color:var(--fg);opacity:.85}
 .ln.out{color:var(--dim); padding-left:2.5ch}
 .ln.out .br{color:var(--dim);opacity:.7}
 .ln.diff{padding-left:2.5ch}
