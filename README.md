@@ -145,8 +145,9 @@ defaults to 90s.
 **Vibe presets** bundle a seed, theme, model, pacing, and drama-weighting into one
 shareable link: `?vibe=startup-crunch` (amber, fast, ship-happy),
 `?vibe=enterprise-migration` (cyan, slow, git- and infra-heavy),
-`?vibe=security-incident` (green, frantic, all DDoS/CVE/page). Each one **opens on a
-signature scene within seconds** as instant feedback that the setting took — startup
+`?vibe=security-incident` (green, frantic, all DDoS/CVE/page). A **badge in the header**
+(`SPRINT` / `MIGRATION` / `● SEV-1`) marks the active vibe, and each one **opens on a
+signature scene within seconds** as extra feedback that the setting took — startup
 ships a deploy, enterprise kicks off a rebase, security trips an anomaly. The seed is
 curated (`tools/seed-search.js`) so it *naturally* yields an agent whose temperament
 reinforces the vibe and an on-theme project — startup→CURSOR-X on intent-router,

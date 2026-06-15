@@ -48,6 +48,12 @@ body{
 #hdr .h-budget.pulse{animation:budgetpulse 1.1s ease-in-out infinite}
 @keyframes budgetpulse{0%,100%{opacity:1}50%{opacity:.32}}
 @media (prefers-reduced-motion: reduce){#hdr .h-budget.pulse{animation:none}}
+#hdr .h-vibe{font-weight:700; letter-spacing:.6px; font-size:.82em; text-transform:uppercase; white-space:nowrap;
+  padding:1px 7px; border-radius:999px; color:var(--bg); background:var(--accent)}
+#hdr .h-vibe[data-vibe="security-incident"]{background:var(--warn)}
+#hdr .h-vibe[data-vibe="security-incident"]::before{content:"● "}
+body:not(.reduce) #hdr .h-vibe[data-vibe="security-incident"]{animation:budgetpulse 1.4s ease-in-out infinite}
+@media (prefers-reduced-motion: reduce){#hdr .h-vibe{animation:none}}
 #hdr .h-time{color:var(--fg); margin-left:auto; font-variant-numeric:tabular-nums}
 .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--ok);
   box-shadow:0 0 6px var(--ok); margin-right:.4ch; vertical-align:middle}
