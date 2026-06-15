@@ -50,10 +50,12 @@ const CODENAMES = [
 ];
 /* preset "vibes" — one shareable ?vibe= link bundles seed + pacing + drama-weighting.
    bias[] scenes are favored by the scheduler; seed pins a curated run. */
+/* seeds are curated by tools/seed-search.js: each naturally yields a codename whose
+   temperament reinforces the vibe's scene bias AND an on-theme project (no overrides). */
 const VIBES={
-  'startup-crunch':       {speed:1.4, freq:1.9, seed:1337,  theme:'amber', bias:['deploy','pipeline','pr','vim','tmux','swarm','chatter','docker']},
-  'enterprise-migration': {speed:0.8, freq:0.7, seed:90909, theme:'cyan',  bias:['rebase','octopus','sql','terraform','docker','cluster','mergeconflict','cherrypick']},
-  'security-incident':    {speed:1.2, freq:2.3, seed:31337, theme:'green', bias:['attackmap','security','auth','filterrepo','pager','anomaly','dns','postmortem']},
+  'startup-crunch':       {speed:1.4, freq:1.9, seed:169, theme:'amber', bias:['deploy','pipeline','pr','vim','tmux','swarm','chatter','docker']},        // → CURSOR-X / intent-router
+  'enterprise-migration': {speed:0.8, freq:0.7, seed:39,  theme:'cyan',  bias:['rebase','octopus','sql','terraform','docker','cluster','mergeconflict','cherrypick']}, // → FORGE / compliance-reactor
+  'security-incident':    {speed:1.2, freq:2.3, seed:524, theme:'green', bias:['attackmap','security','auth','filterrepo','pager','anomaly','dns','postmortem']},      // → PILOT / blast-radius-index
 };
 const VIBE = VIBES[QS.get('vibe')] || null;
 /* agent temperaments — a codename isn't just a label, it's a behavioral profile.
