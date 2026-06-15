@@ -246,6 +246,16 @@ const ASSERT=['assertion failed: balance != expected','expected 200 OK, got 500'
 const TOOLS=['Bash','Bash','Bash','Read','Read','Read','Edit','Edit','Write','Grep','Glob','WebFetch','Task','MultiEdit'];
 const TESTCMDS=['npm run test:integration','pytest -q','cargo test','go test ./...','npm run test','jest --ci','vitest run','go test -race ./...'];
 const DEPLOYCMDS=['docker compose up -d','terraform plan','kubectl rollout status deploy/api','gh pr checks','cargo build --release'];
+/* deploy flavors: dDeploy picks one per run so the rollout isn't always the same 7 stages */
+const DEPLOY_FLAVORS=[
+  {title:'▲ DEPLOY · production',   steps:['build image','scan layers','push to registry','run migrations','canary 5%','canary 50%','rollout 100%','health check']},
+  {title:'λ DEPLOY · functions',    steps:['bundle artifact','upload to S3','publish version','shift alias 10%','shift alias 50%','shift alias 100%','warm pool','health check']},
+  {title:'◈ DEPLOY · edge',         steps:['build bundle','upload assets','invalidate CDN','propagate POPs','purge cache','verify 200s']},
+  {title:'⎈ DEPLOY · kubernetes',   steps:['build image','push to registry','apply manifests','rolling update','readiness probes','rollout status']},
+  {title:'⛁ DEPLOY · schema',       steps:['advisory lock','add column (nullable)','backfill rows','add NOT NULL','swap table','drop shadow']}
+];
+const RETRY_REASONS=['network','registry 5xx','rate limited','lock timeout','TLS handshake','transient 503','connection reset'];
+const DEPLOY_FAILS=['error rate 0.3% → 4.1% on canary','p99 latency 84ms → 1,920ms','readiness probe failing on 3/5 pods','5xx spiking in us-east-1','health check timed out','memory climbing toward OOM','SLO error budget burning hot'];
 const GLOBS=['**/*.ts','src/**/*.go','**/*.rs','**/*.py','pkg/**/*.go','**/*.sql','infra/**/*.yaml','src/**/*.tsx'];
 const GREPS=['TODO|FIXME','acquireLock','withTransaction','idempotencyKey','panic\\(','unsafe','SELECT .* FROM','retry\\(','await '];
 const MODULES=['auth','cache','ledger','raft','mesh','index','queue','planner','session','billing','gossip','router','saga','quorum'];
@@ -1641,13 +1651,39 @@ function* dAnomaly(){
   yield CNT('incidents',1);
   yield OV('close',{wait:U(500,900)});
 }
+// live stat tacked onto traffic-shifting stages so the bar reads like a real rollout
+function deployTick(label){ return /canary|rollout|shift|traffic|warm/.test(label) ? label+' · '+grp(ri(200,9000))+' rps · p99 '+ri(38,150)+'ms · '+(rng()<0.82?'0 err':ri(1,9)+' err') : label; }
 function* dDeploy(){
+  const f=pick(DEPLOY_FLAVORS), steps=f.steps, n=steps.length, id=hash();
   yield OV('open',{type:'box'});
-  yield OV('box',{title:'▲ DEPLOY · production',variant:'deploy',wait:U(200,400)});
-  const steps=['build image','push to registry','run migrations','canary 5%','canary 50%','rollout 100%','health check'];
-  for(let i=0;i<steps.length;i++) yield OV('bar',{frac:(i+1)/steps.length,label:steps[i],wait:U(120,320)});
+  yield OV('box',{title:f.title,variant:'deploy',wait:U(200,400)});
+  // ~1 in 5 runs goes bad and rolls back; fail in the back half, never on the last stage
+  const failAt = rng()<0.2 ? ri(Math.ceil(n*0.5),n-2) : -1;
+  for(let i=0;i<n;i++){
+    const frac=(i+1)/n;
+    if(i===failAt){
+      yield OV('bar',{frac:frac,label:steps[i],wait:U(200,400)});
+      yield OV('boxline',{text:'⚠ '+pick(DEPLOY_FAILS),tone:'err',wait:U(400,800)});
+      beep('alert');
+      yield THINK();
+      yield L('error budget burning — pulling the rollout, not the alarm','warn',{wait:U(700,1300)});
+      const rb=['draining canary','restoring revision '+hash(),'verifying health','traffic 100% → stable'];
+      for(let j=0;j<rb.length;j++) yield OV('bar',{frac:(j+1)/rb.length,label:rb[j],wait:U(220,460)});
+      yield OV('boxline',{text:'rolled back to '+hash()+' · 0 customer impact ✔',tone:'ok',wait:U(400,800)});
+      beep('ok');
+      yield CNT('incidents',1);
+      yield OV('close',{wait:U(700,1200)});
+      return;
+    }
+    // occasional transient retry inside a stage before it goes green
+    if(rng()<0.18){
+      const tries=ri(2,3), reason=pick(RETRY_REASONS);
+      for(let t=1;t<tries;t++) yield OV('bar',{frac:frac,label:steps[i]+' · retry '+t+'/'+tries+' ('+reason+')',wait:U(260,520)});
+    }
+    yield OV('bar',{frac:frac,label:deployTick(steps[i]),wait:U(120,320)});
+  }
   yield OV('boxline',{text:'rollback guard: passed',tone:'dim',wait:U(200,400)});
-  yield OV('boxline',{text:'deploy '+hash()+' healthy ✔',tone:'ok',wait:U(300,600)});
+  yield OV('boxline',{text:'deploy '+id+' healthy ✔',tone:'ok',wait:U(300,600)});
   beep('deploy');
   yield CNT('deploys',1);
   yield OV('close',{wait:U(700,1200)});

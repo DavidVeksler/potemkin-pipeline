@@ -97,6 +97,16 @@ const ASSERT=['assertion failed: balance != expected','expected 200 OK, got 500'
 const TOOLS=['Bash','Bash','Bash','Read','Read','Read','Edit','Edit','Write','Grep','Glob','WebFetch','Task','MultiEdit'];
 const TESTCMDS=['npm run test:integration','pytest -q','cargo test','go test ./...','npm run test','jest --ci','vitest run','go test -race ./...'];
 const DEPLOYCMDS=['docker compose up -d','terraform plan','kubectl rollout status deploy/api','gh pr checks','cargo build --release'];
+/* deploy flavors: dDeploy picks one per run so the rollout isn't always the same 7 stages */
+const DEPLOY_FLAVORS=[
+  {title:'▲ DEPLOY · production',   steps:['build image','scan layers','push to registry','run migrations','canary 5%','canary 50%','rollout 100%','health check']},
+  {title:'λ DEPLOY · functions',    steps:['bundle artifact','upload to S3','publish version','shift alias 10%','shift alias 50%','shift alias 100%','warm pool','health check']},
+  {title:'◈ DEPLOY · edge',         steps:['build bundle','upload assets','invalidate CDN','propagate POPs','purge cache','verify 200s']},
+  {title:'⎈ DEPLOY · kubernetes',   steps:['build image','push to registry','apply manifests','rolling update','readiness probes','rollout status']},
+  {title:'⛁ DEPLOY · schema',       steps:['advisory lock','add column (nullable)','backfill rows','add NOT NULL','swap table','drop shadow']}
+];
+const RETRY_REASONS=['network','registry 5xx','rate limited','lock timeout','TLS handshake','transient 503','connection reset'];
+const DEPLOY_FAILS=['error rate 0.3% → 4.1% on canary','p99 latency 84ms → 1,920ms','readiness probe failing on 3/5 pods','5xx spiking in us-east-1','health check timed out','memory climbing toward OOM','SLO error budget burning hot'];
 const GLOBS=['**/*.ts','src/**/*.go','**/*.rs','**/*.py','pkg/**/*.go','**/*.sql','infra/**/*.yaml','src/**/*.tsx'];
 const GREPS=['TODO|FIXME','acquireLock','withTransaction','idempotencyKey','panic\\(','unsafe','SELECT .* FROM','retry\\(','await '];
 const MODULES=['auth','cache','ledger','raft','mesh','index','queue','planner','session','billing','gossip','router','saga','quorum'];

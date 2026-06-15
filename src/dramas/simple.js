@@ -23,13 +23,39 @@ function* dAnomaly(){
   yield CNT('incidents',1);
   yield OV('close',{wait:U(500,900)});
 }
+// live stat tacked onto traffic-shifting stages so the bar reads like a real rollout
+function deployTick(label){ return /canary|rollout|shift|traffic|warm/.test(label) ? label+' · '+grp(ri(200,9000))+' rps · p99 '+ri(38,150)+'ms · '+(rng()<0.82?'0 err':ri(1,9)+' err') : label; }
 function* dDeploy(){
+  const f=pick(DEPLOY_FLAVORS), steps=f.steps, n=steps.length, id=hash();
   yield OV('open',{type:'box'});
-  yield OV('box',{title:'▲ DEPLOY · production',variant:'deploy',wait:U(200,400)});
-  const steps=['build image','push to registry','run migrations','canary 5%','canary 50%','rollout 100%','health check'];
-  for(let i=0;i<steps.length;i++) yield OV('bar',{frac:(i+1)/steps.length,label:steps[i],wait:U(120,320)});
+  yield OV('box',{title:f.title,variant:'deploy',wait:U(200,400)});
+  // ~1 in 5 runs goes bad and rolls back; fail in the back half, never on the last stage
+  const failAt = rng()<0.2 ? ri(Math.ceil(n*0.5),n-2) : -1;
+  for(let i=0;i<n;i++){
+    const frac=(i+1)/n;
+    if(i===failAt){
+      yield OV('bar',{frac:frac,label:steps[i],wait:U(200,400)});
+      yield OV('boxline',{text:'⚠ '+pick(DEPLOY_FAILS),tone:'err',wait:U(400,800)});
+      beep('alert');
+      yield THINK();
+      yield L('error budget burning — pulling the rollout, not the alarm','warn',{wait:U(700,1300)});
+      const rb=['draining canary','restoring revision '+hash(),'verifying health','traffic 100% → stable'];
+      for(let j=0;j<rb.length;j++) yield OV('bar',{frac:(j+1)/rb.length,label:rb[j],wait:U(220,460)});
+      yield OV('boxline',{text:'rolled back to '+hash()+' · 0 customer impact ✔',tone:'ok',wait:U(400,800)});
+      beep('ok');
+      yield CNT('incidents',1);
+      yield OV('close',{wait:U(700,1200)});
+      return;
+    }
+    // occasional transient retry inside a stage before it goes green
+    if(rng()<0.18){
+      const tries=ri(2,3), reason=pick(RETRY_REASONS);
+      for(let t=1;t<tries;t++) yield OV('bar',{frac:frac,label:steps[i]+' · retry '+t+'/'+tries+' ('+reason+')',wait:U(260,520)});
+    }
+    yield OV('bar',{frac:frac,label:deployTick(steps[i]),wait:U(120,320)});
+  }
   yield OV('boxline',{text:'rollback guard: passed',tone:'dim',wait:U(200,400)});
-  yield OV('boxline',{text:'deploy '+hash()+' healthy ✔',tone:'ok',wait:U(300,600)});
+  yield OV('boxline',{text:'deploy '+id+' healthy ✔',tone:'ok',wait:U(300,600)});
   beep('deploy');
   yield CNT('deploys',1);
   yield OV('close',{wait:U(700,1200)});
