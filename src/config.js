@@ -49,9 +49,9 @@ const CODENAMES = [
 /* preset "vibes" — one shareable ?vibe= link bundles seed + pacing + drama-weighting.
    bias[] scenes are favored by the scheduler; seed pins a curated run. */
 const VIBES={
-  'startup-crunch':       {speed:1.4, freq:1.9, seed:1337,    bias:['deploy','pipeline','pr','vim','tmux','swarm','chatter','docker']},
-  'enterprise-migration': {speed:0.8, freq:0.7, seed:90909,   bias:['rebase','octopus','sql','terraform','docker','cluster','mergeconflict','cherrypick']},
-  'security-incident':    {speed:1.2, freq:2.3, seed:31337,   bias:['attackmap','security','auth','filterrepo','pager','anomaly','dns','postmortem']},
+  'startup-crunch':       {speed:1.4, freq:1.9, seed:1337,  theme:'amber', bias:['deploy','pipeline','pr','vim','tmux','swarm','chatter','docker']},
+  'enterprise-migration': {speed:0.8, freq:0.7, seed:90909, theme:'cyan',  bias:['rebase','octopus','sql','terraform','docker','cluster','mergeconflict','cherrypick']},
+  'security-incident':    {speed:1.2, freq:2.3, seed:31337, theme:'green', bias:['attackmap','security','auth','filterrepo','pager','anomaly','dns','postmortem']},
 };
 const VIBE = VIBES[QS.get('vibe')] || null;
 /* agent temperaments — a codename isn't just a label, it's a behavioral profile.
@@ -83,7 +83,7 @@ const cfg={
   agent: QS.get('agent')||null,
   project: QS.get('project')||'',
   model: QS.get('model')||'mythos-5-preview',
-  theme: THEMES.includes(QS.get('theme'))?QS.get('theme'):'amber',
+  theme: THEMES.includes(QS.get('theme'))?QS.get('theme'):(VIBE&&THEMES.includes(VIBE.theme)?VIBE.theme:'amber'),
   speed: qfloat('speed',0.25,4, VIBE?VIBE.speed:1),
   dramas: (QS.get('dramas')==='off'||QS.get('intensity')==='0')?'off':'on',  // boss/ambient dramas on or off (legacy ?intensity=0 → off)
   freq: qfloat('freq',0.25,4, VIBE?VIBE.freq:1),            // drama cadence multiplier (higher = more often)

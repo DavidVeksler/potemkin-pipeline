@@ -72,7 +72,7 @@ function urlParams(forceSeed){
   if(agentExplicit&&cfg.agent)p.set('agent',cfg.agent);
   if(cfg.project)p.set('project',cfg.project);
   if(cfg.model!=='mythos-5-preview')p.set('model',cfg.model);
-  if(cfg.theme!=='amber')p.set('theme',cfg.theme);
+  if(cfg.theme!==(cfg.vibe&&VIBES[cfg.vibe]?VIBES[cfg.vibe].theme:'amber'))p.set('theme',cfg.theme);  // pin only when theme differs from the vibe's default
   if(speed!==1)p.set('speed',speed.toFixed(2));
   if(!dramaOn)p.set('dramas','off');
   if(dramaFreq!==1)p.set('freq',dramaFreq.toFixed(2));
