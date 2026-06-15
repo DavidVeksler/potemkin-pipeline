@@ -99,6 +99,18 @@ The `const X=` / `function X` anchors below are stable across files.
 - **Add a boss drama:** new `function* dXxx` in `src/dramas/boss.js` → register in `src/dramas/registry.js` →
   if it needs a new GUI add `buildXxx` to `src/overlays/index.js` + overlay CSS. See `IDEAS.md` for
   the planned backlog and the rules each scene follows.
+  **Adding/registering a drama does NOT require re-running seed discovery** — vibe seeds tune only
+  rng draws 1–6 (codename/counters/project), which fire before the first frame; scene selection is
+  later and isn't seed-reproducible anyway (it depends on viewport + frame rate).
+- **Re-tune vibe seeds (`node tools/seed-search.js`, exhaustive over all 2^32):** re-run ONLY when you
+  change an *input the search reads*, not when you add behavior: reorder/add/remove a `CODENAMES` or
+  `PROJECTS` entry; add/change an rng draw at load *before* init()'s project pick (or a counter
+  `ri()` range in `src/state.js`); add a scene id to a vibe's `bias[]` or an `AGENT_PROFILE.bias[]`
+  (may flip the ideal codename); or add a new vibe. Mirror that change into `seed-search.js`'s copies
+  (`CODENAMES`/`PROJECTS`/`VIBE_BIAS`/`AGENT_BIAS`/`identity()`), then re-run. Its `GROUND_TRUTH` check
+  catches draw-math drift — BUT it only proves the harness matches the *recorded* values, so when you
+  touch the load-draw order you must **re-capture ground truth from the live engine** (`/?debug&seed=N`,
+  read codename/project/counters off the page) before trusting the search.
 - **Add a config knob:** four places must stay in sync — parse in `cfg`/CONFIG → add a
   control in the config dialog (`fld`/`rng_`) + `syncURL` → surface in `__HYP.state()` if
   useful → document in README's URL-params list.
