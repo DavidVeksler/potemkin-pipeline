@@ -149,10 +149,12 @@ shareable link: `?vibe=startup-crunch` (amber, fast, ship-happy),
 (`SPRINT` / `MIGRATION` / `● SEV-1`) marks the active vibe, and each one **opens on a
 signature scene within seconds** as extra feedback that the setting took — startup
 ships a deploy, enterprise kicks off a rebase, security trips an anomaly. The seed is
-curated (`tools/seed-search.js`) so it *naturally* yields an agent whose temperament
-reinforces the vibe and an on-theme project — startup→CURSOR-X on intent-router,
-enterprise→FORGE on compliance-reactor, security→PILOT on blast-radius-index. Each leans
-the scheduler toward its signature scenes; override any piece with the params below.
+curated by `tools/seed-search.js`, which exhaustively scans all 2³² seeds (≈15s on 16
+cores) and picks the one whose *load-time* identity fits the vibe — the agent whose
+temperament reinforces it, an on-theme project, and even footer counters that match the
+story: startup→CURSOR-X on intent-router (lean, 2 CVEs), enterprise→FORGE on
+compliance-reactor (585k lines), security→PILOT on blast-radius-index (12 CVEs). Each
+leans the scheduler toward its signature scenes; override any piece with the params below.
 
 **URL params** (all optional, all persist via the config dialog's *Copy link*):
 `?seed=N` · `?agent=NAME` · `?project=NAME` · `?theme=amber|green|cyan` ·
