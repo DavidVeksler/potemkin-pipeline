@@ -806,9 +806,9 @@ const CODENAMES = [
 /* seeds are curated by tools/seed-search.js: each naturally yields a codename whose
    temperament reinforces the vibe's scene bias AND an on-theme project (no overrides). */
 const VIBES={
-  'startup-crunch':       {speed:1.4, freq:1.9, seed:169, theme:'amber', bias:['deploy','pipeline','pr','vim','tmux','swarm','chatter','docker']},        // → CURSOR-X / intent-router
-  'enterprise-migration': {speed:0.8, freq:0.7, seed:39,  theme:'cyan',  bias:['rebase','octopus','sql','terraform','docker','cluster','mergeconflict','cherrypick']}, // → FORGE / compliance-reactor
-  'security-incident':    {speed:1.2, freq:2.3, seed:524, theme:'green', bias:['attackmap','security','auth','filterrepo','pager','anomaly','dns','postmortem']},      // → PILOT / blast-radius-index
+  'startup-crunch':       {speed:1.4, freq:1.9, seed:169, theme:'amber', model:'mythos-5-turbo',    bias:['deploy','pipeline','pr','vim','tmux','swarm','chatter','docker']},        // → CURSOR-X / intent-router
+  'enterprise-migration': {speed:0.8, freq:0.7, seed:39,  theme:'cyan',  model:'mythos-4-stable',   bias:['rebase','octopus','sql','terraform','docker','cluster','mergeconflict','cherrypick']}, // → FORGE / compliance-reactor
+  'security-incident':    {speed:1.2, freq:2.3, seed:524, theme:'green', model:'mythos-5-hardened', open:'anomaly', openAt:6000, bias:['attackmap','security','auth','filterrepo','pager','anomaly','dns','postmortem']}, // → PILOT / blast-radius-index; SEV detected ~6s in
 };
 const VIBE = VIBES[QS.get('vibe')] || null;
 /* agent temperaments — a codename isn't just a label, it's a behavioral profile.
@@ -839,7 +839,7 @@ const NEUTRAL_PROFILE={boot:null,bias:[],rethink:[]};
 const cfg={
   agent: QS.get('agent')||null,
   project: QS.get('project')||'',
-  model: QS.get('model')||'mythos-5-preview',
+  model: QS.get('model')||(VIBE&&VIBE.model)||'mythos-5-preview',
   theme: THEMES.includes(QS.get('theme'))?QS.get('theme'):(VIBE&&THEMES.includes(VIBE.theme)?VIBE.theme:'amber'),
   speed: qfloat('speed',0.25,4, VIBE?VIBE.speed:1),
   dramas: (QS.get('dramas')==='off'||QS.get('intensity')==='0')?'off':'on',  // boss/ambient dramas on or off (legacy ?intensity=0 → off)
@@ -1144,6 +1144,7 @@ let logicalNow=0, nextAt=320, pending=null, lastTs=0, rafId=0, hidden=false;
 let paused=false, mode=cfg.mode, speed=cfg.speed, dramaOn=(cfg.dramas!=='off'), dramaFreq=cfg.freq;
 let releaseTokens=0, lastRelease=0;
 let overlayActive=false, dramaQ=[], nextDramaAt=U(45000,75000)/cfg.freq, firstDrama=true, lastCompact=-99999;
+if(VIBE&&VIBE.openAt!=null) nextDramaAt=VIBE.openAt;   // vibe opens on its signature scene fast (U() above still drawn → project pick unchanged)
 let activeThinker=null, activeTool=null, lastEmit=0, lastVisible='';
 let bossActive=false, bossFrame=0, settingsOpen=false, helpOpen=false, dramaOpen=false;
 let idleActive=false, idleThreshold=cfg.idle, lastActivityTs=0;   // deep-work "away" mode
@@ -3420,7 +3421,8 @@ function checkDrama(){
   if(logicalNow>=nextDramaAt){
     let type;
     const en=enabledDramas();
-    if(firstDrama && en.indexOf('anomaly')>=0){ type='anomaly'; firstDrama=false; }
+    if(firstDrama && cfg.vibe && VIBES[cfg.vibe] && VIBES[cfg.vibe].open && en.indexOf(VIBES[cfg.vibe].open)>=0){ type=VIBES[cfg.vibe].open; firstDrama=false; }  // vibe's signature opener
+    else if(firstDrama && en.indexOf('anomaly')>=0){ type='anomaly'; firstDrama=false; }
     else if(cfg.vibe && VIBES[cfg.vibe] && rng()<0.62){   // vibe presets favor their signature scenes
       const bias=VIBES[cfg.vibe].bias.filter(id=>en.indexOf(id)>=0);
       type=bias.length?pick(bias):pick(en); firstDrama=false;
@@ -3732,7 +3734,7 @@ function urlParams(forceSeed){
   const p=new URLSearchParams();
   if(agentExplicit&&cfg.agent)p.set('agent',cfg.agent);
   if(cfg.project)p.set('project',cfg.project);
-  if(cfg.model!=='mythos-5-preview')p.set('model',cfg.model);
+  if(cfg.model!==(cfg.vibe&&VIBES[cfg.vibe]&&VIBES[cfg.vibe].model||'mythos-5-preview'))p.set('model',cfg.model);  // pin only when model differs from the vibe's default
   if(cfg.theme!==(cfg.vibe&&VIBES[cfg.vibe]?VIBES[cfg.vibe].theme:'amber'))p.set('theme',cfg.theme);  // pin only when theme differs from the vibe's default
   if(speed!==1)p.set('speed',speed.toFixed(2));
   if(!dramaOn)p.set('dramas','off');

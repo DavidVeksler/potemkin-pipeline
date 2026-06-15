@@ -51,9 +51,9 @@ const CODENAMES = [
 /* seeds are curated by tools/seed-search.js: each naturally yields a codename whose
    temperament reinforces the vibe's scene bias AND an on-theme project (no overrides). */
 const VIBES={
-  'startup-crunch':       {speed:1.4, freq:1.9, seed:169, theme:'amber', bias:['deploy','pipeline','pr','vim','tmux','swarm','chatter','docker']},        // → CURSOR-X / intent-router
-  'enterprise-migration': {speed:0.8, freq:0.7, seed:39,  theme:'cyan',  bias:['rebase','octopus','sql','terraform','docker','cluster','mergeconflict','cherrypick']}, // → FORGE / compliance-reactor
-  'security-incident':    {speed:1.2, freq:2.3, seed:524, theme:'green', bias:['attackmap','security','auth','filterrepo','pager','anomaly','dns','postmortem']},      // → PILOT / blast-radius-index
+  'startup-crunch':       {speed:1.4, freq:1.9, seed:169, theme:'amber', model:'mythos-5-turbo',    bias:['deploy','pipeline','pr','vim','tmux','swarm','chatter','docker']},        // → CURSOR-X / intent-router
+  'enterprise-migration': {speed:0.8, freq:0.7, seed:39,  theme:'cyan',  model:'mythos-4-stable',   bias:['rebase','octopus','sql','terraform','docker','cluster','mergeconflict','cherrypick']}, // → FORGE / compliance-reactor
+  'security-incident':    {speed:1.2, freq:2.3, seed:524, theme:'green', model:'mythos-5-hardened', open:'anomaly', openAt:6000, bias:['attackmap','security','auth','filterrepo','pager','anomaly','dns','postmortem']}, // → PILOT / blast-radius-index; SEV detected ~6s in
 };
 const VIBE = VIBES[QS.get('vibe')] || null;
 /* agent temperaments — a codename isn't just a label, it's a behavioral profile.
@@ -84,7 +84,7 @@ const NEUTRAL_PROFILE={boot:null,bias:[],rethink:[]};
 const cfg={
   agent: QS.get('agent')||null,
   project: QS.get('project')||'',
-  model: QS.get('model')||'mythos-5-preview',
+  model: QS.get('model')||(VIBE&&VIBE.model)||'mythos-5-preview',
   theme: THEMES.includes(QS.get('theme'))?QS.get('theme'):(VIBE&&THEMES.includes(VIBE.theme)?VIBE.theme:'amber'),
   speed: qfloat('speed',0.25,4, VIBE?VIBE.speed:1),
   dramas: (QS.get('dramas')==='off'||QS.get('intensity')==='0')?'off':'on',  // boss/ambient dramas on or off (legacy ?intensity=0 → off)

@@ -142,11 +142,15 @@ parks the pass and snaps back to the regular show. Boss dramas still cut in mid-
 after. Tune the delay (or switch it off) with `?idle=N` or the config dialog;
 defaults to 90s.
 
-**Vibe presets** bundle a seed, pacing, and drama-weighting into one shareable link:
-`?vibe=startup-crunch` (fast, ship-happy), `?vibe=enterprise-migration` (slow, git- and
-infra-heavy), `?vibe=security-incident` (frantic, all DDoS/CVE/page). Each pins a curated
-seed and leans the scheduler toward its signature scenes; override any piece with the
-params below.
+**Vibe presets** bundle a seed, theme, model, pacing, and drama-weighting into one
+shareable link: `?vibe=startup-crunch` (amber, fast, ship-happy),
+`?vibe=enterprise-migration` (cyan, slow, git- and infra-heavy),
+`?vibe=security-incident` (green, frantic, all DDoS/CVE/page — opens on an anomaly within
+seconds). The seed is curated (`tools/seed-search.js`) so it *naturally* yields an agent
+whose temperament reinforces the vibe and an on-theme project — startup→CURSOR-X on
+intent-router, enterprise→FORGE on compliance-reactor, security→PILOT on blast-radius-index.
+Each leans the scheduler toward its signature scenes; override any piece with the params
+below.
 
 **URL params** (all optional, all persist via the config dialog's *Copy link*):
 `?seed=N` · `?agent=NAME` · `?project=NAME` · `?theme=amber|green|cyan` ·

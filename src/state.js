@@ -6,6 +6,7 @@ let logicalNow=0, nextAt=320, pending=null, lastTs=0, rafId=0, hidden=false;
 let paused=false, mode=cfg.mode, speed=cfg.speed, dramaOn=(cfg.dramas!=='off'), dramaFreq=cfg.freq;
 let releaseTokens=0, lastRelease=0;
 let overlayActive=false, dramaQ=[], nextDramaAt=U(45000,75000)/cfg.freq, firstDrama=true, lastCompact=-99999;
+if(VIBE&&VIBE.openAt!=null) nextDramaAt=VIBE.openAt;   // vibe opens on its signature scene fast (U() above still drawn → project pick unchanged)
 let activeThinker=null, activeTool=null, lastEmit=0, lastVisible='';
 let bossActive=false, bossFrame=0, settingsOpen=false, helpOpen=false, dramaOpen=false;
 let idleActive=false, idleThreshold=cfg.idle, lastActivityTs=0;   // deep-work "away" mode

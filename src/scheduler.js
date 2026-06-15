@@ -54,7 +54,8 @@ function checkDrama(){
   if(logicalNow>=nextDramaAt){
     let type;
     const en=enabledDramas();
-    if(firstDrama && en.indexOf('anomaly')>=0){ type='anomaly'; firstDrama=false; }
+    if(firstDrama && cfg.vibe && VIBES[cfg.vibe] && VIBES[cfg.vibe].open && en.indexOf(VIBES[cfg.vibe].open)>=0){ type=VIBES[cfg.vibe].open; firstDrama=false; }  // vibe's signature opener
+    else if(firstDrama && en.indexOf('anomaly')>=0){ type='anomaly'; firstDrama=false; }
     else if(cfg.vibe && VIBES[cfg.vibe] && rng()<0.62){   // vibe presets favor their signature scenes
       const bias=VIBES[cfg.vibe].bias.filter(id=>en.indexOf(id)>=0);
       type=bias.length?pick(bias):pick(en); firstDrama=false;
