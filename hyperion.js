@@ -50,14 +50,16 @@ const CODENAMES = [
 ];
 /* preset "vibes" — one shareable ?vibe= link bundles seed + pacing + drama-weighting.
    bias[] scenes are favored by the scheduler; seed pins a curated run. */
-/* seeds are curated by tools/seed-search.js: each naturally yields a codename whose
-   temperament reinforces the vibe's scene bias AND an on-theme project (no overrides). */
+/* seeds are curated by tools/seed-search.js (exhaustive over all 2^32): each naturally yields
+   a codename whose temperament reinforces the vibe's scene bias, an on-theme project, AND
+   footer counters (files/lines/tests/cves) that fit the scenario — all from rng draws 1..6,
+   the only seed-derived state reproducible before the first frame (no overrides). */
 /* open/openAt: each vibe fires a relevant signature scene within seconds — instant
    feedback that the setting took (deploy=shipping, rebase=migration, anomaly=SEV). */
 const VIBES={
-  'startup-crunch':       {speed:1.4, freq:1.9, seed:169, theme:'amber', model:'mythos-5-turbo',    label:'SPRINT',    open:'deploy',  openAt:7000, bias:['deploy','pipeline','pr','vim','tmux','swarm','chatter','docker']},        // → CURSOR-X / intent-router; ships ~7s in
-  'enterprise-migration': {speed:0.8, freq:0.7, seed:39,  theme:'cyan',  model:'mythos-4-stable',   label:'MIGRATION', open:'rebase',  openAt:9000, bias:['rebase','octopus','sql','terraform','docker','cluster','mergeconflict','cherrypick']}, // → FORGE / compliance-reactor; migration ~9s in
-  'security-incident':    {speed:1.2, freq:2.3, seed:524, theme:'green', model:'mythos-5-hardened', label:'SEV-1',     open:'anomaly', openAt:6000, bias:['attackmap','security','auth','filterrepo','pager','anomaly','dns','postmortem']}, // → PILOT / blast-radius-index; SEV detected ~6s in
+  'startup-crunch':       {speed:1.4, freq:1.9, seed:2780268862, theme:'amber', model:'mythos-5-turbo',    label:'SPRINT',    open:'deploy',  openAt:7000, bias:['deploy','pipeline','pr','vim','tmux','swarm','chatter','docker']},        // → CURSOR-X / intent-router; lean repo (97 files·132k·2238 tests·2 CVEs); ships ~7s in
+  'enterprise-migration': {speed:0.8, freq:0.7, seed:52007438,   theme:'cyan',  model:'mythos-4-stable',   label:'MIGRATION', open:'rebase',  openAt:9000, bias:['rebase','octopus','sql','terraform','docker','cluster','mergeconflict','cherrypick']}, // → FORGE / compliance-reactor; huge legacy (245 files·585k·2298 tests); migration ~9s in
+  'security-incident':    {speed:1.2, freq:2.3, seed:132965288,  theme:'green', model:'mythos-5-hardened', label:'SEV-1',     open:'anomaly', openAt:6000, bias:['attackmap','security','auth','filterrepo','pager','anomaly','dns','postmortem']}, // → PILOT / blast-radius-index; CVE storm (12 CVEs, under-tested); SEV detected ~6s in
 };
 const VIBE = VIBES[QS.get('vibe')] || null;
 /* agent temperaments — a codename isn't just a label, it's a behavioral profile.
