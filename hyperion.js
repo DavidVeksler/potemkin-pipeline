@@ -3414,13 +3414,16 @@ function fanfare(){   // triumphant rising arpeggio + sparkle — ships to prod
 }
 function resolveChord(){   // warm major triad — crisis resolved, all green
   if(!actx)return; const t=actx.currentTime;
-  [392,494,587,784].forEach(f=>tone(f,0.5,'sine',0.16,t));
+  tone(196,0.6,'sine',0.10,t);                                  // octave-down root for body
+  [392,494,587,784].forEach((f,i)=>tone(f,0.5,'sine',0.16,t+i*0.018));   // micro-roll reads as a resolve, dodges phase-mush
 }
+function tick(){ if(!actx)return; tone(1320+rng()*240,0.012,'square',0.06); }   // soft pip — a slot fills, an agent reports back
 function beep(kind){
   if(cfg.audio!=='on'||!actx)return;
   if(kind==='alert') wet(klaxon);
   else if(kind==='deploy') wet(fanfare);
   else if(kind==='ok') wet(resolveChord);
+  else if(kind==='tick') tick();
 }
 
 /* --- per-event scoring: every emitted event gets a voice ---------------- */
@@ -3440,6 +3443,7 @@ function sfx(ev){
     case 'task': if(ev.state==='✔'){ tone(784,0.10,'sine',0.20); tone(1047,0.13,'sine',0.18,actx.currentTime+0.06); } break;
     case 'clear': sweep(820,200,0.22,'sine',0.12); break;
     case 'counter': if(now-lastTick>110){ lastTick=now; tone(2000+rng()*300,0.008,'square',0.035); } break;
+    case 'filehl': if(now-lastTick>90){ lastTick=now; tone(900+rng()*200,0.014,'triangle',0.05); } break;   // soft cursor-move as a file lights up
     case 'ov': sfxOverlay(ev,now); break;
   }
 }
