@@ -853,7 +853,7 @@ const VIBES={
 const VIBE = VIBES[QS.get('vibe')] || null;
 /* agent temperaments — a codename isn't just a label, it's a behavioral profile.
    bias[] tilts scene probability; rethink[] colors the agent's voice; boot opens
-   mission #1. Codenames without an entry (NOVA/FLUX/VECTOR/ORBIT) and any custom
+   the first ticket. Codenames without an entry (NOVA/FLUX/VECTOR/ORBIT) and any custom
    ?agent= fall back to NEUTRAL_PROFILE. Seed-derived → deterministic per seed. */
 const AGENT_PROFILES={
   'KERNEL':  {boot:'low-level mode — syscalls, perf, and the kernel are the whole job',
@@ -940,6 +940,9 @@ function barStr(frac,seg){seg=seg||12;const f=clamp(Math.round(frac*seg),0,seg);
 /* ====================================================================== */
 const VERBS=['Analyzing','Refactoring','Patching','Vectorizing','Quantizing','Transpiling','Reconciling','Provisioning','Orchestrating','Hydrating','Memoizing','Backpropagating','Defragmenting','Serializing','Deserializing','Sharding','Rebalancing','Hot-swapping','Recompiling','Profiling','Instrumenting','Tracing','Bisecting','Rebasing','Distilling','Annealing','Coalescing','Marshalling','Unrolling','Inlining','Hoisting','Snapshotting','Replaying','Normalizing','Denormalizing','Pruning','Materializing','Linearizing','Tokenizing','Diffing','Reindexing','Compacting','Throttling','Debouncing','Fuzzing','Hardening','Auditing','Garbage-collecting','Prefetching','Warming'];
 const SUBS=['the dependency graph','the semantic embedding layer','the async boundary','the OAuth2 handshake','the Kubernetes ingress controller','the payment-orchestrator service','the transformer attention heads','the vector index','the write-ahead log','the consensus quorum','the gossip membership protocol','the service-mesh sidecar','the gRPC bidirectional stream','the protobuf schema registry','the GraphQL resolver chain','the Redis eviction policy','the connection pool','the circuit breaker','the bloom filter','the LRU cache tier','the event-sourcing projection','the saga compensation handler','the idempotency keystore','the distributed lock manager','the Raft leader election','the CRDT merge function','the Merkle proof tree','the hash ring','the rate-limiter token bucket','the feature-flag evaluator','the JIT trace cache','the WASM sandbox','the TLS session resumption','the columnar storage engine','the query planner','the join optimizer','the speculative-decoding pipeline','the KV-cache allocator','the gradient checkpointing pass','the tensor-parallel shards','the retry-with-jitter policy','the dead-letter queue','the schema-migration runner','the blue-green cutover','the canary analysis window','the OpenTelemetry span exporter','the eBPF probe','the cgroup memory limiter','the NUMA affinity map','the zero-copy ring buffer'];
+// imperative goal verbs for a ticket title — pair with a SUBS phrase ("the X") to read as a tracked work item
+const GOALVERBS=['harden','stabilize','optimize','refactor','instrument','de-risk','simplify','rip out','rewrite','reshard','cut p99 on','kill tail latency in','add backpressure to','make idempotent','fix the race in','tighten','bound the blast radius of','retire','consolidate','parallelize','add tracing to','batch','cache','rate-limit','circuit-break','flatten','decouple','version','migrate','deflake','warm','garbage-collect'];
+const TICKET_LABELS=['backend','platform','infra','data','reliability','perf','security','ml-infra','sre','core'];
 const QUALS=['(loss Δ 0.0031)','(p99 −34%)','(cache hit 0.992)','(entropy 7.41 bits)','(99.997% confidence)','(int8 precision)','(zero-copy)','(lock-free)','(O(log n) amortized)','(12.4× speedup)','(memory −18%)','(no regressions)','(idempotent)','(eventually consistent)','(linearizable)','(CVSS 9.1)','(EWMA-smoothed)','(backoff capped 30s)','(quorum=3)','(RF=3)','(cold-start 142ms)','(warm 4ms)','(saturation 0.61)','(skew corrected)'];
 const UNITS=['nodes','edges','shards','partitions','embeddings','vectors','spans','traces','segments','regions','replicas','tokens','files','symbols','call sites','hot paths','allocations'];
 /* FILES is procedurally generated per seed by genFiles() at init; this is the fallback. */
@@ -1049,7 +1052,7 @@ const DEPLOY_FLAVORS=[
 ];
 const RETRY_REASONS=['network','registry 5xx','rate limited','lock timeout','TLS handshake','transient 503','connection reset'];
 const DEPLOY_FAILS=['error rate 0.3% → 4.1% on canary','p99 latency 84ms → 1,920ms','readiness probe failing on 3/5 pods','5xx spiking in us-east-1','health check timed out','memory climbing toward OOM','SLO error budget burning hot'];
-// success tails for the inline mission deploy — $ is replaced with the deploy hash
+// success tails for the inline ticket deploy — $ is replaced with the deploy hash
 const DEPLOY_DONE=['deploy $ healthy ✔','promoted to prod · 0 err over 5m bake ✔','blue→green cutover complete · old fleet drained ✔','rollout $ · 100% traffic · p99 nominal ✔','release $ pinned · rollback armed ✔','shipped $ · SLO budget intact ✔'];
 const GLOBS=['**/*.ts','src/**/*.go','**/*.rs','**/*.py','pkg/**/*.go','**/*.sql','infra/**/*.yaml','src/**/*.tsx'];
 const GREPS=['TODO|FIXME','acquireLock','withTransaction','idempotencyKey','panic\\(','unsafe','SELECT .* FROM','retry\\(','await '];
@@ -1269,7 +1272,7 @@ function highlightFile(path,st){
   pendingFileScroll=el;   // coalesced: the rail scroll runs once per frame in flushRender()
   setTimeout(()=>el.classList.remove('glow'),900);
 }
-/* new mission = committed working tree: clear M/A decorations, keep added files */
+/* new ticket = committed working tree: clear M/A decorations, keep added files */
 function clearFileStatus(){
   for(const p in fileEls){ const el=fileEls[p]; delete el.dataset.st; el.classList.remove('hl','ft-new'); const g=el.querySelector('.ft-gut'); if(g)g.textContent=''; }
   lastFileHl=null;
@@ -2288,19 +2291,24 @@ function buildCpu(body,ev){
   };
 }
 /* ====================================================================== */
-/* MISSION GENERATORS                                                      */
+/* TICKET GENERATORS                                                       */
 /* ====================================================================== */
-let missionId=0, firstMission=true;
-function newMission(){
-  missionId++;
-  const root=pick(FILES);
-  const m={ id:missionId, subject:stripThe(pick(SUBS)), rootFile:root, short:shortName(root),
-            difficulty:1+ri(0,2), testBase:100+ri(0,1100), forceFail:firstMission };
-  firstMission=false; return m;
+// the work unit is a tracked ticket (ENG-NNNN): claimed from a backlog, worked
+// through INVESTIGATE→PLAN→IMPLEMENT→TEST→SHIP, then moved → Done. `goal` is the
+// imperative ticket title; `subject` is the bare noun reused in mid-beat prose.
+let ticketSeq=0, firstTicket=true;
+function newTicket(){
+  ticketSeq++;
+  const root=pick(FILES), subj=pick(SUBS);
+  const m={ id:ticketSeq, eng:'ENG-'+ri(1000,9999), goal:pick(GOALVERBS)+' '+subj, subject:stripThe(subj),
+            prio:pick(['P0','P1','P1','P2','P2']), label:pick(TICKET_LABELS), backlog:ri(11,84),
+            rootFile:root, short:shortName(root),
+            difficulty:1+ri(0,2), testBase:100+ri(0,1100), forceFail:firstTicket };
+  firstTicket=false; return m;
 }
 function* pScan(m){
-  yield PHASE('SCAN');
-  yield L('Surveying '+m.subject+'…','accent');
+  yield PHASE('INVESTIGATE');
+  yield L('Reproducing the report · surveying '+m.subject+'…','accent');
   const n=3+ri(0,3);
   for(let i=0;i<n;i++){
     const t=pick(['Glob','Grep','Read','Read']);
@@ -2327,8 +2335,8 @@ function* taskBeat(){
   }
   yield OUT('subagent ('+sub+') returned · '+ri(2,9)+' findings synthesized','dim',{wait:U(300,640)});
 }
+// map = still part of INVESTIGATE (no own phase chip) — tracing the fault to its root before planning
 function* pMap(m){
-  yield PHASE('MAP');
   yield L(T7(),'fg');
   if(rng()<0.7) yield L(T4(),'fg');
   yield L(T1(),'fg');
@@ -2337,8 +2345,8 @@ function* pMap(m){
 }
 function* pPlan(m){
   yield PHASE('PLAN');
-  yield L('Drafting execution plan for '+m.subject+'…','accent');
-  const prep=shuffle(TASKBANK.slice()).slice(0,3+ri(0,2));
+  yield L('Scoping '+m.eng+' — '+m.goal+'…','accent');
+  const prep=shuffle(TASKBANK.slice()).slice(0,2+ri(0,1));
   for(let i=0;i<prep.length;i++) yield TASK('p'+i,prep[i],'✔');
   yield TASK('plan','ratify the master plan','✔');
   yield TASK('impl','implement '+m.short,'○');
@@ -2400,7 +2408,7 @@ function* pTest(m,attempt){
   }
 }
 function* pDeploy(m){
-  yield PHASE('DEPLOY');
+  yield PHASE('SHIP');
   yield TASK('deploy','ship','◐');
   const cm=commitMsg(m);
   yield TOOL('Bash','git commit -am "'+cm+'"');
@@ -2430,9 +2438,9 @@ function* pDeploy(m){
 }
 function* pDone(m){
   yield PHASE('DONE');
-  yield BANNER('✔ '+cap(m.subject)+' shipped — '+pick(DONETAIL));
+  yield BANNER('✔ '+m.eng+' closed · '+cap(m.subject)+' shipped — '+pick(DONETAIL));
   yield CNT('tests',ri(1,6));
-  yield L('Idle — watching for new work…','dim',{wait:U(1200,2600)});
+  yield L('Pulling next ticket from the backlog…','dim',{wait:U(1200,2600)});
 }
 // MCP-flavored tool beats — the mcp__server__action namespace reads as authentic precisely
 // because nobody fakes it. Seeded (structural: real TOOL events that bump cost/ctx).
@@ -2445,8 +2453,8 @@ function* mcpScan(m){
 }
 function* mcpShip(m){
   const r=rng();
-  if(r<0.4){ const id='ENG-'+ri(120,990); yield TOOL('mcp__linear__update_issue','id: "'+id+'", state: "Done"');
-    yield OUT('moved '+id+' → Done','dim',{wait:U(300,640)}); }
+  if(r<0.4){ yield TOOL('mcp__linear__update_issue','id: "'+m.eng+'", state: "Done"');
+    yield OUT('moved '+m.eng+' → Done','dim',{wait:U(300,640)}); }
   else if(r<0.7){ yield TOOL('mcp__slack__post_message','channel: "#eng-deploys", text: "shipped '+m.short+' ✓"');
     yield OUT('posted to #eng-deploys','dim',{wait:U(300,640)}); }
   else { yield TOOL('mcp__github__create_pull_request','title: "'+commitMsg(m)+'"');
@@ -2469,13 +2477,13 @@ function* typoBeat(){
   yield TOOL('Bash',cmd);
   yield OUT(pick(['ok','done','✓ ok']),'dim',{burst:true});
 }
-function* missionStream(){
+function* ticketStream(){
   while(true){
-    const m=newMission();
+    const m=newTicket();
     yield CLR();
-    yield BANNER('▌ Mission #'+m.id+' — '+m.subject);
+    yield BANNER('◆ '+m.eng+' · '+m.prio+' · '+m.goal);
     if(m.id===1 && agentProfile.boot) yield L('▸ '+cfg.agent+' · '+agentProfile.boot,'dim',{wait:U(300,600)});
-    yield L('root: '+m.rootFile+'  · difficulty '+m.difficulty,'dim');
+    yield L('claimed from backlog · '+m.backlog+' open · ['+m.label+'] · '+m.rootFile,'dim');
     yield* pScan(m); yield* pMap(m); yield* pPlan(m);
     if(rng()<0.18) yield* typoBeat();
     yield* pImpl(m); yield* pTest(m); yield* pDeploy(m); yield* pDone(m);
@@ -3595,7 +3603,7 @@ function enabledDramas(){
 /* ====================================================================== */
 /* SCHEDULER                                                               */
 /* ====================================================================== */
-const top=missionStream();
+const top=ticketStream();
 function* topStream(){
   while(true){
     if(dramaQ.length){ const d=dramaQ.shift(); yield* d(); }
@@ -3737,7 +3745,7 @@ function fmtCost(n){ return '$'+(n<1000?n.toFixed(2):compactNum(Math.round(n)));
 function burnTick(tokens){      // every tool call nudges spend + budget pressure; heavier calls cost more
   cost+=0.002 + (tokens||0)*0.0000045 + U(0.004,0.016);
   if(!burnWarn && !burnEase) burnPct=clamp(burnPct+U(0.6,1.9),0,99);
-  // codebase steadily grows as the "agent" churns — keep footer counters alive between mission beats
+  // codebase steadily grows as the "agent" churns — keep footer counters alive between ticket beats
   bumpCounter('lines',ri(2,80));
   if(rng()<0.12) bumpCounter('files',1);
   if(rng()<0.2) bumpCounter('tests',ri(1,4));
@@ -4147,7 +4155,7 @@ function init(){
 init();
 // test/debug hook — only exposed with ?debug in the URL, so production ships zero global surface
 if(cfg.debug){
-  window.__HYP={state:()=>({lines:logEl.childElementCount,counters:Object.assign({},counters),mode,paused,speed,dramas:dramaOn,freq:dramaFreq,ctx:Math.round(ctx),overlayActive,idle:idleActive,logicalNow:Math.round(logicalNow),missionId,platform:cfg.platform,agent:cfg.agent,profile:agentProfile===NEUTRAL_PROFILE?'neutral':cfg.agent,profileBias:agentProfile.bias}),force:forceDrama,drama:n=>{if(DRAMAS[n])enqueueDrama(DRAMAS[n],n);return n;},deepwork:enterIdle,wake:markActivity,seed:cfg.seed};
+  window.__HYP={state:()=>({lines:logEl.childElementCount,counters:Object.assign({},counters),mode,paused,speed,dramas:dramaOn,freq:dramaFreq,ctx:Math.round(ctx),overlayActive,idle:idleActive,logicalNow:Math.round(logicalNow),ticketSeq,platform:cfg.platform,agent:cfg.agent,profile:agentProfile===NEUTRAL_PROFILE?'neutral':cfg.agent,profileBias:agentProfile.bias}),force:forceDrama,drama:n=>{if(DRAMAS[n])enqueueDrama(DRAMAS[n],n);return n;},deepwork:enterIdle,wake:markActivity,seed:cfg.seed};
 }
 
 })();

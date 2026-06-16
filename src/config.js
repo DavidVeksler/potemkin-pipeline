@@ -65,7 +65,7 @@ const VIBES={
 const VIBE = VIBES[QS.get('vibe')] || null;
 /* agent temperaments — a codename isn't just a label, it's a behavioral profile.
    bias[] tilts scene probability; rethink[] colors the agent's voice; boot opens
-   mission #1. Codenames without an entry (NOVA/FLUX/VECTOR/ORBIT) and any custom
+   the first ticket. Codenames without an entry (NOVA/FLUX/VECTOR/ORBIT) and any custom
    ?agent= fall back to NEUTRAL_PROFILE. Seed-derived → deterministic per seed. */
 const AGENT_PROFILES={
   'KERNEL':  {boot:'low-level mode — syscalls, perf, and the kernel are the whole job',

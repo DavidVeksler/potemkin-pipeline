@@ -59,7 +59,7 @@ The `const X=` / `function X` anchors below are stable across files.
 | Log renderer | `src/render/renderer.js` | `render()`, `appendLine`, autoscroll |
 | Overlay renderer + matrix rain | `src/render/overlay.js` | `renderOverlay`, `drawMatrix` |
 | Boss-level app GUIs | `src/overlays/index.js` | `APP_BUILDERS`, `buildGrafana` … `buildCpu` |
-| A mission's beats | `src/missions/index.js` | `pScan`, `pImpl`, `missionStream` |
+| A ticket's beats | `src/missions/index.js` | `pScan`, `pImpl`, `ticketStream` |
 | Simple dramas (anomaly/deploy/sec/matrix/auth/compact) | `src/dramas/simple.js` | |
 | Boss dramas (grafana/btop/gpu/mesh/…) | `src/dramas/boss.js` | |
 | Git dramas (rebase/bisect/blame/…) | `src/dramas/git.js` | |

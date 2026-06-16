@@ -47,7 +47,7 @@ function highlightFile(path,st){
   pendingFileScroll=el;   // coalesced: the rail scroll runs once per frame in flushRender()
   setTimeout(()=>el.classList.remove('glow'),900);
 }
-/* new mission = committed working tree: clear M/A decorations, keep added files */
+/* new ticket = committed working tree: clear M/A decorations, keep added files */
 function clearFileStatus(){
   for(const p in fileEls){ const el=fileEls[p]; delete el.dataset.st; el.classList.remove('hl','ft-new'); const g=el.querySelector('.ft-gut'); if(g)g.textContent=''; }
   lastFileHl=null;

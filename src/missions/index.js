@@ -1,17 +1,22 @@
 /* ====================================================================== */
-/* MISSION GENERATORS                                                      */
+/* TICKET GENERATORS                                                       */
 /* ====================================================================== */
-let missionId=0, firstMission=true;
-function newMission(){
-  missionId++;
-  const root=pick(FILES);
-  const m={ id:missionId, subject:stripThe(pick(SUBS)), rootFile:root, short:shortName(root),
-            difficulty:1+ri(0,2), testBase:100+ri(0,1100), forceFail:firstMission };
-  firstMission=false; return m;
+// the work unit is a tracked ticket (ENG-NNNN): claimed from a backlog, worked
+// through INVESTIGATE→PLAN→IMPLEMENT→TEST→SHIP, then moved → Done. `goal` is the
+// imperative ticket title; `subject` is the bare noun reused in mid-beat prose.
+let ticketSeq=0, firstTicket=true;
+function newTicket(){
+  ticketSeq++;
+  const root=pick(FILES), subj=pick(SUBS);
+  const m={ id:ticketSeq, eng:'ENG-'+ri(1000,9999), goal:pick(GOALVERBS)+' '+subj, subject:stripThe(subj),
+            prio:pick(['P0','P1','P1','P2','P2']), label:pick(TICKET_LABELS), backlog:ri(11,84),
+            rootFile:root, short:shortName(root),
+            difficulty:1+ri(0,2), testBase:100+ri(0,1100), forceFail:firstTicket };
+  firstTicket=false; return m;
 }
 function* pScan(m){
-  yield PHASE('SCAN');
-  yield L('Surveying '+m.subject+'…','accent');
+  yield PHASE('INVESTIGATE');
+  yield L('Reproducing the report · surveying '+m.subject+'…','accent');
   const n=3+ri(0,3);
   for(let i=0;i<n;i++){
     const t=pick(['Glob','Grep','Read','Read']);
@@ -38,8 +43,8 @@ function* taskBeat(){
   }
   yield OUT('subagent ('+sub+') returned · '+ri(2,9)+' findings synthesized','dim',{wait:U(300,640)});
 }
+// map = still part of INVESTIGATE (no own phase chip) — tracing the fault to its root before planning
 function* pMap(m){
-  yield PHASE('MAP');
   yield L(T7(),'fg');
   if(rng()<0.7) yield L(T4(),'fg');
   yield L(T1(),'fg');
@@ -48,8 +53,8 @@ function* pMap(m){
 }
 function* pPlan(m){
   yield PHASE('PLAN');
-  yield L('Drafting execution plan for '+m.subject+'…','accent');
-  const prep=shuffle(TASKBANK.slice()).slice(0,3+ri(0,2));
+  yield L('Scoping '+m.eng+' — '+m.goal+'…','accent');
+  const prep=shuffle(TASKBANK.slice()).slice(0,2+ri(0,1));
   for(let i=0;i<prep.length;i++) yield TASK('p'+i,prep[i],'✔');
   yield TASK('plan','ratify the master plan','✔');
   yield TASK('impl','implement '+m.short,'○');
@@ -111,7 +116,7 @@ function* pTest(m,attempt){
   }
 }
 function* pDeploy(m){
-  yield PHASE('DEPLOY');
+  yield PHASE('SHIP');
   yield TASK('deploy','ship','◐');
   const cm=commitMsg(m);
   yield TOOL('Bash','git commit -am "'+cm+'"');
@@ -141,9 +146,9 @@ function* pDeploy(m){
 }
 function* pDone(m){
   yield PHASE('DONE');
-  yield BANNER('✔ '+cap(m.subject)+' shipped — '+pick(DONETAIL));
+  yield BANNER('✔ '+m.eng+' closed · '+cap(m.subject)+' shipped — '+pick(DONETAIL));
   yield CNT('tests',ri(1,6));
-  yield L('Idle — watching for new work…','dim',{wait:U(1200,2600)});
+  yield L('Pulling next ticket from the backlog…','dim',{wait:U(1200,2600)});
 }
 // MCP-flavored tool beats — the mcp__server__action namespace reads as authentic precisely
 // because nobody fakes it. Seeded (structural: real TOOL events that bump cost/ctx).
@@ -156,8 +161,8 @@ function* mcpScan(m){
 }
 function* mcpShip(m){
   const r=rng();
-  if(r<0.4){ const id='ENG-'+ri(120,990); yield TOOL('mcp__linear__update_issue','id: "'+id+'", state: "Done"');
-    yield OUT('moved '+id+' → Done','dim',{wait:U(300,640)}); }
+  if(r<0.4){ yield TOOL('mcp__linear__update_issue','id: "'+m.eng+'", state: "Done"');
+    yield OUT('moved '+m.eng+' → Done','dim',{wait:U(300,640)}); }
   else if(r<0.7){ yield TOOL('mcp__slack__post_message','channel: "#eng-deploys", text: "shipped '+m.short+' ✓"');
     yield OUT('posted to #eng-deploys','dim',{wait:U(300,640)}); }
   else { yield TOOL('mcp__github__create_pull_request','title: "'+commitMsg(m)+'"');
@@ -180,13 +185,13 @@ function* typoBeat(){
   yield TOOL('Bash',cmd);
   yield OUT(pick(['ok','done','✓ ok']),'dim',{burst:true});
 }
-function* missionStream(){
+function* ticketStream(){
   while(true){
-    const m=newMission();
+    const m=newTicket();
     yield CLR();
-    yield BANNER('▌ Mission #'+m.id+' — '+m.subject);
+    yield BANNER('◆ '+m.eng+' · '+m.prio+' · '+m.goal);
     if(m.id===1 && agentProfile.boot) yield L('▸ '+cfg.agent+' · '+agentProfile.boot,'dim',{wait:U(300,600)});
-    yield L('root: '+m.rootFile+'  · difficulty '+m.difficulty,'dim');
+    yield L('claimed from backlog · '+m.backlog+' open · ['+m.label+'] · '+m.rootFile,'dim');
     yield* pScan(m); yield* pMap(m); yield* pPlan(m);
     if(rng()<0.18) yield* typoBeat();
     yield* pImpl(m); yield* pTest(m); yield* pDeploy(m); yield* pDone(m);

@@ -82,12 +82,12 @@ framework). The interesting parts:
 - **One render loop, one clock.** A single `requestAnimationFrame` drives a *logical*
   clock — nothing uses `setInterval` or wall time. Tab away and it pauses instead of
   replaying four thousand catch-up frames the instant you come back.
-- **The script is a generator.** Every mission and boss drama is a JS generator
+- **The script is a generator.** Every ticket and boss drama is a JS generator
   (`function*`) that *yields* typed events — `TOOL('Bash', …)`, `DIFF('+', …)`,
   `THINK()`, `WAIT(900)`, `OV('app', …)`. A scheduler pumps each event when the clock
   passes its due time. ~14 event constructors compose **43 scripted scenes** — 25 boss
   app-windows, 10 ambient incident beats, and 8 git-theater arcs — on top of a
-  never-ending stream of fake missions, plus a deep-work "away" grind.
+  never-ending stream of fake tickets, plus a deep-work "away" grind.
 - **Determinism by seed.** A 32-bit `mulberry32` PRNG seeds everything narratively
   load-bearing: the procedurally generated file tree, the project, the agent's codename,
   which crisis strikes and how bad it gets. `?seed=N` reproduces a run to the beat.
@@ -171,7 +171,7 @@ Developed as split files and re-inlined into a standalone distributable:
 
 - `hyperion.html` — markup
 - `hyperion.css` — styles (themes, overlays, the boss-window chrome)
-- `hyperion.js` — the engine (RNG, mission/drama generators, scheduler, overlay + app builders, live tickers, WebAudio)
+- `hyperion.js` — the engine (RNG, ticket/drama generators, scheduler, overlay + app builders, live tickers, WebAudio)
 - `build.sh` — inlines CSS + JS into `index.html`
 - `index.html` — the generated single-file artifact you deploy (also the GitHub Pages root)
 - `assets/` — README GIFs only; not shipped in the app

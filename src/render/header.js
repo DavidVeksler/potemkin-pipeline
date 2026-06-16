@@ -41,7 +41,7 @@ function fmtCost(n){ return '$'+(n<1000?n.toFixed(2):compactNum(Math.round(n)));
 function burnTick(tokens){      // every tool call nudges spend + budget pressure; heavier calls cost more
   cost+=0.002 + (tokens||0)*0.0000045 + U(0.004,0.016);
   if(!burnWarn && !burnEase) burnPct=clamp(burnPct+U(0.6,1.9),0,99);
-  // codebase steadily grows as the "agent" churns — keep footer counters alive between mission beats
+  // codebase steadily grows as the "agent" churns — keep footer counters alive between ticket beats
   bumpCounter('lines',ri(2,80));
   if(rng()<0.12) bumpCounter('files',1);
   if(rng()<0.2) bumpCounter('tests',ri(1,4));

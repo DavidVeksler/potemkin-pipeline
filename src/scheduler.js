@@ -1,7 +1,7 @@
 /* ====================================================================== */
 /* SCHEDULER                                                               */
 /* ====================================================================== */
-const top=missionStream();
+const top=ticketStream();
 function* topStream(){
   while(true){
     if(dramaQ.length){ const d=dramaQ.shift(); yield* d(); }
