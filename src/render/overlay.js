@@ -62,7 +62,8 @@ function renderOverlay(ev){
       if(!ovBox)return;
       ovBox.querySelectorAll('[data-k="'+ev.k+'"]').forEach(t=>{
         if(ev.state!=null) t.dataset.state=ev.state;
-        if(ev.text!=null) t.textContent=ev.text;
+        if(ev.code!=null){ t.textContent=''; t.appendChild(hiCode(ev.code)); t.classList.remove('edited'); void t.offsetWidth; t.classList.add('edited'); }
+        else if(ev.text!=null) t.textContent=ev.text;
         if(ev.cssVar) t.style.setProperty(ev.cssVar,ev.val);
       });
       break;

@@ -442,11 +442,12 @@ function* dVim(){
   yield L('Recording a macro — qa … q, then @a across the buffer','warn',{wait:U(400,800)});
   const reps=ri(4,9);
   for(let i=0;i<reps;i++){
-    const row=ri(0,12);
+    const row=ri(0,12), add=rng()<0.72, edit=add?pick(ADD):pick(DEL);
     yield OV('appstep',{k:'cur',cssVar:'--row',val:row});
     yield OV('appstep',{k:'cmd',text:'@a   ('+(i+1)+'/'+reps+')'});
     yield OV('appstep',{k:'ruler',text:(row+1)+','+ri(1,40)+'   '+ri(8,92)+'%'});
-    yield DIFF(rng()<0.72?'+':'-',rng()<0.72?pick(ADD):pick(DEL),{wait:U(120,300)});
+    yield OV('appstep',{k:'src-'+row,code:(add?'  ':'// ')+edit,wait:U(120,300)});
+    yield DIFF(add?'+':'-',edit,{wait:U(120,300)});
     yield CNT('lines',ri(3,40));
   }
   // the substitute — live count
@@ -454,6 +455,11 @@ function* dVim(){
   const newT=pick(['acquireLock','await guard ','unknown','=== null','retryWithJitter']);
   yield OV('appstep',{k:'mode',text:':'});
   yield OV('appstep',{k:'cmd',text:':%s/'+oldT+'/'+newT+'/gc'});
+  for(let j=0;j<ri(2,4);j++){
+    const row=ri(0,14);
+    yield OV('appstep',{k:'cur',cssVar:'--row',val:Math.min(row,12)});
+    yield OV('appstep',{k:'src-'+row,code:'  '+pick(['return','const v =','await','if(ok)'])+' '+newT+'('+pick(['ctx','req','key,1','batch'])+')',wait:U(120,260)});
+  }
   yield OUT(grp(ri(60,4000))+' substitutions on '+ri(20,400)+' lines','dim',{burst:true});
   // reindent the whole buffer
   yield OV('appstep',{k:'cmd',text:'gg=G'});
