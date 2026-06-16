@@ -20,8 +20,6 @@ Ranked roughly by theater-per-byte. ⭐ = recommended next.
 
 10. **Fake commit ticker / contribution graph** in the rail — an all-green wall
     that fills as it works.
-12. **Sound-design pass** — distinct cues per drama severity (the WebAudio
-    engine already exists).
 13. **Screenshot / share-card export** — a button that renders the current frame
     to a branded PNG for posting.
 
@@ -40,8 +38,6 @@ So anything that reads as **"a category × time grid that's calm until one band 
 3. **Cache hit-rate heatmap** — rows = `L1 / L2 / Redis / CDN / origin`, color = miss-rate. Spike: a cache stampede — misses cascade downward through the tiers as each layer's hit-rate collapses. Cascade *direction* (top→bottom) is a fresh visual beat the latency one doesn't have.
 
 4. **Error-budget / status-code heatmap** — rows = `2xx / 3xx / 4xx / 5xx`, color = volume. Spike: the 5xx row lights up across all columns at once (a deploy went bad), then recovers after a "rollback."
-
-5. **Partition-lag heatmap** — rows = Kafka partitions, color = consumer lag. Spike: a few partitions go red as a consumer falls behind; recover = "rebalanced / scaled consumers."
 
 ## Variations that bend the mechanic
 
