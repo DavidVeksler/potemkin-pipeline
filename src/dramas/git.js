@@ -18,28 +18,58 @@ function* dRebase(){
   yield CNT('commits',1);
   yield OV('close',{wait:U(600,1100)});
 }
+/* both sides edited the same line — merged keeps both intents (a real 3-way resolution) */
+const MERGE_HUNKS=[
+  {ctx:'function resolveTimeout(env){', ours:'const ms = 30_000;',          theirs:'const ms = 45_000;',          merged:'const ms = Number(env.TIMEOUT_MS ?? 45_000);'},
+  {ctx:'export const retry = {',        ours:'  attempts: 3,',              theirs:'  attempts: 5,',              merged:'  attempts: cfg.maxRetries ?? 5,'},
+  {ctx:'async function read(key){',      ours:'  return cache.get(key);',    theirs:'  return store.lookup(key);', merged:'  return cache.get(key) ?? await store.lookup(key);'},
+  {ctx:'function headers(req){',         ours:"  h['x-trace'] = req.id;",    theirs:"  h['x-span'] = span.id;",   merged:"  h['x-trace'] = req.id; h['x-span'] = span.id;"},
+  {ctx:'const pool = createPool({',      ours:'  max: 16,',                  theirs:'  max: 32,',                  merged:'  max: Number(env.POOL_MAX ?? 32),'},
+  {ctx:'function shardFor(key){',        ours:'  return hash(key) % 64;',     theirs:'  return hash(key) % 128;',   merged:'  return hash(key) % SHARD_COUNT;'},
+];
 function* dMergeConflict(){
   const branch=pick(['feature/'+pick(['streaming','multi-region','zero-downtime','crdt-merge']),'epic/rewrite-'+pick(['auth','ledger','scheduler'])]);
-  const files=shuffle(FILES.slice()).slice(0,ri(4,8));
+  const files=shuffle(FILES.slice()).slice(0,ri(3,6));
+  const hunks=shuffle(MERGE_HUNKS.slice());
   yield OV('open',{type:'anomaly'});
   yield OV('banner',{cls:'err pulse',text:'⚠ MERGE CONFLICT — '+files.length+' files · '+branch+' ⇆ main',wait:U(300,600)});
   beep('alert');
-  yield L('▌ Merging '+branch+' into main','accent',{wait:U(500,900)});
+  yield L('▌ git merge --no-ff '+branch,'accent',{wait:U(400,800)});
   yield TOOL('Bash','git merge --no-ff '+branch);
   yield OUT('Auto-merging '+files.length+' paths…','dim',{burst:true});
-  yield OUT('CONFLICT (content): '+ri(11,140)+' hunks across '+files.length+' files','err',{burst:true});
+  yield OUT('CONFLICT (content): merge conflict in '+files.length+' files','err',{burst:true});
   yield THINK();
-  yield L('rerere remembers '+ri(2,5)+' of these resolutions — replaying','warn',{wait:U(700,1300)});
-  for(const f of files){
-    yield TOOL('Edit',f);
-    yield DIFF('-','<<<<<<< HEAD',{wait:U(40,110)});
-    yield DIFF('+',pick(FIX),{wait:U(50,140)});
+  // centerpiece: open the worst-hit file and actually resolve a hunk
+  const star=files[0], h=hunks[0];
+  yield L('opening '+star+' — first of '+ri(2,6)+' conflicted hunks','dim',{wait:U(500,900)});
+  yield TOOL('Edit',star);
+  yield OUT('@@ -'+ri(40,400)+',7 +'+ri(40,400)+',7 @@ '+h.ctx,'dim',{burst:true});
+  yield L('<<<<<<< HEAD','warn',{wait:U(140,280)});
+  yield DIFF('-',h.ours,{wait:U(80,180)});
+  yield L('=======','dim',{wait:U(80,180)});
+  yield DIFF('+',h.theirs,{wait:U(80,180)});
+  yield L('>>>>>>> '+branch,'warn',{wait:U(140,280)});
+  yield THINK();
+  yield L('both branches touched the same line — reconciling, keeping both intents','accent',{wait:U(700,1300)});
+  yield OUT('— resolution —','dim',{burst:true});
+  yield DIFF('-',h.ours,{wait:U(60,150)});
+  yield DIFF('-',h.theirs,{wait:U(60,150)});
+  yield DIFF('+',h.merged,{wait:U(90,200)});
+  yield TOOL('Bash','git add '+star);
+  yield L('✔ '+star+' resolved','ok',{wait:U(300,600)});
+  // the rest: rerere replays a couple, hand-resolve the others
+  const rest=files.slice(1), replayed=Math.min(rest.length,ri(1,3));
+  if(replayed) yield L('git rerere — replaying '+replayed+' remembered resolution'+(replayed>1?'s':''),'warn',{wait:U(500,900)});
+  for(let i=0;i<rest.length;i++){
+    const hh=hunks[(i+1)%hunks.length];
+    if(i<replayed){ yield OUT('Resolved \''+rest[i]+'\' using previous resolution.','dim',{burst:true}); }
+    else{ yield TOOL('Edit',rest[i]); yield DIFF('-',hh.ours,{wait:U(40,110)}); yield DIFF('+',hh.merged,{wait:U(50,140)}); }
   }
-  yield OUT('git add -A · '+files.length+' conflicts resolved','dim',{burst:true});
-  yield TOOL('Bash','git commit --no-edit && git rerere');
+  yield TOOL('Bash','git add -A && git commit --no-edit');
+  yield OUT('[main '+hash(7)+"] Merge branch '"+branch+"' into main",'dim',{burst:true});
   yield OV('banner',{cls:'ok',text:'✓ MERGED — '+branch+' folded into main, no force needed',wait:U(700,1400)});
   beep('ok');
-  yield L('✔ '+files.length+'-way conflict resolved · merge commit '+hash(7),'ok',{wait:U(600,1200)});
+  yield L('✔ '+files.length+' files reconciled · merge commit '+hash(7)+' · tree clean','ok',{wait:U(600,1200)});
   yield CNT('commits',1);
   yield OV('close',{wait:U(500,900)});
 }
