@@ -54,6 +54,7 @@ const SCENE_REGISTRY=[
   {id:'attackmap',    label:'threat map · DDoS',           category:'Security',                    generator:dAttack,        appBuilder:buildAttack,   weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
   {id:'security',     label:'CVE patch',                   category:'Security',                    generator:dSec,           appBuilder:null,          weight:1,autoplay:true, requiresMotion:false,tags:['core']},
   {id:'auth',         label:'auth / secret rotation',      category:'Security',                    generator:dAuth,          appBuilder:null,          weight:1,autoplay:true, requiresMotion:false,tags:['core']},
+  {id:'leak',         label:'agent leaks a secret · public repo',category:'Security',              generator:dLeak,          appBuilder:null,          weight:1,autoplay:true, requiresMotion:false,tags:['core']},
   // ---- Version control ----
   {id:'rebase',       label:'interactive rebase',          category:'Version control',             generator:dRebase,        appBuilder:null,          weight:1,autoplay:true, requiresMotion:false,tags:['git']},
   {id:'mergeconflict',label:'merge conflict',              category:'Version control',             generator:dMergeConflict, appBuilder:null,          weight:1,autoplay:true, requiresMotion:false,tags:['git']},

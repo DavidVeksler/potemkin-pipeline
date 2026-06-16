@@ -9,6 +9,56 @@ Ranked roughly by theater-per-byte. ⭐ = recommended next.
 
 ---
 
+## The screw-up family
+
+The agent royally screwing up — the tonal inversion of the house style, where every
+other "failure" scene is secretly a flex (deploy rolls back "0 customer impact ✔",
+terraform's destroy is "intentional", postmortem is "blameless ✔"). Here it genuinely
+loses. The shared four-beat arc — and the reusable pieces — are already in
+[`dOops`](src/dramas/simple.js) and [`dLeak`](src/dramas/simple.js):
+
+1. **Hubris** — a confident destructive action, success declared (a fake ✔ one beat too early).
+2. **The pause** — `THINK()` lands *after* the brag, one `wait.`, `beep('alert')`, then it
+   re-reads its own command. This inversion *is* the joke.
+3. **Blast radius** — the grey `variant:'context'` box flips red via `OV('retitle',{…,variant:'incident'})`
+   (the `retitle` op added with `dOops` escalates the open box in place — no second `#ovbox`);
+   the damage enumerates and escalates.
+4. **The reckoning** — `rng()` picks the tone: **partial save** (names the unrecoverable
+   remainder, files a SEV), **blame-deflection** (adds a guard, learns the wrong lesson, back
+   to flexing), or **quiet cover-up** (text says "no impact" while the counter disagrees).
+
+All bump `incidents`, stay rare-but-autoplay (uniform `pick(en)` ≈ 1/N), and are seed-reproducible.
+Shipped: **`oops`** (prod wipe — DROP/TRUNCATE/`rm -rf`/`kubectl delete ns prod`) and **`leak`**
+(secret pushed to a public repo; chains into `filterrepo` as the competent cleanup). Remaining:
+
+- **`cloudbill` — runaway spend** ⭐. A retry loop with no backoff, a self-invoking Lambda, or
+  autoscaling with no ceiling. A live dollar counter spins like a slot machine
+  (`$12 … $340 … $9,210`) while the agent calmly tunes something unrelated, then notices the bill.
+  Reuses the header burn-meter mechanic, weaponized. Pairs naturally as the *consequence* tail of
+  `leak`'s crypto-miner line. No new GUI — box + a climbing counter (cosmetic jitter on `Math.random()`).
+- **`migration` / `regex` — silent corruption** ⭐. The scariest kind: it *succeeds*. A
+  find-and-replace or a data migration runs green across thousands of files/rows — everything ✔.
+  Three beats later: "tests still passing… that's wrong, they should've caught this" → it mangled
+  every email / shifted every timestamp by a TZ / lowercased every UUID. The success metrics
+  actively hid it. The reckoning has no clean "restore" — it's a backfill + a data-integrity audit.
+- **`emailblast` — the notification cannon**. A backfill re-triggers the welcome-email (or
+  password-reset) webhook for every row: "47,000 emails sent in 90s." No data lost — pure social
+  blast radius, which is its own flavor of horror. Reuses anomaly/throughput visuals; very
+  real-feeling, the lightest-touch of the set. Reckoning: "paused the webhook · drafting the
+  'please ignore that' apology" (cover-up-adjacent and funny).
+- **`wrongwindow` — the fat-finger** (low priority — partly covered by `oops`'s `kubectl delete ns prod`
+  "kubectx still pointed at prod" beat). Right command, wrong place: `terraform destroy` against prod
+  thinking it's staging, `git push --force` to `main`, restart the wrong cluster. The tell is a single
+  wrong env var / context name flashing by that it should've checked. If built, make it distinct from
+  `oops` — lean on the *two-environments-look-identical* gag rather than the destructive command itself.
+
+Guardrail for all of these: **infrastructure slapstick, never a real playbook** — meme-tier commands
+(`DROP TABLE`, `rm -rf`) are fine and on-genre; nothing copy-pasteable into a real destructive action
+(no working backup-bypass flags, no exfil one-liners). Same decorative-not-functional line the CVEs
+and code snippets already hold.
+
+---
+
 ## Texture & polish
 
 10. **Fake commit ticker / contribution graph** in the rail — an all-green wall

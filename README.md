@@ -85,8 +85,8 @@ framework). The interesting parts:
 - **The script is a generator.** Every ticket and boss drama is a JS generator
   (`function*`) that *yields* typed events — `TOOL('Bash', …)`, `DIFF('+', …)`,
   `THINK()`, `WAIT(900)`, `OV('app', …)`. A scheduler pumps each event when the clock
-  passes its due time. ~14 event constructors compose **44 scripted scenes** — 25 boss
-  app-windows, 11 ambient incident beats, and 8 git-theater arcs — on top of a
+  passes its due time. ~14 event constructors compose **45 scripted scenes** — 25 boss
+  app-windows, 12 ambient incident beats, and 8 git-theater arcs — on top of a
   never-ending stream of fake tickets, plus a deep-work "away" grind.
 - **Determinism by seed.** A 32-bit `mulberry32` PRNG seeds everything narratively
   load-bearing: the procedurally generated file tree, the project, the agent's codename,

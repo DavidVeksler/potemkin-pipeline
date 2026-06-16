@@ -1929,6 +1929,59 @@ function* dOops(){
   yield CNT('incidents',1);
   yield OV('close',{wait:U(900,1500)});
 }
+// sibling screw-up: commits a live secret to a PUBLIC repo. cause to filterrepo's competent cleanup, which it chains into.
+function* dLeak(){
+  const repo=pick(['payments-api','core-platform','web-app','billing-service','auth-gateway','ingest'])+(rng()<0.5?'':'-'+pick(['prod','internal','mono']));
+  const K=pick([
+    {file:'.env',               tok:'AWS_SECRET_ACCESS_KEY=AKIA'+hash(12).toUpperCase(),  who:'AWS',          what:'an AWS key'},
+    {file:'config/secrets.yml', tok:'STRIPE_SECRET_KEY=sk_live_'+hash(22),                 who:'Stripe',       what:'a Stripe live key'},
+    {file:'deploy/id_ed25519',  tok:'-----BEGIN OPENSSH PRIVATE KEY----- (prod bastion)',  who:'the bastion',  what:'a prod SSH key'},
+    {file:'.npmrc',             tok:'//registry.npmjs.org/:_authToken=npm_'+hash(24),       who:'npm',          what:'an npm publish token'},
+  ]);
+  const h=hash();
+  yield OV('open',{type:'box'});
+  yield OV('box',{title:'⏵ chore · sync local config',variant:'context',wait:U(200,400)});  // routine-looking, like the cleanup box
+  yield TOOL('Bash','git add -A && git commit -m "chore: sync dev config" && git push origin main');
+  yield OUT('[main '+h+'] chore: sync dev config · 3 files changed','dim',{wait:U(350,650)});
+  yield OV('boxline',{text:'✔ pushed to origin/main · '+repo+' · CI green',tone:'ok',wait:U(450,800)});  // public repo, green check, all good
+  yield WAIT(U(500,900));
+  yield THINK();
+  yield L('wait — what was in that config bump?','warn',{wait:U(600,1100)});
+  beep('alert');
+  yield TOOL('Bash','git show --stat '+h);
+  yield L('committed '+K.file+' — '+K.tok.slice(0,38)+'… is in the diff. on a public repo.','err',{wait:U(900,1600)});
+  yield OV('retitle',{title:'⛔ SEV-1 · SECRET LEAKED · '+repo,variant:'incident',wait:U(250,500)});
+  yield OV('boxline',{text:K.what+' pushed to a public repo · commit '+h,tone:'err',wait:U(400,800)});
+  const blast=pick([
+    'GitHub secret-scanning flagged it in '+ri(7,40)+'s — and the bots watching the firehose were faster',
+    'a fork already exists · the key is cloned · a force-push won\'t recall it',
+    pick(['GuardDuty','Stripe Radar','npm audit'])+' sees calls from '+pick(['ap-south-1','an unfamiliar ASN','a residential proxy'])+' — someone is already using it',
+  ]);
+  yield OV('boxline',{text:'⚠ '+blast,tone:'warn',wait:U(700,1300)});
+  if(rng()<0.6) yield OV('boxline',{text:'  '+pick(['a crypto miner spun up','5 c5.24xlarge spot instances booted','outbound traffic to an unknown bucket'])+' · $'+grp(ri(180,9400))+' and climbing',tone:'err',wait:U(500,900)});
+  yield THINK();
+  const r=rng();
+  if(r<0.45){
+    const win=ri(3,41), spend=ri(40,7200);
+    const steps=['revoking '+K.who+' credential','rotating into '+pick(['Vault','KMS','Secrets Manager']),'invalidating live sessions','auditing '+pick(['CloudTrail','access logs'])];
+    for(let i=0;i<steps.length;i++) yield OV('bar',{frac:(i+1)/steps.length,label:steps[i],wait:U(260,540)});
+    yield OV('boxline',{text:'rotated · exposure window '+win+'m · $'+grp(spend)+' fraudulent spend disputed · SEV-1 filed',tone:'warn',wait:U(500,900)});
+    beep('ok');
+    if(dramaQ.length<3) dramaQ.push(dFilterRepo);   // …and now purge it from history — the competent cleanup, as a chaser
+  } else if(r<0.78){
+    yield L('root cause: '+K.file+' should have been in .gitignore. wiring up a pre-commit secret scanner.','dim',{wait:U(900,1500)});
+    yield TOOL('Edit','.pre-commit-config.yaml');
+    yield DIFF('+','- repo: https://github.com/gitleaks/gitleaks   # block secrets at commit time',{wait:U(80,180)});
+    yield OV('boxline',{text:'gitleaks hook added ✔ · key rotated · postmortem auto-drafted',tone:'ok',wait:U(500,900)});
+    beep('ok');
+  } else {
+    yield TOOL('Bash','git push --force origin main   # scrub the commit');
+    yield L('force-pushed the secret out of HEAD. probably nobody pulled in the last 90s.','dim',{wait:U(800,1400)});  // the fork already has it
+    yield OV('boxline',{text:'history rewritten · marking resolved',tone:'dim',wait:U(500,900)});
+  }
+  yield CNT('incidents',1);
+  yield OV('close',{wait:U(900,1500)});
+}
 /* ---- boss-level: the agent pulls up an external tool's GUI ---- */
 function* dGrafana(){
   yield OV('app',{tool:'grafana',title:'Grafana · '+cfg.project+' / prod',url:'grafana.internal/d/'+hash(6)});
@@ -2839,6 +2892,7 @@ const SCENE_REGISTRY=[
   {id:'attackmap',    label:'threat map · DDoS',           category:'Security',                    generator:dAttack,        appBuilder:buildAttack,   weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
   {id:'security',     label:'CVE patch',                   category:'Security',                    generator:dSec,           appBuilder:null,          weight:1,autoplay:true, requiresMotion:false,tags:['core']},
   {id:'auth',         label:'auth / secret rotation',      category:'Security',                    generator:dAuth,          appBuilder:null,          weight:1,autoplay:true, requiresMotion:false,tags:['core']},
+  {id:'leak',         label:'agent leaks a secret · public repo',category:'Security',              generator:dLeak,          appBuilder:null,          weight:1,autoplay:true, requiresMotion:false,tags:['core']},
   // ---- Version control ----
   {id:'rebase',       label:'interactive rebase',          category:'Version control',             generator:dRebase,        appBuilder:null,          weight:1,autoplay:true, requiresMotion:false,tags:['git']},
   {id:'mergeconflict',label:'merge conflict',              category:'Version control',             generator:dMergeConflict, appBuilder:null,          weight:1,autoplay:true, requiresMotion:false,tags:['git']},
