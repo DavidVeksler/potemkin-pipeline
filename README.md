@@ -102,6 +102,8 @@ framework). The interesting parts:
 - **Theming & a11y.** Five palettes (amber / green / cyan / outrun / daylight) via CSS custom properties.
   All motion sits behind `body:not(.reduce)` and honors `prefers-reduced-motion`, so the
   office screensaver doesn't induce a seizure.
+
+  <p align="center"><img src="assets/themes.svg" width="80%" alt="The same log re-skinned through all five palettes — amber, green, cyan, outrun, daylight — cycling on a loop."><br><sub>Press <kbd>1</kbd>–<kbd>5</kbd> to swap palettes live.</sub></p>
 - **Sound from nothing.** Turn audio on (`?audio=on` or the config dialog) and the whole
   show is *scored* live by WebAudio — every tool call chirps, phases whoosh, text clatters
   like a typewriter, thinking hums, a boss drama slams in on an alarm klaxon and a deploy
