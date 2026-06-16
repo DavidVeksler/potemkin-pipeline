@@ -564,6 +564,33 @@ body:not(.reduce) .dns-row[data-state=stale]{animation:gpf 1.3s ease-in-out infi
 .dns-row[data-state=fresh]{border-color:color-mix(in srgb,var(--ok) 50%,transparent); background:color-mix(in srgb,var(--ok) 7%,transparent)}
 .dns-row[data-state=fresh] .dns-ans{color:var(--ok)}
 .dns-cap{font-size:11px; color:var(--dim); text-align:center}
+/* Postgres replication failover (Patroni) */
+#appwin[data-tool=pgrepl]{width:min(660px,94vw)}
+.appbody.pgr{display:flex; flex-direction:column; gap:9px}
+.pgr-head .pgr-ht{font-size:11px; color:var(--accent); font-weight:700; letter-spacing:.5px}
+.pgr-tbl{display:flex; flex-direction:column; gap:3px}
+.pgr-row{display:grid; grid-template-columns:1.7fr .9fr 1.3fr 7ch; gap:10px; align-items:center; font-size:11px;
+  padding:5px 9px; border-radius:5px; border:1px solid color-mix(in srgb,var(--dim) 22%,transparent);
+  background:color-mix(in srgb,var(--bg) 40%,transparent); transition:border-color .4s ease,background .4s ease}
+.pgr-hr{border:none; background:none; padding:0 9px 1px; font-size:8.5px; letter-spacing:.6px}
+.pgr-hr .pgr-c{color:var(--dim)}
+.pgr-nm{color:var(--fg); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-variant-numeric:tabular-nums}
+.pgr-role{color:var(--dim); font-weight:700; letter-spacing:.4px; transition:color .4s ease}
+.pgr-st{color:var(--dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; transition:color .4s ease}
+.pgr-lag{text-align:right; color:var(--dim); font-variant-numeric:tabular-nums; transition:color .4s ease}
+.pgr-row[data-state=leader]{border-color:color-mix(in srgb,var(--accent) 50%,transparent); background:color-mix(in srgb,var(--accent) 8%,transparent)}
+.pgr-row[data-state=leader] .pgr-role{color:var(--accent)} .pgr-row[data-state=leader] .pgr-st{color:var(--fg)}
+.pgr-row[data-state=streaming] .pgr-st{color:var(--ok)} .pgr-row[data-state=streaming] .pgr-lag{color:var(--ok)}
+.pgr-row[data-state=down]{border-color:color-mix(in srgb,var(--err) 45%,transparent)}
+.pgr-row[data-state=down] .pgr-role,.pgr-row[data-state=down] .pgr-st{color:var(--err)}
+body:not(.reduce) .pgr-row[data-state=down]{animation:gpf 1.3s ease-in-out infinite}
+.pgr-row[data-state=vote]{border-color:color-mix(in srgb,var(--warn) 30%,transparent)}
+.pgr-row[data-state=promote]{border-color:color-mix(in srgb,var(--warn) 55%,transparent); background:color-mix(in srgb,var(--warn) 8%,transparent)}
+.pgr-row[data-state=promote] .pgr-role,.pgr-row[data-state=promote] .pgr-st{color:var(--warn)}
+body:not(.reduce) .pgr-row[data-state=promote]{animation:gpf 1.1s ease-in-out infinite}
+.pgr-row[data-state=sync]{border-color:color-mix(in srgb,var(--warn) 35%,transparent)}
+.pgr-row[data-state=sync] .pgr-st{color:var(--warn)} .pgr-row[data-state=sync] .pgr-lag{color:var(--warn)}
+.pgr-cap{font-size:11px; color:var(--dim); text-align:center}
 /* latency heatmap (scrolling) */
 #appwin[data-tool=heatmap],#appwin[data-tool=cpuheat],#appwin[data-tool=thermal]{width:min(760px,94vw)}
 .appbody.heat{display:flex; flex-direction:column; gap:8px}

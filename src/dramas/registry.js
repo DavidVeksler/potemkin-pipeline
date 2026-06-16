@@ -32,6 +32,7 @@ const SCENE_REGISTRY=[
   {id:'heatmap',      label:'latency heatmap',             category:'Performance & profiling',     generator:dHeatmap,       appBuilder:buildHeat,     weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
   {id:'cpuheat',      label:'cpu · core pinned',           category:'Performance & profiling',     generator:dCpuheat,       appBuilder:buildCpu,      weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
   {id:'thermal',      label:'thermal throttle map',        category:'Performance & profiling',     generator:dThermal,       appBuilder:buildThermal,  weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
+  {id:'repl',         label:'replication lag · the wave',  category:'Performance & profiling',     generator:dRepl,          appBuilder:buildRepl,     weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
   // ---- Infrastructure & containers ----
   {id:'cluster',      label:'k9s · CrashLoopBackOff',      category:'Infrastructure & containers', generator:dCluster,       appBuilder:buildCluster,  weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
   {id:'docker',       label:'docker buildx',               category:'Infrastructure & containers', generator:dDocker,        appBuilder:buildDocker,   weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
@@ -40,6 +41,7 @@ const SCENE_REGISTRY=[
   {id:'dns',          label:'DNS propagation',             category:'Infrastructure & containers', generator:dDns,           appBuilder:buildDns,      weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
   {id:'chaos',        label:'chaos · game day',            category:'Infrastructure & containers', generator:dChaos,         appBuilder:null,          weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
   {id:'kafka',        label:'kafka · consumer lag',        category:'Infrastructure & containers', generator:dKafka,         appBuilder:buildKafka,    weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
+  {id:'pgrepl',       label:'Postgres · replica failover', category:'Infrastructure & containers', generator:dPgFailover,    appBuilder:buildPgrepl,   weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
   // ---- Editor & terminal ----
   {id:'vim',          label:'vim · hero edit session',     category:'Editor & terminal',           generator:dVim,           appBuilder:buildVim,      weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
   {id:'tmux',         label:'tmux · split-pane war room',  category:'Editor & terminal',           generator:dTmux,          appBuilder:buildTmux,     weight:1,autoplay:true, requiresMotion:false,tags:['boss']},

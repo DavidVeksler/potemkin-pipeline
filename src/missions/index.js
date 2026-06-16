@@ -118,11 +118,23 @@ function* pDeploy(m){
   yield OUT('[main '+hash()+'] '+cm,'dim',{burst:true});
   yield CNT('commits',1);
   yield TOOL('Bash',pick(['gh pr create --fill','git push origin HEAD']));
-  const steps=['build image','push registry','run migrations','canary 5%','canary 50%','rollout 100%','health check'];
-  for(let i=0;i<steps.length;i++){
-    yield OUT('['+'▰'.repeat(i+1)+'▱'.repeat(steps.length-1-i)+'] '+steps[i]+(i===steps.length-1?' ✔':''),'accent',{wait:U(80,260)});
+  const f=pick(DEPLOY_FLAVORS), steps=f.steps, n=steps.length, id=hash();
+  const bar=k=>'['+'▰'.repeat(k+1)+'▱'.repeat(n-1-k)+'] ';
+  // ~1 in 6 trips on a traffic stage — agent pulls the canary, hotfixes, rolls forward (still ships)
+  let tripAt = rng()<0.16 ? steps.findIndex(s=>/canary|shift|rolling|propagate|backfill/.test(s)) : -1;
+  for(let i=0;i<n;i++){
+    if(rng()<0.14){ const tr=ri(2,3); yield OUT(bar(i)+steps[i]+' · retry 1/'+tr+' ('+pick(RETRY_REASONS)+')','dim',{wait:U(140,360)}); }
+    if(i===tripAt){
+      yield OUT(bar(i)+deployTick(steps[i]),'accent',{wait:U(120,260)});
+      yield OUT('⚠ '+pick(DEPLOY_FAILS),'err',{burst:true,wait:U(300,600)});
+      yield L('error budget burning — pulling the canary, rolling forward','warn',{wait:U(600,1200)});
+      yield TOOL('Edit',m.rootFile); yield DIFF('+',pickNR(FIX,'fix'),{wait:U(50,150)});
+      yield OUT('hotfix '+hash()+' · canary clean — resuming','dim',{wait:U(300,600)});
+      yield CNT('incidents',1); tripAt=-1; i--; continue; // replay the stage, clean this time
+    }
+    yield OUT(bar(i)+deployTick(steps[i])+(i===n-1?' ✔':''),'accent',{wait:U(80,260)});
   }
-  yield OUT('deploy '+hash()+' healthy ✔','ok');
+  yield OUT(pick(DEPLOY_DONE).split('$').join(id),'ok');
   yield CNT('deploys',1); yield CNT('files',ri(0,3)); yield CNT('lines',ri(20,400));
   if(rng()<0.6) yield* mcpShip(m);
   yield TASK('deploy','ship','✔');

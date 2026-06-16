@@ -370,6 +370,30 @@ function* dThermal(){
   yield WAIT(U(1200,1800));
   yield OV('close',{wait:U(700,1100)});
 }
+function* dRepl(){
+  const cluster=pick(['orders-db','ledger-pg','users-pg','events-ch','inventory-db'])+'·'+pick(['us-east','eu-west','ap-south']);
+  yield OV('app',{tool:'repl',title:'replication lag · '+cluster,url:'grafana.internal/d/'+hash(6),cluster});
+  yield L('▌ Pulling up the replication topology — a follower feels behind','accent',{wait:U(700,1100)});
+  yield WAIT(U(1500,2100));
+  beep('alert');
+  yield OV('livefx',{phase:'spike'});
+  yield WAIT(U(1000,1500));
+  const lag=ri(9,42);
+  yield OV('appstep',{k:'cap',text:'⚠ replication lag '+lag+'s — the wave is sweeping primary→replicas'});
+  yield L('⚠ lag cascading through the chain — '+lag+'s behind and climbing replica by replica','err',{wait:U(1000,1600)});
+  yield THINK();
+  yield L(rethink(),'warn',{wait:U(800,1500)});
+  yield TOOL('Bash','repmgr standby promote && repmgr standby follow --upstream-node-id='+ri(2,5));
+  yield OUT('promoting a healthy standby · re-pointing followers · draining the backlog','dim',{burst:true});
+  yield WAIT(U(1600,2200));
+  yield OV('livefx',{phase:'recover'});
+  yield OV('appstep',{k:'cap',text:'✓ lag draining in reverse · '+ri(0,1)+'.'+ri(1,9)+'s across all replicas'});
+  beep('ok');
+  yield L('✔ failover clean — the wave drained back through the chain, fleet caught up','ok',{wait:U(1000,1600)});
+  yield CNT('incidents',1);
+  yield WAIT(U(1400,2000));
+  yield OV('close',{wait:U(700,1100)});
+}
 function* dKafka(){
   const topic=pick(['orders.v2','payments.events','clickstream','user.activity','ledger.cdc','telemetry.spans']);
   const group=pick(['checkout-consumers','billing-workers','analytics-sink','search-indexer','fraud-scoring']);
@@ -560,5 +584,68 @@ function* dCpuheat(){
   yield L('✔ busy-loop tamed — work rebalanced, no single core pinned','ok',{wait:U(1000,1600)});
   yield CNT('incidents',1);
   yield WAIT(U(1400,2000));
+  yield OV('close',{wait:U(700,1100)});
+}
+function* dPgFailover(){
+  const nodes=pgNodes();
+  // heir: the replica (index>0) sitting closest to the primary's WAL position
+  const heir=nodes.map((n,i)=>[i,n.lag]).filter(([i])=>i>0).sort((a,b)=>a[1]-b[1])[0][0];
+  yield OV('app',{tool:'pgrepl',title:'patroni · '+(cfg.project||'core')+'-db · prod',url:'',nodes});
+  yield L('▌ Inspecting the Postgres replication cluster','accent',{wait:U(700,1100)});
+  yield WAIT(U(900,1400));
+  beep('alert');
+  yield OV('appstep',{k:'r0',state:'down'});
+  yield OV('appstep',{k:'r0-st',text:'unreachable'});
+  yield OV('appstep',{k:'r0-lag',text:'— '});
+  yield OV('appstep',{k:'cap',text:'⚠ primary db-0 down · leader lease expired · cluster has no writer'});
+  yield L('⚠ primary db-0 went dark — leader lease expired, no node accepting writes','err',{wait:U(1000,1600)});
+  yield THINK();
+  yield L(pick(['Patroni is holding the election — picking the most caught-up replica.','Comparing replica WAL positions — promoting the one with least lag.','DCS lock released — fencing the old primary before promoting a new one.']),'warn',{wait:U(900,1500)});
+  for(let i=1;i<nodes.length;i++) yield OV('appstep',{k:'r'+i,state:'vote'});
+  yield WAIT(U(700,1100));
+  yield OV('appstep',{k:'r'+heir,state:'promote'});
+  yield OV('appstep',{k:'r'+heir+'-st',text:'promoting…'});
+  yield OV('appstep',{k:'cap',text:'⚑ promoting '+nodes[heir].id+' — most caught up ('+fmtLag(nodes[heir].lag)+' behind)'});
+  yield TOOL('Bash','patronictl failover '+(cfg.project||'core')+'-db --candidate '+nodes[heir].id+' --force');
+  yield OUT('pg_promote() · timeline bumped to '+ri(7,29)+' · accepting writes','dim',{burst:true});
+  yield WAIT(U(1000,1500));
+  yield OV('appstep',{k:'r'+heir,state:'leader'});
+  yield OV('appstep',{k:'r'+heir+'-role',text:'PRIMARY'});
+  yield OV('appstep',{k:'r'+heir+'-st',text:'leader · streaming'});
+  yield OV('appstep',{k:'r'+heir+'-lag',text:'—'});
+  beep('ok');
+  yield L('✔ '+nodes[heir].id+' promoted to primary — writes flowing again','ok',{wait:U(900,1400)});
+  // surviving replicas re-point at the new leader; lag jumps on reconnect, then drains
+  const others=nodes.map((_,i)=>i).filter(i=>i!==heir&&i!==0);
+  yield L('↻ re-pointing replicas at the new primary — replaying WAL to catch up','warn',{wait:U(800,1300)});
+  for(const i of others){
+    yield OV('appstep',{k:'r'+i,state:'sync'});
+    yield OV('appstep',{k:'r'+i+'-st',text:'syncing WAL'});
+    yield OV('appstep',{k:'r'+i+'-lag',text:fmtLag(U(3,12))});
+  }
+  yield WAIT(U(900,1400));
+  // old primary comes back and rejoins as a replica via pg_rewind
+  yield OV('appstep',{k:'r0',state:'sync'});
+  yield OV('appstep',{k:'r0-role',text:'replica'});
+  yield OV('appstep',{k:'r0-st',text:'pg_rewind'});
+  yield OV('appstep',{k:'r0-lag',text:fmtLag(U(8,24))});
+  yield TOOL('Bash','pg_rewind --source-server="host='+nodes[heir].id+'" && systemctl start patroni');
+  yield OUT('old primary rejoining as replica · rewinding divergent WAL','dim',{burst:true});
+  yield WAIT(U(1000,1500));
+  const drain=shuffle(others.concat([0]));
+  let caught=0;
+  for(const i of drain){
+    yield OV('appstep',{k:'r'+i,state:'streaming'});
+    yield OV('appstep',{k:'r'+i+'-st',text:'streaming'});
+    yield OV('appstep',{k:'r'+i+'-lag',text:'0 B'});
+    caught++;
+    yield OV('appstep',{k:'cap',text:'WAL replay catching up · '+caught+'/'+drain.length+' replicas in sync',wait:U(280,520)});
+    beep('tick');
+  }
+  yield OV('appstep',{k:'cap',text:'✓ cluster healthy · '+nodes[heir].id+' primary · '+drain.length+' replicas streaming · 0 lag'});
+  beep('ok');
+  yield L('✔ failover complete — new primary elected, every replica caught up, zero data lost','ok',{wait:U(1000,1600)});
+  yield CNT('incidents',1);
+  yield WAIT(U(1200,1800));
   yield OV('close',{wait:U(700,1100)});
 }

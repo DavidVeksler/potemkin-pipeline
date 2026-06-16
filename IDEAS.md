@@ -9,13 +9,6 @@ Ranked roughly by theater-per-byte. ⭐ = recommended next.
 
 ---
 
-## New boss scenes
-
-6. **Postgres replication failover** — primary goes dark, a replica is promoted,
-   WAL catches up.
-
----
-
 ## Texture & polish
 
 10. **Fake commit ticker / contribution graph** in the rail — an all-green wall
@@ -43,10 +36,8 @@ So anything that reads as **"a category × time grid that's calm until one band 
 
 6. **Per-region/shard grid (true 2D, not bands)** — instead of percentile bands on Y, make rows = regions (`us-east / eu-west / ap-south …`) and let the spike be *spatially localized* (one region row goes hot, the rest stay cool). Reads as a regional outage rather than a tail blowout. Tiny change to the `tick` value function, big change in story.
 
-7. **Replication-lag "the wave"** — spike doesn't recover instantly; it propagates: lag appears in one row, then the heat sweeps to adjacent rows column-by-column (failover cascade), then drains in reverse. Same canvas, animated spike *travels* across rows.
-
 8. **Cooldown that doesn't fully recover** — most dramas end clean. A heatmap variant could end with a faint warm residue ("p99 still elevated — opened follow-up ticket") for tonal variety, since the engine already supports partial-intensity columns.
 
 ## My picks (heatmap)
 
-For a *new visual beat* rather than a reskin: **cache-stampede cascade** (#3) or the **traveling replication wave** (#7), because the spike moving *through* rows is something the latency heatmap's all-rows-at-once spike never shows.
+For a *new visual beat* rather than a reskin: the **cache-stampede cascade** (#3), because the spike moving *through* rows is something the latency heatmap's all-rows-at-once spike never shows. (The traveling replication wave shipped as the `repl` scene.)

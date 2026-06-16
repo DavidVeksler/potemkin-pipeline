@@ -469,6 +469,29 @@ function buildGpu(body,ev){
   };
 }
 
+/* --- Postgres streaming-replication cluster (Patroni) : primary dies, a replica is promoted, WAL catches up --- */
+function fmtLag(mb){ return mb<1?Math.round(mb*1024)+' KB':mb.toFixed(1)+' MB'; }
+function pgNodes(){
+  const region=pick(['us-east-1','us-west-2','eu-west-1','ap-south-1','eu-central-1']);
+  const azs=shuffle(['a','b','c','a','b']);
+  return [0,1,2,3].map(i=>({id:'db-'+i+' · '+region+azs[i],role:i===0?'PRIMARY':'replica',lag:i===0?0:U(0.3,3.4)}));
+}
+function buildPgrepl(body,ev){
+  body.classList.add('pgr');
+  const head=el('pgr-head'); head.appendChild(spn('pgr-ht','PATRONI · streaming replication · '+ev.nodes.length+' nodes')); body.appendChild(head);
+  const tbl=el('pgr-tbl');
+  const hr=el('pgr-row pgr-hr'); ['NODE','ROLE','STATE','WAL LAG'].forEach(h=>hr.appendChild(spn('pgr-c',h))); tbl.appendChild(hr);
+  ev.nodes.forEach((n,i)=>{
+    const row=el('pgr-row'); row.dataset.k='r'+i; row.dataset.state=i===0?'leader':'streaming';
+    row.appendChild(spn('pgr-c pgr-nm',n.id));
+    const role=spn('pgr-c pgr-role',n.role); role.dataset.k='r'+i+'-role'; row.appendChild(role);
+    const st=spn('pgr-c pgr-st',i===0?'leader · streaming':'streaming'); st.dataset.k='r'+i+'-st'; row.appendChild(st);
+    const lag=spn('pgr-c pgr-lag',i===0?'—':fmtLag(n.lag)); lag.dataset.k='r'+i+'-lag'; row.appendChild(lag);
+    tbl.appendChild(row);
+  });
+  body.appendChild(tbl);
+  const cap=el('pgr-cap',ev.nodes.length+' nodes · 1 primary · '+(ev.nodes.length-1)+' replicas streaming'); cap.dataset.k='cap'; body.appendChild(cap);
+}
 /* --- service mesh (Kiali) with traffic flowing along the edges --- */
 function meshNodes(){ return [
   {x:30,y:92,l:'gateway'},{x:116,y:46,l:'productpage'},{x:116,y:138,l:'orders'},
@@ -632,6 +655,42 @@ function buildHeat(body,ev){
         for(let r=0;r<this.rows;r++){ x.fillStyle=heatColor(c[r]); x.fillRect(i*cw,H-(r+1)*ch,Math.ceil(cw),Math.ceil(ch)-1); } }
     },
     phase(p){ this.hot = p==='spike'?1:0; }
+  };
+}
+/* --- replication-lag wave (scrolling canvas) : a spike that travels row-to-row, then drains in reverse --- */
+const REPL_ROWS=['primary','replica-1','replica-2','replica-3','replica-4','replica-5'];
+function buildRepl(body,ev){
+  body.classList.add('heat');
+  const head=el('heat-head'); head.appendChild(spn('heat-ht','REPLICATION LAG · '+(ev.cluster||'orders-db')+' · '+REPL_ROWS.length+' nodes'));
+  head.appendChild(spn('heat-sub','last 5m')); body.appendChild(head);
+  const wrap=el('heat-wrap');
+  const yax=el('heat-y'); for(let i=REPL_ROWS.length-1;i>=0;i--) yax.appendChild(el('heat-yl',REPL_ROWS[i]));
+  wrap.appendChild(yax);
+  const cv=document.createElement('canvas'); cv.className='heat-cv'; wrap.appendChild(cv);
+  body.appendChild(wrap);
+  const cap=el('heat-cap','all replicas in sync · lag < 1s'); cap.dataset.k='cap'; body.appendChild(cap);
+  liveState={kind:'repl',last:0,cv,ctx:null,cols:[],nCols:64,rows:REPL_ROWS.length,front:-1.5,dir:0,
+    tick(ts){ if(ts-this.last<150)return; this.last=ts;
+      if(!this.ctx||this.cv.width===0){ this.cv.width=this.cv.clientWidth||640; this.cv.height=this.cv.clientHeight||130; this.ctx=this.cv.getContext('2d'); this.nCols=Math.max(28,(this.cv.width/9)|0); }
+      if(this.dir){ this.front+=this.dir*0.5;                                  // the wave front climbs (spike) or recedes (recover)
+        if(this.front>this.rows+0.5) this.front=this.rows+0.5;
+        if(this.front<-1.5){ this.front=-1.5; this.dir=0; } }
+      const col=[];
+      for(let r=0;r<this.rows;r++){
+        let v=0.08+Math.random()*0.1;                                          // quiet baseline lag
+        const d=this.front-r;                                                  // ticks since the front passed this node
+        if(d>=0){ const edge=Math.max(0,0.9-d*0.18); v=0.5+edge*0.45+Math.random()*0.08; }  // bright leading edge, warm body behind
+        col.push(clamp(v,0,1));
+      }
+      this.cols.push(col); while(this.cols.length>this.nCols)this.cols.shift();
+      this.draw();
+    },
+    draw(){ const x=this.ctx,W=this.cv.width,H=this.cv.height; x.clearRect(0,0,W,H);
+      const cw=W/this.nCols, ch=H/this.rows;
+      for(let i=0;i<this.cols.length;i++){ const c=this.cols[i];
+        for(let r=0;r<this.rows;r++){ x.fillStyle=heatColor(c[r]); x.fillRect(i*cw,H-(r+1)*ch,Math.ceil(cw),Math.ceil(ch)-1); } }
+    },
+    phase(p){ this.dir = p==='spike'?1:-1; }                                   // spike → climb the chain, recover → drain in reverse
   };
 }
 /* --- thermal / power throttle map (scrolling canvas) : a column of dies redlines --- */

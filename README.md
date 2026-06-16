@@ -37,7 +37,8 @@ someone who has never once been on call. Here's the highlight reel:
 Two dozen-plus distinct dramas, each a tidy crisis → the-agent-acts → recovery arc
 that always, always ends in green. A sampling (the rest — vim hero sessions, a tmux
 war room, terraform plan/apply, an on-call page, DNS propagation, a chaos game-day,
-kafka consumer lag, a thermal-throttle map — you'll meet by leaving it running):
+kafka consumer lag, a Postgres replica failover, a thermal-throttle map, a
+replication-lag wave — you'll meet by leaving it running):
 
 <table>
 <tr>
@@ -84,7 +85,7 @@ framework). The interesting parts:
 - **The script is a generator.** Every mission and boss drama is a JS generator
   (`function*`) that *yields* typed events — `TOOL('Bash', …)`, `DIFF('+', …)`,
   `THINK()`, `WAIT(900)`, `OV('app', …)`. A scheduler pumps each event when the clock
-  passes its due time. ~14 event constructors compose **41 scripted scenes** — 23 boss
+  passes its due time. ~14 event constructors compose **43 scripted scenes** — 25 boss
   app-windows, 10 ambient incident beats, and 8 git-theater arcs — on top of a
   never-ending stream of fake missions, plus a deep-work "away" grind.
 - **Determinism by seed.** A 32-bit `mulberry32` PRNG seeds everything narratively

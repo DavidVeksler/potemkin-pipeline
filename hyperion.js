@@ -109,7 +109,6 @@ let agentExplicit = QS.get('agent')!=null;     // only pin agent in the URL when
 const prefersRM = matchMedia('(prefers-reduced-motion: reduce)').matches;
 let reduceFlash = cfg.reduceFlash==='on' ? true : cfg.reduceFlash==='off' ? false : prefersRM;
 let reduceMotion = prefersRM;
-
 /* ====================================================================== */
 /* RNG + HELPERS                                                           */
 /* ====================================================================== */
@@ -146,7 +145,6 @@ function compactNum(n){
   return grp(n);
 }
 function barStr(frac,seg){seg=seg||12;const f=clamp(Math.round(frac*seg),0,seg);return '['+'▰'.repeat(f)+'▱'.repeat(seg-f)+']';}
-
 /* ====================================================================== */
 /* BANKS                                                                   */
 /* ====================================================================== */
@@ -301,7 +299,6 @@ function scanOut(t){
   if(t==='Grep'){ const m=ri(0,80); return m===0?'No matches found':'Found '+m+' match'+(m===1?'':'es')+' in '+plur(ri(1,Math.min(m,40)),'file'); }
   return 'Read '+plur(ri(40,1200),'line');
 }
-
 /* ---- code/config snippet generators (seeded, plausible-but-fictional) ---- */
 const ID_FN=['acquireLock','withTransaction','flushBatch','resolveAddr','reconcile','rebalanceShards','evictStale','commitOffset','validateEntry','dispatch','hydrateCache','prefetch','snapshotState','fenceRead','drainQueue'];
 const ID_VAR=['lease','batch','entry','shard','token','span','quorum','cursor','txn','offset','node','lock'];
@@ -378,7 +375,6 @@ function hiCode(line){
   if(last<line.length) frag.appendChild(document.createTextNode(line.slice(last)));
   return frag;
 }
-
 /* ====================================================================== */
 /* EVENT CONSTRUCTORS                                                      */
 /* ====================================================================== */
@@ -396,7 +392,6 @@ function CNT(field,delta){return {kind:'counter',field:field,delta:delta};}
 function CLR(){return {kind:'clear'};}
 function WAIT(ms){return {kind:'wait',wait:ms};}
 function OV(op,o){return Object.assign({kind:'ov',op:op},o);}
-
 /* ====================================================================== */
 /* STATE                                                                   */
 /* ====================================================================== */
@@ -419,7 +414,6 @@ const counters={files:ri(80,250),lines:ri(80,600)*1000,tests:ri(800,2500),cves:r
 const taskEls={}; const fileEls={}; let lastFileHl=null;
 let lineQueue=[], pendingFileScroll=null;   // batched DOM: queue log appends + coalesce rail scroll, flush once per frame
 const SPIN=['⠋','⠙','⠹','⠸','⠼','⠴','⠦','⠧','⠇','⠏'];
-
 /* ====================================================================== */
 /* DOM REFS                                                                */
 /* ====================================================================== */
@@ -429,7 +423,6 @@ const overlay=$('#overlay'), ovback=overlay.querySelector('.backdrop');
 const bossEl=$('#boss'), settingsEl=$('#settings'), helpEl=$('#help'), toastEl=$('#toast'), liveBtn=$('#livebtn'), cfgbtn=$('#cfgbtn'), dramaEl=$('#dramapick');
 const hAgent=$('.h-agent'),hProj=$('.h-proj'),hModel=$('.h-model'),hVibe=$('.h-vibe'),ctxbar=$('.ctxbar'),ctxpct=$('.ctxpct'),hTok=$('.h-tok'),hCost=$('.h-cost'),hBudget=$('.h-budget'),hTime=$('.h-time'),modeind=$('#modeind');
 const cFiles=$('#c-files'),cLines=$('#c-lines'),cTests=$('#c-tests'),cCves=$('#c-cves'),cDeploys=$('#c-deploys'),cCommits=$('#c-commits'),cIncidents=$('#c-incidents');
-
 /* ====================================================================== */
 /* FILE TREE                                                               */
 /* ====================================================================== */
@@ -484,7 +477,6 @@ function clearFileStatus(){
   for(const p in fileEls){ const el=fileEls[p]; delete el.dataset.st; el.classList.remove('hl','ft-new'); const g=el.querySelector('.ft-gut'); if(g)g.textContent=''; }
   lastFileHl=null;
 }
-
 /* ====================================================================== */
 /* RENDERER                                                                */
 /* ====================================================================== */
@@ -641,7 +633,6 @@ logEl.addEventListener('scroll',()=>{
   pinned=nearBottom; liveBtn.style.display=nearBottom?'none':'block';
 });
 liveBtn.addEventListener('click',()=>{pinned=true;liveBtn.style.display='none';logEl.scrollTop=logEl.scrollHeight;});
-
 /* ====================================================================== */
 /* OVERLAY RENDERER                                                        */
 /* ====================================================================== */
@@ -739,7 +730,6 @@ function drawMatrix(){
     if(y>c.height && rng()>0.975) mx.cols[i]=0; else mx.cols[i]+=reduceMotion?0.45:1;
   }
 }
-
 /* ====================================================================== */
 /* BOSS-LEVEL APP WINDOWS (faux tool GUIs the agent "pulls up")            */
 /* ====================================================================== */
@@ -1211,6 +1201,29 @@ function buildGpu(body,ev){
   };
 }
 
+/* --- Postgres streaming-replication cluster (Patroni) : primary dies, a replica is promoted, WAL catches up --- */
+function fmtLag(mb){ return mb<1?Math.round(mb*1024)+' KB':mb.toFixed(1)+' MB'; }
+function pgNodes(){
+  const region=pick(['us-east-1','us-west-2','eu-west-1','ap-south-1','eu-central-1']);
+  const azs=shuffle(['a','b','c','a','b']);
+  return [0,1,2,3].map(i=>({id:'db-'+i+' · '+region+azs[i],role:i===0?'PRIMARY':'replica',lag:i===0?0:U(0.3,3.4)}));
+}
+function buildPgrepl(body,ev){
+  body.classList.add('pgr');
+  const head=el('pgr-head'); head.appendChild(spn('pgr-ht','PATRONI · streaming replication · '+ev.nodes.length+' nodes')); body.appendChild(head);
+  const tbl=el('pgr-tbl');
+  const hr=el('pgr-row pgr-hr'); ['NODE','ROLE','STATE','WAL LAG'].forEach(h=>hr.appendChild(spn('pgr-c',h))); tbl.appendChild(hr);
+  ev.nodes.forEach((n,i)=>{
+    const row=el('pgr-row'); row.dataset.k='r'+i; row.dataset.state=i===0?'leader':'streaming';
+    row.appendChild(spn('pgr-c pgr-nm',n.id));
+    const role=spn('pgr-c pgr-role',n.role); role.dataset.k='r'+i+'-role'; row.appendChild(role);
+    const st=spn('pgr-c pgr-st',i===0?'leader · streaming':'streaming'); st.dataset.k='r'+i+'-st'; row.appendChild(st);
+    const lag=spn('pgr-c pgr-lag',i===0?'—':fmtLag(n.lag)); lag.dataset.k='r'+i+'-lag'; row.appendChild(lag);
+    tbl.appendChild(row);
+  });
+  body.appendChild(tbl);
+  const cap=el('pgr-cap',ev.nodes.length+' nodes · 1 primary · '+(ev.nodes.length-1)+' replicas streaming'); cap.dataset.k='cap'; body.appendChild(cap);
+}
 /* --- service mesh (Kiali) with traffic flowing along the edges --- */
 function meshNodes(){ return [
   {x:30,y:92,l:'gateway'},{x:116,y:46,l:'productpage'},{x:116,y:138,l:'orders'},
@@ -1376,6 +1389,42 @@ function buildHeat(body,ev){
     phase(p){ this.hot = p==='spike'?1:0; }
   };
 }
+/* --- replication-lag wave (scrolling canvas) : a spike that travels row-to-row, then drains in reverse --- */
+const REPL_ROWS=['primary','replica-1','replica-2','replica-3','replica-4','replica-5'];
+function buildRepl(body,ev){
+  body.classList.add('heat');
+  const head=el('heat-head'); head.appendChild(spn('heat-ht','REPLICATION LAG · '+(ev.cluster||'orders-db')+' · '+REPL_ROWS.length+' nodes'));
+  head.appendChild(spn('heat-sub','last 5m')); body.appendChild(head);
+  const wrap=el('heat-wrap');
+  const yax=el('heat-y'); for(let i=REPL_ROWS.length-1;i>=0;i--) yax.appendChild(el('heat-yl',REPL_ROWS[i]));
+  wrap.appendChild(yax);
+  const cv=document.createElement('canvas'); cv.className='heat-cv'; wrap.appendChild(cv);
+  body.appendChild(wrap);
+  const cap=el('heat-cap','all replicas in sync · lag < 1s'); cap.dataset.k='cap'; body.appendChild(cap);
+  liveState={kind:'repl',last:0,cv,ctx:null,cols:[],nCols:64,rows:REPL_ROWS.length,front:-1.5,dir:0,
+    tick(ts){ if(ts-this.last<150)return; this.last=ts;
+      if(!this.ctx||this.cv.width===0){ this.cv.width=this.cv.clientWidth||640; this.cv.height=this.cv.clientHeight||130; this.ctx=this.cv.getContext('2d'); this.nCols=Math.max(28,(this.cv.width/9)|0); }
+      if(this.dir){ this.front+=this.dir*0.5;                                  // the wave front climbs (spike) or recedes (recover)
+        if(this.front>this.rows+0.5) this.front=this.rows+0.5;
+        if(this.front<-1.5){ this.front=-1.5; this.dir=0; } }
+      const col=[];
+      for(let r=0;r<this.rows;r++){
+        let v=0.08+Math.random()*0.1;                                          // quiet baseline lag
+        const d=this.front-r;                                                  // ticks since the front passed this node
+        if(d>=0){ const edge=Math.max(0,0.9-d*0.18); v=0.5+edge*0.45+Math.random()*0.08; }  // bright leading edge, warm body behind
+        col.push(clamp(v,0,1));
+      }
+      this.cols.push(col); while(this.cols.length>this.nCols)this.cols.shift();
+      this.draw();
+    },
+    draw(){ const x=this.ctx,W=this.cv.width,H=this.cv.height; x.clearRect(0,0,W,H);
+      const cw=W/this.nCols, ch=H/this.rows;
+      for(let i=0;i<this.cols.length;i++){ const c=this.cols[i];
+        for(let r=0;r<this.rows;r++){ x.fillStyle=heatColor(c[r]); x.fillRect(i*cw,H-(r+1)*ch,Math.ceil(cw),Math.ceil(ch)-1); } }
+    },
+    phase(p){ this.dir = p==='spike'?1:-1; }                                   // spike → climb the chain, recover → drain in reverse
+  };
+}
 /* --- thermal / power throttle map (scrolling canvas) : a column of dies redlines --- */
 const THERMAL_ROWS=['die7','die6','die5','die4','die3','die2','die1','die0'];
 function buildThermal(body,ev){
@@ -1441,7 +1490,6 @@ function buildCpu(body,ev){
     phase(p){ this.hot = p==='spike'?1:0; }
   };
 }
-
 /* ====================================================================== */
 /* MISSION GENERATORS                                                      */
 /* ====================================================================== */
@@ -1625,7 +1673,6 @@ function* missionStream(){
     ctxBump(3);
   }
 }
-
 /* ====================================================================== */
 /* DRAMA GENERATORS                                                        */
 /* ====================================================================== */
@@ -1790,7 +1837,6 @@ function* dPager(){
   yield OV('close',{wait:U(600,1000)});
   if(rng()<0.5 && dramaQ.length<3) dramaQ.push(dPostmortem);   // the page often spawns the postmortem
 }
-
 /* ---- boss-level: the agent pulls up an external tool's GUI ---- */
 function* dGrafana(){
   yield OV('app',{tool:'grafana',title:'Grafana · '+cfg.project+' / prod',url:'grafana.internal/d/'+hash(6)});
@@ -2163,6 +2209,30 @@ function* dThermal(){
   yield WAIT(U(1200,1800));
   yield OV('close',{wait:U(700,1100)});
 }
+function* dRepl(){
+  const cluster=pick(['orders-db','ledger-pg','users-pg','events-ch','inventory-db'])+'·'+pick(['us-east','eu-west','ap-south']);
+  yield OV('app',{tool:'repl',title:'replication lag · '+cluster,url:'grafana.internal/d/'+hash(6),cluster});
+  yield L('▌ Pulling up the replication topology — a follower feels behind','accent',{wait:U(700,1100)});
+  yield WAIT(U(1500,2100));
+  beep('alert');
+  yield OV('livefx',{phase:'spike'});
+  yield WAIT(U(1000,1500));
+  const lag=ri(9,42);
+  yield OV('appstep',{k:'cap',text:'⚠ replication lag '+lag+'s — the wave is sweeping primary→replicas'});
+  yield L('⚠ lag cascading through the chain — '+lag+'s behind and climbing replica by replica','err',{wait:U(1000,1600)});
+  yield THINK();
+  yield L(rethink(),'warn',{wait:U(800,1500)});
+  yield TOOL('Bash','repmgr standby promote && repmgr standby follow --upstream-node-id='+ri(2,5));
+  yield OUT('promoting a healthy standby · re-pointing followers · draining the backlog','dim',{burst:true});
+  yield WAIT(U(1600,2200));
+  yield OV('livefx',{phase:'recover'});
+  yield OV('appstep',{k:'cap',text:'✓ lag draining in reverse · '+ri(0,1)+'.'+ri(1,9)+'s across all replicas'});
+  beep('ok');
+  yield L('✔ failover clean — the wave drained back through the chain, fleet caught up','ok',{wait:U(1000,1600)});
+  yield CNT('incidents',1);
+  yield WAIT(U(1400,2000));
+  yield OV('close',{wait:U(700,1100)});
+}
 function* dKafka(){
   const topic=pick(['orders.v2','payments.events','clickstream','user.activity','ledger.cdc','telemetry.spans']);
   const group=pick(['checkout-consumers','billing-workers','analytics-sink','search-indexer','fraud-scoring']);
@@ -2355,7 +2425,69 @@ function* dCpuheat(){
   yield WAIT(U(1400,2000));
   yield OV('close',{wait:U(700,1100)});
 }
-
+function* dPgFailover(){
+  const nodes=pgNodes();
+  // heir: the replica (index>0) sitting closest to the primary's WAL position
+  const heir=nodes.map((n,i)=>[i,n.lag]).filter(([i])=>i>0).sort((a,b)=>a[1]-b[1])[0][0];
+  yield OV('app',{tool:'pgrepl',title:'patroni · '+(cfg.project||'core')+'-db · prod',url:'',nodes});
+  yield L('▌ Inspecting the Postgres replication cluster','accent',{wait:U(700,1100)});
+  yield WAIT(U(900,1400));
+  beep('alert');
+  yield OV('appstep',{k:'r0',state:'down'});
+  yield OV('appstep',{k:'r0-st',text:'unreachable'});
+  yield OV('appstep',{k:'r0-lag',text:'— '});
+  yield OV('appstep',{k:'cap',text:'⚠ primary db-0 down · leader lease expired · cluster has no writer'});
+  yield L('⚠ primary db-0 went dark — leader lease expired, no node accepting writes','err',{wait:U(1000,1600)});
+  yield THINK();
+  yield L(pick(['Patroni is holding the election — picking the most caught-up replica.','Comparing replica WAL positions — promoting the one with least lag.','DCS lock released — fencing the old primary before promoting a new one.']),'warn',{wait:U(900,1500)});
+  for(let i=1;i<nodes.length;i++) yield OV('appstep',{k:'r'+i,state:'vote'});
+  yield WAIT(U(700,1100));
+  yield OV('appstep',{k:'r'+heir,state:'promote'});
+  yield OV('appstep',{k:'r'+heir+'-st',text:'promoting…'});
+  yield OV('appstep',{k:'cap',text:'⚑ promoting '+nodes[heir].id+' — most caught up ('+fmtLag(nodes[heir].lag)+' behind)'});
+  yield TOOL('Bash','patronictl failover '+(cfg.project||'core')+'-db --candidate '+nodes[heir].id+' --force');
+  yield OUT('pg_promote() · timeline bumped to '+ri(7,29)+' · accepting writes','dim',{burst:true});
+  yield WAIT(U(1000,1500));
+  yield OV('appstep',{k:'r'+heir,state:'leader'});
+  yield OV('appstep',{k:'r'+heir+'-role',text:'PRIMARY'});
+  yield OV('appstep',{k:'r'+heir+'-st',text:'leader · streaming'});
+  yield OV('appstep',{k:'r'+heir+'-lag',text:'—'});
+  beep('ok');
+  yield L('✔ '+nodes[heir].id+' promoted to primary — writes flowing again','ok',{wait:U(900,1400)});
+  // surviving replicas re-point at the new leader; lag jumps on reconnect, then drains
+  const others=nodes.map((_,i)=>i).filter(i=>i!==heir&&i!==0);
+  yield L('↻ re-pointing replicas at the new primary — replaying WAL to catch up','warn',{wait:U(800,1300)});
+  for(const i of others){
+    yield OV('appstep',{k:'r'+i,state:'sync'});
+    yield OV('appstep',{k:'r'+i+'-st',text:'syncing WAL'});
+    yield OV('appstep',{k:'r'+i+'-lag',text:fmtLag(U(3,12))});
+  }
+  yield WAIT(U(900,1400));
+  // old primary comes back and rejoins as a replica via pg_rewind
+  yield OV('appstep',{k:'r0',state:'sync'});
+  yield OV('appstep',{k:'r0-role',text:'replica'});
+  yield OV('appstep',{k:'r0-st',text:'pg_rewind'});
+  yield OV('appstep',{k:'r0-lag',text:fmtLag(U(8,24))});
+  yield TOOL('Bash','pg_rewind --source-server="host='+nodes[heir].id+'" && systemctl start patroni');
+  yield OUT('old primary rejoining as replica · rewinding divergent WAL','dim',{burst:true});
+  yield WAIT(U(1000,1500));
+  const drain=shuffle(others.concat([0]));
+  let caught=0;
+  for(const i of drain){
+    yield OV('appstep',{k:'r'+i,state:'streaming'});
+    yield OV('appstep',{k:'r'+i+'-st',text:'streaming'});
+    yield OV('appstep',{k:'r'+i+'-lag',text:'0 B'});
+    caught++;
+    yield OV('appstep',{k:'cap',text:'WAL replay catching up · '+caught+'/'+drain.length+' replicas in sync',wait:U(280,520)});
+    beep('tick');
+  }
+  yield OV('appstep',{k:'cap',text:'✓ cluster healthy · '+nodes[heir].id+' primary · '+drain.length+' replicas streaming · 0 lag'});
+  beep('ok');
+  yield L('✔ failover complete — new primary elected, every replica caught up, zero data lost','ok',{wait:U(1000,1600)});
+  yield CNT('incidents',1);
+  yield WAIT(U(1200,1800));
+  yield OV('close',{wait:U(700,1100)});
+}
 /* ---- git operations: wild source-control theater ---- */
 function* dRebase(){
   const n=ri(28,64), onto=pick(['main','origin/main','release/'+ri(2,5)+'.x']);
@@ -2513,7 +2645,6 @@ function* dBlame(){
   yield CNT('incidents',1); yield CNT('tests',ri(1,4));
   yield OV('close',{wait:U(500,900)});
 }
-
 /* ---- deep-work "away" mode: a never-ending long-horizon grind toward an absurd goal ---- */
 const MEGA_GOALS=[
   {label:'Refactoring the entire monorepo',unit:'files',lo:9000,hi:52000},
@@ -2560,7 +2691,6 @@ function* dDeepWork(){
   yield L('▌ Interactive session resumed — parking the deep-work pass','accent',{wait:U(300,600)});
   yield L('checkpointed · resumable from the last batch','dim',{wait:U(500,900)});
 }
-
 /* ====================================================================== */
 /* SCENE REGISTRY                                                          */
 /* ====================================================================== */
@@ -2595,6 +2725,7 @@ const SCENE_REGISTRY=[
   {id:'heatmap',      label:'latency heatmap',             category:'Performance & profiling',     generator:dHeatmap,       appBuilder:buildHeat,     weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
   {id:'cpuheat',      label:'cpu · core pinned',           category:'Performance & profiling',     generator:dCpuheat,       appBuilder:buildCpu,      weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
   {id:'thermal',      label:'thermal throttle map',        category:'Performance & profiling',     generator:dThermal,       appBuilder:buildThermal,  weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
+  {id:'repl',         label:'replication lag · the wave',  category:'Performance & profiling',     generator:dRepl,          appBuilder:buildRepl,     weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
   // ---- Infrastructure & containers ----
   {id:'cluster',      label:'k9s · CrashLoopBackOff',      category:'Infrastructure & containers', generator:dCluster,       appBuilder:buildCluster,  weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
   {id:'docker',       label:'docker buildx',               category:'Infrastructure & containers', generator:dDocker,        appBuilder:buildDocker,   weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
@@ -2603,6 +2734,7 @@ const SCENE_REGISTRY=[
   {id:'dns',          label:'DNS propagation',             category:'Infrastructure & containers', generator:dDns,           appBuilder:buildDns,      weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
   {id:'chaos',        label:'chaos · game day',            category:'Infrastructure & containers', generator:dChaos,         appBuilder:null,          weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
   {id:'kafka',        label:'kafka · consumer lag',        category:'Infrastructure & containers', generator:dKafka,         appBuilder:buildKafka,    weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
+  {id:'pgrepl',       label:'Postgres · replica failover', category:'Infrastructure & containers', generator:dPgFailover,    appBuilder:buildPgrepl,   weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
   // ---- Editor & terminal ----
   {id:'vim',          label:'vim · hero edit session',     category:'Editor & terminal',           generator:dVim,           appBuilder:buildVim,      weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
   {id:'tmux',         label:'tmux · split-pane war room',  category:'Editor & terminal',           generator:dTmux,          appBuilder:buildTmux,     weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
@@ -2651,7 +2783,6 @@ function buildApp(tool,body,ev){ const b=APP_BUILDERS[tool]; if(b) b(body,ev); }
 function enabledDramas(){
   return dramaOn ? SCENE_REGISTRY.filter(s=>s.autoplay).map(s=>s.id) : [];
 }
-
 /* ====================================================================== */
 /* SCHEDULER                                                               */
 /* ====================================================================== */
@@ -2698,8 +2829,9 @@ function emitOne(){
 }
 function checkDrama(){
   if(overlayActive||dramaQ.length)return;
-  // context compaction (condition-driven): a full overlay when dramas are on, a silent reset when off
-  if(ctx>=80 && logicalNow-lastCompact>5000){
+  // context compaction (condition-driven): only when the window is genuinely near-full (like real auto-compact),
+  // a full overlay when dramas are on, a silent reset when off
+  if(ctx>=92 && logicalNow-lastCompact>5000){
     if(dramaOn) dramaQ.push(DRAMAS.compaction);
     else ctxAnim={from:ctx,to:U(22,28),t0:performance.now(),dur:1400};   // silent compaction when dramas are off
     lastCompact=logicalNow; return;
@@ -2753,7 +2885,6 @@ function frame(ts){
   flushRender();   // batched DOM: insert this frame's queued log lines + scroll once
   rafId=requestAnimationFrame(frame);
 }
-
 /* ---- header decorations ---- */
 let lastHeaderTs=0, lastTokTs=0;
 function updateHeader(ts,dt){
@@ -2823,7 +2954,6 @@ function injectBurnLine(){
   d.appendChild(spn('br','⎿ ')); d.appendChild(document.createTextNode(pick(BURN_LINES)));
   appendLine(d);
 }
-
 /* ====================================================================== */
 /* INPUT / HOTKEYS                                                         */
 /* ====================================================================== */
@@ -2884,7 +3014,6 @@ function forceDrama(){
 }
 function showBoss(){ bossActive=true; bossEl.classList.add('on'); }
 function hideBoss(){ bossActive=false; bossEl.classList.remove('on'); }
-
 /* ====================================================================== */
 /* IDLE / DEEP-WORK "AWAY" MODE                                            */
 /* ====================================================================== */
@@ -2907,7 +3036,6 @@ function tickIdle(ts){
 }
 ['pointerdown','pointermove','wheel','touchstart'].forEach(t=>addEventListener(t,markActivity,{passive:true}));
 ['pointerdown','touchstart'].forEach(t=>addEventListener(t,audioUnlock,{passive:true}));   // a click/tap also satisfies the audio-gesture requirement
-
 /* ====================================================================== */
 /* SCENE PICKER (hotkey 'd') — fire any drama on demand for testing        */
 /* ====================================================================== */
@@ -2947,7 +3075,6 @@ function toggleDrama(force){
 dramaEl.addEventListener('close',()=>{ dramaOpen=false; });
 dramaEl.addEventListener('cancel',()=>{ dramaOpen=false; });
 dramaEl.addEventListener('click',e=>{ if(e.target===dramaEl) toggleDrama(false); });   // click backdrop to dismiss
-
 /* ====================================================================== */
 /* CONFIGURATION DIALOG (native <dialog>, centered modal)                  */
 /* ====================================================================== */
@@ -3062,7 +3189,6 @@ cfgbtn.addEventListener('click',()=>toggleSettings(true));
 /* ---- toast ---- */
 let toastT=0;
 function toast(msg){ toastEl.textContent=msg; toastEl.classList.add('on'); clearTimeout(toastT); toastT=setTimeout(()=>toastEl.classList.remove('on'),1400); }
-
 /* ====================================================================== */
 /* AUDIO (WebAudio, no assets)                                             */
 /* ====================================================================== */
@@ -3175,7 +3301,6 @@ function sfxOverlay(ev,now){
     case 'bar': tone(1500,0.010,'square',0.045); break;
   }
 }
-
 /* ====================================================================== */
 /* VISIBILITY                                                              */
 /* ====================================================================== */
@@ -3183,7 +3308,6 @@ document.addEventListener('visibilitychange',()=>{
   if(document.hidden){ hidden=true; if(rafId)cancelAnimationFrame(rafId); rafId=0; }
   else { hidden=false; lastTs=0; markActivity(); if(!rafId) rafId=requestAnimationFrame(frame); }  // returning to the tab counts as activity; don't replay backlog
 });
-
 /* ====================================================================== */
 /* INIT                                                                    */
 /* ====================================================================== */
@@ -3209,7 +3333,6 @@ function init(){
   rafId=requestAnimationFrame(frame);
 }
 init();
-
 // test/debug hook — only exposed with ?debug in the URL, so production ships zero global surface
 if(cfg.debug){
   window.__HYP={state:()=>({lines:logEl.childElementCount,counters:Object.assign({},counters),mode,paused,speed,dramas:dramaOn,freq:dramaFreq,ctx:Math.round(ctx),overlayActive,idle:idleActive,logicalNow:Math.round(logicalNow),missionId,agent:cfg.agent,profile:agentProfile===NEUTRAL_PROFILE?'neutral':cfg.agent,profileBias:agentProfile.bias}),force:forceDrama,drama:n=>{if(DRAMAS[n])enqueueDrama(DRAMAS[n],n);return n;},deepwork:enterIdle,wake:markActivity,seed:cfg.seed};

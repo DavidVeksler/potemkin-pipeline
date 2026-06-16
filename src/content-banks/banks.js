@@ -107,6 +107,8 @@ const DEPLOY_FLAVORS=[
 ];
 const RETRY_REASONS=['network','registry 5xx','rate limited','lock timeout','TLS handshake','transient 503','connection reset'];
 const DEPLOY_FAILS=['error rate 0.3% → 4.1% on canary','p99 latency 84ms → 1,920ms','readiness probe failing on 3/5 pods','5xx spiking in us-east-1','health check timed out','memory climbing toward OOM','SLO error budget burning hot'];
+// success tails for the inline mission deploy — $ is replaced with the deploy hash
+const DEPLOY_DONE=['deploy $ healthy ✔','promoted to prod · 0 err over 5m bake ✔','blue→green cutover complete · old fleet drained ✔','rollout $ · 100% traffic · p99 nominal ✔','release $ pinned · rollback armed ✔','shipped $ · SLO budget intact ✔'];
 const GLOBS=['**/*.ts','src/**/*.go','**/*.rs','**/*.py','pkg/**/*.go','**/*.sql','infra/**/*.yaml','src/**/*.tsx'];
 const GREPS=['TODO|FIXME','acquireLock','withTransaction','idempotencyKey','panic\\(','unsafe','SELECT .* FROM','retry\\(','await '];
 const MODULES=['auth','cache','ledger','raft','mesh','index','queue','planner','session','billing','gossip','router','saga','quorum'];

@@ -44,8 +44,9 @@ function emitOne(){
 }
 function checkDrama(){
   if(overlayActive||dramaQ.length)return;
-  // context compaction (condition-driven): a full overlay when dramas are on, a silent reset when off
-  if(ctx>=80 && logicalNow-lastCompact>5000){
+  // context compaction (condition-driven): only when the window is genuinely near-full (like real auto-compact),
+  // a full overlay when dramas are on, a silent reset when off
+  if(ctx>=92 && logicalNow-lastCompact>5000){
     if(dramaOn) dramaQ.push(DRAMAS.compaction);
     else ctxAnim={from:ctx,to:U(22,28),t0:performance.now(),dur:1400};   // silent compaction when dramas are off
     lastCompact=logicalNow; return;
