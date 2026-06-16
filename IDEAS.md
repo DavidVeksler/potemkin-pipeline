@@ -27,12 +27,6 @@ Ranked roughly by theater-per-byte. ⭐ = recommended next.
 
 ---
 
-## Meta & distribution
-
-15. **OG image + meta tags** so the live link unfurls nicely when shared.
-
----
-
 ## HEATMAP DRAMAS
 
 **What the heatmap actually is** ([hyperion.js:1041](hyperion.js:1041)): a `liveState` canvas ticker — `rows × scrolling time-columns`, each cell color-mapped by intensity, columns push left every 150ms, and a single `phase('spike'|'recover')` flag re-shapes the value distribution (the bottom rows stay flat, top rows blow up via `tail*tail`). The drama arc ([dHeatmap:1557](hyperion.js:1557)) is just: pull up dashboard → calm baseline → `beep('alert')` → spike → agent edits → recover → resolved.
