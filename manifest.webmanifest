@@ -1,0 +1,20 @@
+{
+  "name": "HYPERION — Potemkin Pipeline",
+  "short_name": "HYPERION",
+  "description": "A faux-autonomous coding agent that performs furious productivity and ships absolutely nothing. A screensaver for the AI hype era.",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["fullscreen", "standalone", "minimal-ui"],
+  "orientation": "landscape",
+  "background_color": "#0c0a08",
+  "theme_color": "#0c0a08",
+  "categories": ["entertainment", "developer", "utilities"],
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

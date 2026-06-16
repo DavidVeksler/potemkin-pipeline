@@ -176,6 +176,7 @@ Developed as split files and re-inlined into a standalone distributable:
 - `hyperion.js` — the engine (RNG, ticket/drama generators, scheduler, overlay + app builders, live tickers, WebAudio)
 - `build.sh` — inlines CSS + JS into `index.html`
 - `index.html` — the generated single-file artifact you deploy (also the GitHub Pages root)
+- `manifest.webmanifest` · `sw.js` · `icon-192.png` · `icon-512.png` · `apple-touch-icon.png` — PWA scaffolding (sit beside `index.html`; see *Install*)
 - `assets/` — README GIFs only; not shipped in the app
 
 > In-app the simulated product is branded with a random codename (HYPERION is one of
@@ -194,3 +195,16 @@ There is no test suite, because there is nothing to test, because none of it is 
 ## Live
 
 - GitHub Pages: https://davidveksler.github.io/potemkin-pipeline/
+
+## Install
+
+It's a PWA — install it for a chromeless, full-screen window (great as a literal screensaver
+on a second monitor):
+
+- **Desktop Chrome/Edge:** open the live URL, click the install icon in the address bar.
+- **iOS/iPadOS Safari:** Share → *Add to Home Screen*.
+- **Android Chrome:** menu → *Install app* / *Add to Home Screen*.
+
+A service worker (`sw.js`) precaches the app, so once installed it runs fully offline. The
+PWA bits live as sibling files next to `index.html`; the app itself stays a single inlined
+file. Opening the raw `index.html` over `file://` skips the service worker and works as before.

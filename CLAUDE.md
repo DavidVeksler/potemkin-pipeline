@@ -37,6 +37,13 @@ external requests — the zero-dependency single-file output is the whole point.
 `index.html` *is* the deploy — pushing a stale or unbuilt one ships broken. Always
 `./build.sh` before committing. Live at `davidveksler.github.io/potemkin-pipeline/`.
 
+**PWA:** `manifest.webmanifest`, `sw.js`, and `icon-*.png`/`apple-touch-icon.png` sit beside
+`index.html` to make it installable. These sibling files are an *intentional* exception to
+the single-file rule (a service worker must be a standalone same-origin script) — don't fold
+them in or delete them. The app itself stays single-file; the SW is a no-op over `file://`.
+Regenerate icons with `python3 tools/gen-icons.py`. Bump `CACHE` in `sw.js` to evict stale
+caches. The manifest `<link>` + PWA meta tags live in `hyperion.html` (carried into `index.html`).
+
 There is no test suite. Test manually: open `hyperion.html` (raw) or `index.html` (built)
 in a browser. Append `?debug` to expose `window.__HYP`:
 `__HYP.drama('gpu')` · `__HYP.force()` · `__HYP.deepwork()`/`.wake()` · `__HYP.state()`.

@@ -26,6 +26,16 @@
 <meta name="twitter:image" content="https://davidveksler.github.io/potemkin-pipeline/assets/og.png">
 <meta name="theme-color" content="#0c0a08">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%230c0a08'/%3E%3Ctext x='8' y='12.5' font-size='13' font-weight='700' text-anchor='middle' fill='%23ff9d2f' font-family='monospace'%3EH%3C/text%3E%3C/svg%3E">
+
+<!-- PWA / installable web app -->
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="HYPERION">
+<meta name="application-name" content="HYPERION">
+
 <style>
 /* ============================== THEME TOKENS ============================== */
 :root, [data-theme="amber"]{
@@ -797,6 +807,13 @@ body.crt #app::after{content:""; position:fixed; inset:0; z-index:60; pointer-ev
 </div>
 <div id="toast"></div>
 
+<script>
+/* Register the service worker for installable-PWA + offline support.
+   No-op over file:// (where SWs are unavailable) — keeps raw-file use working. */
+if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
+  addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+}
+</script>
 <script>
 "use strict";
 (function(){
