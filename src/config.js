@@ -3,6 +3,9 @@
 /* ====================================================================== */
 const QS=new URLSearchParams(location.search);
 const THEMES=['amber','green','cyan'];
+/* ?platform= pins the repo's tech stack (file tree + code snippets) instead of the
+   per-seed random pick. Aliases normalize to canonical ids matched in genFiles(). */
+const PLATFORM_ALIASES={ts:'typescript',typescript:'typescript',js:'typescript',javascript:'typescript',go:'go',golang:'go',rs:'rust',rust:'rust',py:'python',python:'python',tsx:'react',react:'react'};
 function qint(name,lo,hi,def){const v=parseInt(QS.get(name),10);return Number.isFinite(v)?Math.max(lo,Math.min(hi,v)):def;}
 function qfloat(name,lo,hi,def){const v=parseFloat(QS.get(name));return Number.isFinite(v)?Math.max(lo,Math.min(hi,v)):def;}
 const PROJECTS = [
@@ -88,6 +91,7 @@ const NEUTRAL_PROFILE={boot:null,bias:[],rethink:[]};
 const cfg={
   agent: QS.get('agent')||null,
   project: QS.get('project')||'',
+  platform: PLATFORM_ALIASES[(QS.get('platform')||'').toLowerCase()]||null,  // pinned tech stack, or null = random per seed
   model: QS.get('model')||(VIBE&&VIBE.model)||'mythos-5-preview',
   theme: THEMES.includes(QS.get('theme'))?QS.get('theme'):(VIBE&&THEMES.includes(VIBE.theme)?VIBE.theme:'amber'),
   speed: qfloat('speed',0.25,4, VIBE?VIBE.speed:1),

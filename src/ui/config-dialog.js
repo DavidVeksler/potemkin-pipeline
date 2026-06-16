@@ -29,6 +29,8 @@ function buildConfig(){
   fld(g,'agent',txt(cfg.agent,v=>{cfg.agent=v;agentExplicit=!!v;hAgent.textContent=v||pickCodename(cfg.seed);resolveAgentProfile();syncURL();}),true);
   fld(g,'project',txt(cfg.project,v=>{cfg.project=v;hProj.textContent=v;syncURL();}));
   fld(g,'model',txt(cfg.model,v=>{cfg.model=v;hModel.textContent=v;syncURL();}));
+  // platform pins the repo's stack — applied on reload (file tree is generated once at init); pin the seed so only the language changes
+  fld(g,'platform',sel([{v:'',t:'— random —'},{v:'typescript',t:'TypeScript'},{v:'react',t:'React'},{v:'go',t:'Go'},{v:'rust',t:'Rust'},{v:'python',t:'Python'}],cfg.platform||'',v=>{cfg.platform=v||null;location.search=urlParams(true);}),true);
 
   g=sec('Appearance');
   fld(g,'theme',sel(THEMES,cfg.theme,v=>setTheme(v)));
@@ -71,6 +73,7 @@ function urlParams(forceSeed){
   const p=new URLSearchParams();
   if(agentExplicit&&cfg.agent)p.set('agent',cfg.agent);
   if(cfg.project)p.set('project',cfg.project);
+  if(cfg.platform)p.set('platform',cfg.platform);
   if(cfg.model!==(cfg.vibe&&VIBES[cfg.vibe]&&VIBES[cfg.vibe].model||'mythos-5-preview'))p.set('model',cfg.model);  // pin only when model differs from the vibe's default
   if(cfg.theme!==(cfg.vibe&&VIBES[cfg.vibe]?VIBES[cfg.vibe].theme:'amber'))p.set('theme',cfg.theme);  // pin only when theme differs from the vibe's default
   if(speed!==1)p.set('speed',speed.toFixed(2));
@@ -93,7 +96,7 @@ function copyLink(){
   else { history.replaceState(null,'',location.pathname+(q?'?'+q:'')); toast('link in URL bar'); }
 }
 function resetConfig(){
-  cfg.model='mythos-5-preview'; cfg.audio='off'; cfg.crt='off'; cfg.reduceFlash=null;
+  cfg.model='mythos-5-preview'; cfg.audio='off'; cfg.crt='off'; cfg.reduceFlash=null; cfg.platform=null;
   cfg.idle=90; idleThreshold=90; exitIdle();
   speed=1; dramaOn=true; cfg.dramas='on'; dramaFreq=1; cfg.freq=1; mode='auto'; cfg.project=PROJECTS[(rng()*PROJECTS.length)|0];
   cfg.seed=(Math.random()*4294967296)>>>0; _seed=cfg.seed; seedExplicit=false;

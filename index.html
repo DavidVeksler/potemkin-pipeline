@@ -791,6 +791,9 @@ body.crt #app::after{content:""; position:fixed; inset:0; z-index:60; pointer-ev
 /* ====================================================================== */
 const QS=new URLSearchParams(location.search);
 const THEMES=['amber','green','cyan'];
+/* ?platform= pins the repo's tech stack (file tree + code snippets) instead of the
+   per-seed random pick. Aliases normalize to canonical ids matched in genFiles(). */
+const PLATFORM_ALIASES={ts:'typescript',typescript:'typescript',js:'typescript',javascript:'typescript',go:'go',golang:'go',rs:'rust',rust:'rust',py:'python',python:'python',tsx:'react',react:'react'};
 function qint(name,lo,hi,def){const v=parseInt(QS.get(name),10);return Number.isFinite(v)?Math.max(lo,Math.min(hi,v)):def;}
 function qfloat(name,lo,hi,def){const v=parseFloat(QS.get(name));return Number.isFinite(v)?Math.max(lo,Math.min(hi,v)):def;}
 const PROJECTS = [
@@ -876,6 +879,7 @@ const NEUTRAL_PROFILE={boot:null,bias:[],rethink:[]};
 const cfg={
   agent: QS.get('agent')||null,
   project: QS.get('project')||'',
+  platform: PLATFORM_ALIASES[(QS.get('platform')||'').toLowerCase()]||null,  // pinned tech stack, or null = random per seed
   model: QS.get('model')||(VIBE&&VIBE.model)||'mythos-5-preview',
   theme: THEMES.includes(QS.get('theme'))?QS.get('theme'):(VIBE&&THEMES.includes(VIBE.theme)?VIBE.theme:'amber'),
   speed: qfloat('speed',0.25,4, VIBE?VIBE.speed:1),
@@ -942,16 +946,21 @@ const UNITS=['nodes','edges','shards','partitions','embeddings','vectors','spans
 let FILES=['src/core/orchestrator.ts','src/payment/saga.ts','lib/auth/session.go','pkg/consensus/raft.rs','internal/cache/lru.py','services/billing/ledger.cs','src/api/resolvers/account.graphql','infra/k8s/ingress.yaml','src/model/attention.py','src/vector/index.rs','db/migrations/0042_add_idx.sql','src/net/circuit_breaker.ts','pkg/crdt/merge.go','src/observability/spans.ts'];
 /* seeded repo-layout generator: same seed → same tree, so a shared link reproduces the exact file structure */
 const STACKS=[
-  {ext:'ts', roots:['src','lib','packages','apps'], cfg:['package.json','tsconfig.json']},
-  {ext:'go', roots:['cmd','internal','pkg'],         cfg:['go.mod','go.sum']},
-  {ext:'rs', roots:['src','crates'],                 cfg:['Cargo.toml']},
-  {ext:'py', roots:['src','app','services'],          cfg:['pyproject.toml']}
+  {id:'typescript', ext:'ts', roots:['src','lib','packages','apps'], cfg:['package.json','tsconfig.json']},
+  {id:'go',         ext:'go', roots:['cmd','internal','pkg'],         cfg:['go.mod','go.sum']},
+  {id:'rust',       ext:'rs', roots:['src','crates'],                 cfg:['Cargo.toml']},
+  {id:'python',     ext:'py', roots:['src','app','services'],         cfg:['pyproject.toml']}
 ];
+/* react = tsx-flavored variant; selectable via ?platform=react, kept out of the random rotation
+   so default per-seed runs (and curated vibe seeds) generate the exact same tree as before. */
+const REACT_STACK={id:'react', ext:'tsx', roots:['src','components','app','pages'], cfg:['package.json','tsconfig.json','vite.config.ts']};
+/* resolve cfg.platform → a stack, or null to fall back to the random pick(STACKS) */
+function platformStack(){ if(!cfg.platform)return null; if(cfg.platform==='react')return REACT_STACK; return STACKS.find(s=>s.id===cfg.platform)||null; }
 const DOMAINS=['core','auth','payment','billing','cache','vector','model','consensus','net','observability','gateway','scheduler','worker','ingest','stream','store','index','registry','resolver','session','ledger','saga','queue','router','broker','pipeline','sandbox','telemetry','ratelimit','search','sync'];
 const BASES=['orchestrator','handler','service','client','server','manager','pool','store','index','router','resolver','schema','worker','scheduler','dispatcher','codec','parser','validator','middleware','registry','factory','adapter','gateway','controller','repository','serializer','allocator','reconciler','planner','executor'];
 function shuffle(a){for(let i=a.length-1;i>0;i--){const j=(rng()*(i+1))|0;const t=a[i];a[i]=a[j];a[j]=t;}return a;}
 function genFiles(){
-  const st=pick(STACKS), head=[];
+  const st=platformStack()||pick(STACKS), head=[];
   st.cfg.forEach(f=>head.push(f));
 
   if(rng()<0.75) head.push('README.md');
@@ -1014,7 +1023,7 @@ function genFiles(){
 }
 /* a plausible new path inside an existing source dir — seeded, so a run reproduces */
 function newFilePath(){
-  const src=FILES.filter(p=>/\.(ts|go|rs|py|cs)$/.test(p)); if(!src.length)return null;
+  const src=FILES.filter(p=>/\.(tsx?|go|rs|py|cs)$/.test(p)); if(!src.length)return null;
   const base=pick(src), dir=base.replace(/\/[^/]*$/,''), ext=base.split('.').pop();
   for(let i=0;i<8;i++){ const p=dir+'/'+pick(BASES)+'.'+ext; if(!FILES.includes(p))return p; }
   return null;
@@ -3906,6 +3915,8 @@ function buildConfig(){
   fld(g,'agent',txt(cfg.agent,v=>{cfg.agent=v;agentExplicit=!!v;hAgent.textContent=v||pickCodename(cfg.seed);resolveAgentProfile();syncURL();}),true);
   fld(g,'project',txt(cfg.project,v=>{cfg.project=v;hProj.textContent=v;syncURL();}));
   fld(g,'model',txt(cfg.model,v=>{cfg.model=v;hModel.textContent=v;syncURL();}));
+  // platform pins the repo's stack — applied on reload (file tree is generated once at init); pin the seed so only the language changes
+  fld(g,'platform',sel([{v:'',t:'— random —'},{v:'typescript',t:'TypeScript'},{v:'react',t:'React'},{v:'go',t:'Go'},{v:'rust',t:'Rust'},{v:'python',t:'Python'}],cfg.platform||'',v=>{cfg.platform=v||null;location.search=urlParams(true);}),true);
 
   g=sec('Appearance');
   fld(g,'theme',sel(THEMES,cfg.theme,v=>setTheme(v)));
@@ -3948,6 +3959,7 @@ function urlParams(forceSeed){
   const p=new URLSearchParams();
   if(agentExplicit&&cfg.agent)p.set('agent',cfg.agent);
   if(cfg.project)p.set('project',cfg.project);
+  if(cfg.platform)p.set('platform',cfg.platform);
   if(cfg.model!==(cfg.vibe&&VIBES[cfg.vibe]&&VIBES[cfg.vibe].model||'mythos-5-preview'))p.set('model',cfg.model);  // pin only when model differs from the vibe's default
   if(cfg.theme!==(cfg.vibe&&VIBES[cfg.vibe]?VIBES[cfg.vibe].theme:'amber'))p.set('theme',cfg.theme);  // pin only when theme differs from the vibe's default
   if(speed!==1)p.set('speed',speed.toFixed(2));
@@ -3970,7 +3982,7 @@ function copyLink(){
   else { history.replaceState(null,'',location.pathname+(q?'?'+q:'')); toast('link in URL bar'); }
 }
 function resetConfig(){
-  cfg.model='mythos-5-preview'; cfg.audio='off'; cfg.crt='off'; cfg.reduceFlash=null;
+  cfg.model='mythos-5-preview'; cfg.audio='off'; cfg.crt='off'; cfg.reduceFlash=null; cfg.platform=null;
   cfg.idle=90; idleThreshold=90; exitIdle();
   speed=1; dramaOn=true; cfg.dramas='on'; dramaFreq=1; cfg.freq=1; mode='auto'; cfg.project=PROJECTS[(rng()*PROJECTS.length)|0];
   cfg.seed=(Math.random()*4294967296)>>>0; _seed=cfg.seed; seedExplicit=false;
@@ -4135,7 +4147,7 @@ function init(){
 init();
 // test/debug hook — only exposed with ?debug in the URL, so production ships zero global surface
 if(cfg.debug){
-  window.__HYP={state:()=>({lines:logEl.childElementCount,counters:Object.assign({},counters),mode,paused,speed,dramas:dramaOn,freq:dramaFreq,ctx:Math.round(ctx),overlayActive,idle:idleActive,logicalNow:Math.round(logicalNow),missionId,agent:cfg.agent,profile:agentProfile===NEUTRAL_PROFILE?'neutral':cfg.agent,profileBias:agentProfile.bias}),force:forceDrama,drama:n=>{if(DRAMAS[n])enqueueDrama(DRAMAS[n],n);return n;},deepwork:enterIdle,wake:markActivity,seed:cfg.seed};
+  window.__HYP={state:()=>({lines:logEl.childElementCount,counters:Object.assign({},counters),mode,paused,speed,dramas:dramaOn,freq:dramaFreq,ctx:Math.round(ctx),overlayActive,idle:idleActive,logicalNow:Math.round(logicalNow),missionId,platform:cfg.platform,agent:cfg.agent,profile:agentProfile===NEUTRAL_PROFILE?'neutral':cfg.agent,profileBias:agentProfile.bias}),force:forceDrama,drama:n=>{if(DRAMAS[n])enqueueDrama(DRAMAS[n],n);return n;},deepwork:enterIdle,wake:markActivity,seed:cfg.seed};
 }
 
 })();

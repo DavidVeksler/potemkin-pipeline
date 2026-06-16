@@ -9,16 +9,21 @@ const UNITS=['nodes','edges','shards','partitions','embeddings','vectors','spans
 let FILES=['src/core/orchestrator.ts','src/payment/saga.ts','lib/auth/session.go','pkg/consensus/raft.rs','internal/cache/lru.py','services/billing/ledger.cs','src/api/resolvers/account.graphql','infra/k8s/ingress.yaml','src/model/attention.py','src/vector/index.rs','db/migrations/0042_add_idx.sql','src/net/circuit_breaker.ts','pkg/crdt/merge.go','src/observability/spans.ts'];
 /* seeded repo-layout generator: same seed → same tree, so a shared link reproduces the exact file structure */
 const STACKS=[
-  {ext:'ts', roots:['src','lib','packages','apps'], cfg:['package.json','tsconfig.json']},
-  {ext:'go', roots:['cmd','internal','pkg'],         cfg:['go.mod','go.sum']},
-  {ext:'rs', roots:['src','crates'],                 cfg:['Cargo.toml']},
-  {ext:'py', roots:['src','app','services'],          cfg:['pyproject.toml']}
+  {id:'typescript', ext:'ts', roots:['src','lib','packages','apps'], cfg:['package.json','tsconfig.json']},
+  {id:'go',         ext:'go', roots:['cmd','internal','pkg'],         cfg:['go.mod','go.sum']},
+  {id:'rust',       ext:'rs', roots:['src','crates'],                 cfg:['Cargo.toml']},
+  {id:'python',     ext:'py', roots:['src','app','services'],         cfg:['pyproject.toml']}
 ];
+/* react = tsx-flavored variant; selectable via ?platform=react, kept out of the random rotation
+   so default per-seed runs (and curated vibe seeds) generate the exact same tree as before. */
+const REACT_STACK={id:'react', ext:'tsx', roots:['src','components','app','pages'], cfg:['package.json','tsconfig.json','vite.config.ts']};
+/* resolve cfg.platform → a stack, or null to fall back to the random pick(STACKS) */
+function platformStack(){ if(!cfg.platform)return null; if(cfg.platform==='react')return REACT_STACK; return STACKS.find(s=>s.id===cfg.platform)||null; }
 const DOMAINS=['core','auth','payment','billing','cache','vector','model','consensus','net','observability','gateway','scheduler','worker','ingest','stream','store','index','registry','resolver','session','ledger','saga','queue','router','broker','pipeline','sandbox','telemetry','ratelimit','search','sync'];
 const BASES=['orchestrator','handler','service','client','server','manager','pool','store','index','router','resolver','schema','worker','scheduler','dispatcher','codec','parser','validator','middleware','registry','factory','adapter','gateway','controller','repository','serializer','allocator','reconciler','planner','executor'];
 function shuffle(a){for(let i=a.length-1;i>0;i--){const j=(rng()*(i+1))|0;const t=a[i];a[i]=a[j];a[j]=t;}return a;}
 function genFiles(){
-  const st=pick(STACKS), head=[];
+  const st=platformStack()||pick(STACKS), head=[];
   st.cfg.forEach(f=>head.push(f));
 
   if(rng()<0.75) head.push('README.md');
@@ -81,7 +86,7 @@ function genFiles(){
 }
 /* a plausible new path inside an existing source dir — seeded, so a run reproduces */
 function newFilePath(){
-  const src=FILES.filter(p=>/\.(ts|go|rs|py|cs)$/.test(p)); if(!src.length)return null;
+  const src=FILES.filter(p=>/\.(tsx?|go|rs|py|cs)$/.test(p)); if(!src.length)return null;
   const base=pick(src), dir=base.replace(/\/[^/]*$/,''), ext=base.split('.').pop();
   for(let i=0;i<8;i++){ const p=dir+'/'+pick(BASES)+'.'+ext; if(!FILES.includes(p))return p; }
   return null;

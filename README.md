@@ -158,7 +158,7 @@ compliance-reactor (585k lines), security→PILOT on blast-radius-index (12 CVEs
 leans the scheduler toward its signature scenes; override any piece with the params below.
 
 **URL params** (all optional, all persist via the config dialog's *Copy link*):
-`?seed=N` · `?agent=NAME` · `?project=NAME` · `?theme=amber|green|cyan` ·
+`?seed=N` · `?agent=NAME` · `?project=NAME` · `?platform=typescript|react|go|rust|python` (pins the repo's tech stack — file tree + code snippets; default is random per seed) · `?theme=amber|green|cyan` ·
 `?speed=0.25–4` · `?dramas=on|off` · `?freq=0.25–4` (drama cadence) ·
 `?vibe=startup-crunch|enterprise-migration|security-incident` ·
 `?mode=performer` · `?idle=N`
