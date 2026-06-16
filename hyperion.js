@@ -4,7 +4,7 @@
 /* CONFIG                                                                  */
 /* ====================================================================== */
 const QS=new URLSearchParams(location.search);
-const THEMES=['amber','green','cyan'];
+const THEMES=['amber','green','cyan','outrun','daylight'];
 /* ?platform= pins the repo's tech stack (file tree + code snippets) instead of the
    per-seed random pick. Aliases normalize to canonical ids matched in genFiles(). */
 const PLATFORM_ALIASES={ts:'typescript',typescript:'typescript',js:'typescript',javascript:'typescript',go:'go',golang:'go',rs:'rust',rust:'rust',py:'python',python:'python',tsx:'react',react:'react'};
@@ -3165,6 +3165,8 @@ addEventListener('keydown',e=>{
     case '1': setTheme('amber'); return;
     case '2': setTheme('green'); return;
     case '3': setTheme('cyan'); return;
+    case '4': setTheme('outrun'); return;
+    case '5': setTheme('daylight'); return;
     case '+': case '=': setSpeed(speed*1.5); e.preventDefault(); return;
     case '-': case '_': setSpeed(speed/1.5); e.preventDefault(); return;
     case 'f': forceDrama(); e.preventDefault(); return;

@@ -99,7 +99,7 @@ framework). The interesting parts:
   `[data-k]` hooks (no re-render): flip a GPU to `THROTTLE`, turn a pod red, blow out the
   tail. Continents on the threat map are a hand-rolled dot bitmap; mesh packets ride SMIL
   `animateMotion`; the heatmap and btop graphs are `<canvas>`.
-- **Theming & a11y.** Three palettes (amber / green / cyan) via CSS custom properties.
+- **Theming & a11y.** Five palettes (amber / green / cyan / outrun / daylight) via CSS custom properties.
   All motion sits behind `body:not(.reduce)` and honors `prefers-reduced-motion`, so the
   office screensaver doesn't induce a seizure.
 - **Sound from nothing.** Turn audio on (`?audio=on` or the config dialog) and the whole
@@ -121,7 +121,7 @@ framework). The interesting parts:
 |-----|------|
 | <kbd>m</kbd> | toggle autopilot ↔ performer mode |
 | <kbd>space</kbd> | pause / resume |
-| <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> | theme: amber / green / cyan |
+| <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> <kbd>4</kbd> <kbd>5</kbd> | theme: amber / green / cyan / outrun / daylight |
 | <kbd>+</kbd> <kbd>−</kbd> | speed up / down |
 | <kbd>f</kbd> | force a random drama |
 | <kbd>d</kbd> | open the scene picker and fire any drama on demand |
@@ -158,7 +158,7 @@ compliance-reactor (585k lines), security→PILOT on blast-radius-index (12 CVEs
 leans the scheduler toward its signature scenes; override any piece with the params below.
 
 **URL params** (all optional, all persist via the config dialog's *Copy link*):
-`?seed=N` · `?agent=NAME` · `?project=NAME` · `?platform=typescript|react|go|rust|python` (pins the repo's tech stack — file tree + code snippets; default is random per seed) · `?theme=amber|green|cyan` ·
+`?seed=N` · `?agent=NAME` · `?project=NAME` · `?platform=typescript|react|go|rust|python` (pins the repo's tech stack — file tree + code snippets; default is random per seed) · `?theme=amber|green|cyan|outrun|daylight` ·
 `?speed=0.25–4` · `?dramas=on|off` · `?freq=0.25–4` (drama cadence) ·
 `?vibe=startup-crunch|enterprise-migration|security-incident` ·
 `?mode=performer` · `?idle=N`

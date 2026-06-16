@@ -43,6 +43,16 @@
   --ok:#39ffd6; --warn:#ffd23f; --err:#ff4d4d; --rail:#04141c;
   --add:#39ffd6; --del:#ff7a7a;
 }
+[data-theme="outrun"]{   /* synthwave — magenta + cyan on deep indigo */
+  --bg:#0d0221; --fg:#f5d3ff; --dim:#8a5a9e; --accent:#ff2bd6;
+  --ok:#2bf5e0; --warn:#ffd23f; --err:#ff5277; --rail:#15052b;
+  --add:#2bf5e0; --del:#ff5fa8;
+}
+[data-theme="daylight"]{ /* honest light theme — ink on paper, red-pen accent */
+  --bg:#f4f1e8; --fg:#1a1814; --dim:#9a9080; --accent:#c0392b;
+  --ok:#1a7f4b; --warn:#b8731a; --err:#d6453a; --rail:#eae6d8;
+  --add:#1a7f4b; --del:#c0392b;
+}
 /* ============================== BASE ============================== */
 *{box-sizing:border-box}
 html,body{height:100%;margin:0}
@@ -775,7 +785,7 @@ body.crt #app::after{content:""; position:fixed; inset:0; z-index:60; pointer-ev
   <h2>HOTKEYS</h2>
   <div class="hk"><kbd>m</kbd><span>autopilot ↔ performer</span></div>
   <div class="hk"><kbd>space</kbd><span>pause / resume</span></div>
-  <div class="hk"><kbd>1 2 3</kbd><span>theme: amber / green / cyan</span></div>
+  <div class="hk"><kbd>1 2 3 4 5</kbd><span>theme: amber / green / cyan / outrun / daylight</span></div>
   <div class="hk"><kbd>+ −</kbd><span>speed up / down</span></div>
   <div class="hk"><kbd>f</kbd><span>force a random drama</span></div>
   <div class="hk"><kbd>d</kbd><span>pick a specific scene</span></div>
@@ -794,7 +804,7 @@ body.crt #app::after{content:""; position:fixed; inset:0; z-index:60; pointer-ev
 /* CONFIG                                                                  */
 /* ====================================================================== */
 const QS=new URLSearchParams(location.search);
-const THEMES=['amber','green','cyan'];
+const THEMES=['amber','green','cyan','outrun','daylight'];
 /* ?platform= pins the repo's tech stack (file tree + code snippets) instead of the
    per-seed random pick. Aliases normalize to canonical ids matched in genFiles(). */
 const PLATFORM_ALIASES={ts:'typescript',typescript:'typescript',js:'typescript',javascript:'typescript',go:'go',golang:'go',rs:'rust',rust:'rust',py:'python',python:'python',tsx:'react',react:'react'};
@@ -3955,6 +3965,8 @@ addEventListener('keydown',e=>{
     case '1': setTheme('amber'); return;
     case '2': setTheme('green'); return;
     case '3': setTheme('cyan'); return;
+    case '4': setTheme('outrun'); return;
+    case '5': setTheme('daylight'); return;
     case '+': case '=': setSpeed(speed*1.5); e.preventDefault(); return;
     case '-': case '_': setSpeed(speed/1.5); e.preventDefault(); return;
     case 'f': forceDrama(); e.preventDefault(); return;

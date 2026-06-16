@@ -14,6 +14,16 @@
   --ok:#39ffd6; --warn:#ffd23f; --err:#ff4d4d; --rail:#04141c;
   --add:#39ffd6; --del:#ff7a7a;
 }
+[data-theme="outrun"]{   /* synthwave — magenta + cyan on deep indigo */
+  --bg:#0d0221; --fg:#f5d3ff; --dim:#8a5a9e; --accent:#ff2bd6;
+  --ok:#2bf5e0; --warn:#ffd23f; --err:#ff5277; --rail:#15052b;
+  --add:#2bf5e0; --del:#ff5fa8;
+}
+[data-theme="daylight"]{ /* honest light theme — ink on paper, red-pen accent */
+  --bg:#f4f1e8; --fg:#1a1814; --dim:#9a9080; --accent:#c0392b;
+  --ok:#1a7f4b; --warn:#b8731a; --err:#d6453a; --rail:#eae6d8;
+  --add:#1a7f4b; --del:#c0392b;
+}
 /* ============================== BASE ============================== */
 *{box-sizing:border-box}
 html,body{height:100%;margin:0}

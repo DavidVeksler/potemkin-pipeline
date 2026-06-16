@@ -25,6 +25,8 @@ addEventListener('keydown',e=>{
     case '1': setTheme('amber'); return;
     case '2': setTheme('green'); return;
     case '3': setTheme('cyan'); return;
+    case '4': setTheme('outrun'); return;
+    case '5': setTheme('daylight'); return;
     case '+': case '=': setSpeed(speed*1.5); e.preventDefault(); return;
     case '-': case '_': setSpeed(speed/1.5); e.preventDefault(); return;
     case 'f': forceDrama(); e.preventDefault(); return;

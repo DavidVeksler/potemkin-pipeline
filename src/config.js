@@ -2,7 +2,7 @@
 /* CONFIG                                                                  */
 /* ====================================================================== */
 const QS=new URLSearchParams(location.search);
-const THEMES=['amber','green','cyan'];
+const THEMES=['amber','green','cyan','outrun','daylight'];
 /* ?platform= pins the repo's tech stack (file tree + code snippets) instead of the
    per-seed random pick. Aliases normalize to canonical ids matched in genFiles(). */
 const PLATFORM_ALIASES={ts:'typescript',typescript:'typescript',js:'typescript',javascript:'typescript',go:'go',golang:'go',rs:'rust',rust:'rust',py:'python',python:'python',tsx:'react',react:'react'};
