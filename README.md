@@ -194,4 +194,3 @@ There is no test suite, because there is nothing to test, because none of it is 
 ## Live
 
 - GitHub Pages: https://davidveksler.github.io/potemkin-pipeline/
-- Target home: cheatsheets.davidveksler.com
