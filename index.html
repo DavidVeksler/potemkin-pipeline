@@ -3811,6 +3811,28 @@ function emitOne(){
   pending=stream.next().value; nextAt=logicalNow+waitOf(pending);
   checkDrama();
 }
+// a "beat" is one complete animation: a header event plus the continuation events that finish
+// its visual unit (a tool call + its output/diff/snippet/counter, an overlay step, a line).
+// beat-starts introduce a new unit; clear/wait/thinking are glue that pull the following start
+// into the same beat so a keypress never strands on an invisible or half-finished animation.
+function isBeatStart(ev){
+  switch(ev.kind){
+    case 'tool': case 'phase': case 'task': case 'ov': case 'line': return true;
+    default: return false;   // output diff snippet filehl counter → continuations
+  }
+}
+// emit one whole beat; returns events emitted. Bounded by MAX_PER_FRAME so a giant run can't dump.
+function emitBeat(){
+  if(!pending)return 0;
+  let n=0;
+  for(;;){
+    const glue=pending.kind==='clear'||pending.kind==='wait'||pending.kind==='thinking';
+    emitOne(); n++;
+    if(!pending||n>=MAX_PER_FRAME)break;
+    if(isBeatStart(pending)&&!glue)break;
+  }
+  return n;
+}
 function checkDrama(){
   if(overlayActive||dramaQ.length)return;
   // context compaction (condition-driven): only when the window is genuinely near-full (like real auto-compact),
@@ -3858,11 +3880,14 @@ function frame(ts){
   // engine
   if(!paused && !bossActive){
     if(mode==='auto'){ logicalNow+=dt*speed; pumpAuto(); }
-    else { // performer: release ≥1 event/25ms, frame-rate independent, capped per frame so a mash never dumps
+    else { // performer: each keypress queues one beat (a complete animation). Release queued beats at
+           // a steady rate, frame-rate independent, capped per frame so a mash never dumps the stream.
       if(releaseTokens>0){
-        const budget=Math.min(Math.floor((ts-lastRelease)/25),MAX_PER_FRAME);
-        const n=Math.min(budget,releaseTokens);
-        if(n>0){ for(let i=0;i<n;i++){ releaseTokens--; emitOne(); } lastRelease=ts; }
+        let beats=Math.min(Math.floor((ts-lastRelease)/25),releaseTokens), events=0;
+        if(beats>0){
+          for(let i=0;i<beats&&events<MAX_PER_FRAME;i++){ releaseTokens--; events+=emitBeat(); }
+          lastRelease=ts;
+        }
       } else { lastRelease=ts; }
     }
   }
