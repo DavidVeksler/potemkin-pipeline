@@ -30,6 +30,9 @@ function renderOverlay(ev){
     case 'boxline':{
       if(!ovBox)return; ovBox.querySelector('.ovbody').appendChild(el('obl tone-'+(ev.tone||'fg'),ev.text)); break;
     }
+    case 'retitle':{   // escalate the open box in place (e.g. a calm cleanup box turning red) — no second #ovbox
+      if(!ovBox)return; ovBox.querySelector('.ovtitle').textContent=ev.title; if(ev.variant)ovBox.dataset.variant=ev.variant; break;
+    }
     case 'bar':{
       if(!ovBox)return;
       let bar=ovBox.querySelector('.ovbar'); if(!bar){bar=el('ovbar');ovBox.appendChild(bar);}

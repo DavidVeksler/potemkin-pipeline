@@ -162,3 +162,61 @@ function* dPager(){
   yield OV('close',{wait:U(600,1000)});
   if(rng()<0.5 && dramaQ.length<3) dramaQ.push(dPostmortem);   // the page often spawns the postmortem
 }
+// the agent royally screws up. inverts the house style: act confidently, declare ✔, THEN read the command.
+function* dOops(){
+  // each scenario: a confident destructive command, the success line it brags about, the bug it ignored, the unit lost
+  const S=pick([
+    {cmd:'psql -h prod-db-01 -c "DELETE FROM events WHERE ts < \'$CUTOFF\'"',ok:n=>'DELETE '+grp(n),
+     unit:'rows',bug:'$CUTOFF was never exported — the predicate evaluated to ts < \'\' → every row matched',n:()=>ri(2_400_000,48_000_000)},
+    {cmd:'psql -h prod-db-01 -c "TRUNCATE users CASCADE"',ok:n=>'TRUNCATE TABLE',
+     unit:'rows',bug:'CASCADE walked 11 foreign keys — sessions, orders, invoices all went with it',n:()=>ri(900_000,12_000_000)},
+    {cmd:'rm -rf "$DATA_DIR/"',ok:_=>'',
+     unit:'files',bug:'$DATA_DIR was unset on the prod box — `rm -rf "/"` started at the root mount',n:()=>ri(1_200_000,9_400_000)},
+    {cmd:'kubectl delete ns prod --wait=false',ok:_=>'namespace "prod" deleted',
+     unit:'pods',bug:'kubectx still pointed at prod — I read it as staging and never checked',n:()=>ri(180,2400)},
+  ]);
+  const lost=S.n();
+  yield OV('open',{type:'box'});
+  yield OV('box',{title:'⏵ cleanup · reclaiming space',variant:'context',wait:U(200,400)});  // looks routine — turns red only on the reveal
+  yield TOOL('Bash',S.cmd);
+  if(S.ok(lost)) yield OUT(S.ok(lost),'dim',{wait:U(350,650)});
+  yield OV('boxline',{text:'✔ done — reclaimed '+ri(28,61)+'% · table bloat gone',tone:'ok',wait:U(450,800)});  // the brag, one beat too early
+  yield WAIT(U(500,900));
+  // the pause — it re-reads its own command AFTER declaring victory. this is the whole joke.
+  yield THINK();
+  yield L('wait.','warn',{wait:U(600,1100)});
+  beep('alert');
+  yield TOOL('Read',pick(['scripts/cleanup.sh','ops/prune.sh','Makefile','~/.kube/config']));
+  yield L(S.bug,'err',{wait:U(900,1600)});
+  yield OV('retitle',{title:'⛔ SEV-1 · DATA LOSS · '+pick(['api-gateway','checkout','payments','ledger','core-db']),variant:'incident',wait:U(250,500)});
+  yield OV('boxline',{text:grp(lost)+' '+S.unit+' gone · production · no dry-run',tone:'err',wait:U(400,800)});
+  // blast radius: the backup you were counting on isn't there
+  const back=pick([
+    'last snapshot '+ri(9,19)+'h old · PITR window starts 40m after the delete',
+    'nightly backup job has been failing silently since '+pick(['Feb','Mar','Apr'])+' — no one watched the alert',
+    'the replica already replayed the write · it is just as empty as the primary',
+  ]);
+  yield OV('boxline',{text:'⚠ '+back,tone:'warn',wait:U(700,1300)});
+  yield THINK();
+  // the reckoning — the dial. partial save / blame-deflection / cover-up, picked for tonal variety
+  const r=rng();
+  if(r<0.45){
+    const ok=ri(82,97), gap=ri(11,58);
+    const steps=['promoting standby '+hash(),'replaying WAL to T-'+gap+'m','reconciling sequences','reopening writes'];
+    for(let i=0;i<steps.length;i++) yield OV('bar',{frac:(i+1)/steps.length,label:steps[i],wait:U(260,540)});
+    yield OV('boxline',{text:'restored '+ok+'% · '+gap+'m of writes unrecoverable · SEV-1 filed',tone:'warn',wait:U(500,900)});
+    beep('ok');
+  } else if(r<0.78){
+    yield L('root cause: the script should have required --confirm. adding a guard so this can\'t recur.','dim',{wait:U(900,1500)});
+    yield TOOL('Edit',pick(['scripts/cleanup.sh','ops/prune.sh']));
+    yield DIFF('+','if [ -z "$CUTOFF" ]; then echo "refusing: empty predicate" && exit 1; fi',{wait:U(80,180)});
+    yield OV('boxline',{text:'guard added ✔ · postmortem auto-drafted · blameless',tone:'ok',wait:U(500,900)});  // learned the wrong lesson, back to flexing
+    beep('ok');
+  } else {
+    yield L('checked the dashboards — traffic looks nominal.','dim',{wait:U(800,1400)});
+    yield OV('boxline',{text:'no customer-facing impact detected',tone:'dim',wait:U(600,1100)});  // the text and the rowcount disagree
+    yield OV('boxline',{text:'closing the incident · moving on',tone:'dim',wait:U(500,900)});
+  }
+  yield CNT('incidents',1);
+  yield OV('close',{wait:U(900,1500)});
+}
