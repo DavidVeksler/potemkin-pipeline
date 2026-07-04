@@ -238,6 +238,22 @@ body.reduce #ovbanner{animation:none}
 #ovbox[data-variant=git] .ovtitle{color:color-mix(in srgb,var(--accent) 55%,var(--ok) 45%)}
 #ovbox[data-variant=incident]{border-color:color-mix(in srgb,var(--err) 70%,transparent)}
 #ovbox[data-variant=incident] .ovtitle{color:var(--err)}
+/* SEV-1 reveal: the box shakes once when a routine box is retitled into an incident */
+body:not(.reduce) #ovbox.shake{animation:ovshake .45s ease}
+@keyframes ovshake{
+  0%,100%{transform:translate(-50%,-50%)}
+  20%{transform:translate(calc(-50% - 8px),-50%)}
+  40%{transform:translate(calc(-50% + 7px),-50%)}
+  60%{transform:translate(calc(-50% - 4px),-50%)}
+  80%{transform:translate(calc(-50% + 2px),-50%)}
+}
+/* one big number the box updates in place (spend meter, row count) */
+#ovbox .ovstat{margin-top:10px; font-size:24px; font-weight:800; letter-spacing:.5px; color:var(--dim);
+  font-variant-numeric:tabular-nums; text-align:center; transition:color .3s ease}
+#ovbox .ovstat[data-tone=warn]{color:var(--warn)}
+#ovbox .ovstat[data-tone=err]{color:var(--err)}
+body:not(.reduce) #ovbox .ovstat[data-tone=err]{animation:budgetpulse 1s ease-in-out infinite}
+#ovbox .ovstat[data-tone=ok]{color:var(--ok)}
 #mxcanvas{position:absolute; inset:0; width:100%; height:100%; background:rgba(0,0,0,.55)}
 body:not(.reduce) #overlay.fadein{animation:ovfade .35s ease}
 @keyframes ovfade{from{opacity:0}to{opacity:1}}
@@ -605,6 +621,66 @@ body:not(.reduce) .pgr-row[data-state=promote]{animation:gpf 1.1s ease-in-out in
 .pgr-row[data-state=sync]{border-color:color-mix(in srgb,var(--warn) 35%,transparent)}
 .pgr-row[data-state=sync] .pgr-st{color:var(--warn)} .pgr-row[data-state=sync] .pgr-lag{color:var(--warn)}
 .pgr-cap{font-size:11px; color:var(--dim); text-align:center}
+/* training run (tensorboard) : live loss curve */
+#appwin[data-tool=trainrun]{width:min(760px,94vw)}
+.appbody.tb{display:flex; flex-direction:column; gap:9px}
+.tb-head{display:flex; align-items:baseline; gap:10px}
+.tb-ht{font-size:11px; color:var(--accent); font-weight:700; letter-spacing:.5px}
+.tb-step{margin-left:auto; font-size:11px; color:var(--fg); font-variant-numeric:tabular-nums}
+.tb-stats{display:grid; grid-template-columns:repeat(4,1fr); gap:8px}
+.tb-s{border:1px solid color-mix(in srgb,var(--dim) 28%,transparent); border-radius:6px; padding:5px 8px; background:color-mix(in srgb,var(--bg) 40%,transparent)}
+.tb-t{display:block; font-size:8.5px; color:var(--dim); text-transform:uppercase; letter-spacing:.5px}
+.tb-v{font-size:14px; font-weight:700; color:var(--ok); font-variant-numeric:tabular-nums; transition:color .3s ease}
+.tb-v[data-lvl=hi]{color:var(--err)}
+.tb-cv{width:100%; height:150px; display:block; border-radius:4px; border:1px solid color-mix(in srgb,var(--dim) 22%,transparent)}
+.tb-cap{font-size:11px; color:var(--dim); text-align:center}
+/* service radar (rotating sweep) */
+#appwin[data-tool=radar]{width:min(560px,94vw)}
+.appbody.rd{display:flex; flex-direction:column; gap:9px}
+.rd-head{display:flex; align-items:baseline; gap:10px}
+.rd-ht{font-size:11px; color:var(--accent); font-weight:700; letter-spacing:.5px}
+.rd-cnt{margin-left:auto; font-size:12px; color:var(--ok); font-weight:700; font-variant-numeric:tabular-nums}
+.rd-cv{width:100%; height:280px; display:block; border-radius:6px; background:color-mix(in srgb,#000 35%,var(--rail))}
+.rd-cap{font-size:11px; color:var(--dim); text-align:center}
+/* global traffic map (region failover) — rides on the .am threat-map layout */
+.appbody.geo .am-v{color:var(--ok)}
+.geo-arc{fill:none; stroke:var(--ok); stroke-width:.8; stroke-linecap:round; vector-effect:non-scaling-stroke; stroke-dasharray:4 18; opacity:.9}
+body:not(.reduce) .geo-arc{animation:amflow 1.4s linear infinite}
+.geo-arc.bg{stroke-dasharray:none; opacity:.22; stroke-width:.5; animation:none}
+.geo-arc.alt{stroke:var(--accent); opacity:0}
+.geo-arc.alt.bg{opacity:0}
+.geo-arc[data-state=down]{stroke:var(--err)}
+.geo-arc[data-state=off]{opacity:.05; animation:none}
+.geo-arc.alt[data-state=on]{opacity:.9}
+.geo-arc.alt.bg[data-state=on]{opacity:.22}
+.geo-dc[data-state=standby] .geo-dring{stroke:var(--dim); animation:none} .geo-dc[data-state=standby] .geo-ddot{fill:var(--dim)}
+.geo-src{fill:color-mix(in srgb,var(--fg) 55%,transparent)}
+.geo-dring{fill:none; stroke:var(--ok); stroke-width:.6; vector-effect:non-scaling-stroke}
+body:not(.reduce) .geo-dring{animation:ampulse 1.8s ease-in-out infinite}
+.geo-ddot{fill:var(--ok)}
+.geo-dlbl{fill:var(--dim); font-size:3.4px; font-family:inherit}
+.geo-dc[data-state=down] .geo-dring{stroke:var(--err)} .geo-dc[data-state=down] .geo-ddot{fill:var(--err)}
+.geo-dc[data-state=drained] .geo-dring{stroke:var(--dim); animation:none} .geo-dc[data-state=drained] .geo-ddot{fill:var(--dim)}
+.geo-dc[data-state=hot] .geo-dring{stroke:var(--accent)} .geo-dc[data-state=hot] .geo-ddot{fill:var(--accent)}
+/* CI test-matrix wall */
+#appwin[data-tool=cimatrix]{width:min(680px,94vw)}
+.appbody.cim{display:flex; flex-direction:column; gap:10px}
+.cim-head{display:flex; align-items:baseline; gap:10px}
+.cim-ht{font-size:11px; color:var(--accent); font-weight:700; letter-spacing:.5px}
+.cim-n{margin-left:auto; font-size:12px; color:var(--ok); font-weight:700; font-variant-numeric:tabular-nums}
+.cim-grid{display:grid; grid-template-columns:11ch repeat(var(--cols,8),1fr); gap:5px; align-items:center}
+.cim-lbl{font-size:9px; color:var(--dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.cim-c{aspect-ratio:1.7; border-radius:3px; display:flex; align-items:center; justify-content:center;
+  font-size:8px; color:color-mix(in srgb,var(--dim) 80%,transparent);
+  background:color-mix(in srgb,var(--dim) 10%,transparent); border:1px solid color-mix(in srgb,var(--dim) 22%,transparent);
+  transition:background .3s ease,border-color .3s ease,color .3s ease}
+.cim-c[data-state=run]{border-color:var(--accent); color:var(--accent); background:color-mix(in srgb,var(--accent) 12%,transparent)}
+body:not(.reduce) .cim-c[data-state=run]{animation:cimpulse 1s ease-in-out infinite}
+@keyframes cimpulse{0%,100%{opacity:.55}50%{opacity:1}}
+.cim-c[data-state=pass]{border-color:color-mix(in srgb,var(--ok) 55%,transparent); background:color-mix(in srgb,var(--ok) 26%,transparent); color:var(--ok); animation:none}
+.cim-c[data-state=fail]{border-color:var(--err); background:color-mix(in srgb,var(--err) 30%,transparent); color:#fff}
+body:not(.reduce) .cim-c[data-state=fail]{animation:gpf 1.1s ease-in-out infinite}
+.cim-cap{font-size:11px; color:var(--dim); text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
 /* latency heatmap (scrolling) */
 #appwin[data-tool=heatmap],#appwin[data-tool=cpuheat],#appwin[data-tool=thermal]{width:min(760px,94vw)}
 .appbody.heat{display:flex; flex-direction:column; gap:8px}

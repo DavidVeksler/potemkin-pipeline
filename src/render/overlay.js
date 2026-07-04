@@ -31,7 +31,14 @@ function renderOverlay(ev){
       if(!ovBox)return; ovBox.querySelector('.ovbody').appendChild(el('obl tone-'+(ev.tone||'fg'),ev.text)); break;
     }
     case 'retitle':{   // escalate the open box in place (e.g. a calm cleanup box turning red) — no second #ovbox
-      if(!ovBox)return; ovBox.querySelector('.ovtitle').textContent=ev.title; if(ev.variant)ovBox.dataset.variant=ev.variant; break;
+      if(!ovBox)return; ovBox.querySelector('.ovtitle').textContent=ev.title; if(ev.variant)ovBox.dataset.variant=ev.variant;
+      if(ev.variant==='incident'){ overlay.classList.add('anomaly'); if(!reduceFlash){ ovBox.classList.remove('shake'); void ovBox.offsetWidth; ovBox.classList.add('shake'); } }
+      break;
+    }
+    case 'boxstat':{   // one big number the box updates in place (spend meter, row count) — boxline appends, this overwrites
+      if(!ovBox)return;
+      let s=ovBox.querySelector('.ovstat'); if(!s){ s=el('ovstat'); ovBox.appendChild(s); }
+      s.textContent=ev.text; if(ev.tone)s.dataset.tone=ev.tone; break;
     }
     case 'bar':{
       if(!ovBox)return;

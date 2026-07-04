@@ -33,6 +33,7 @@ const SCENE_REGISTRY=[
   {id:'cpuheat',      label:'cpu · core pinned',           category:'Performance & profiling',     generator:dCpuheat,       appBuilder:buildCpu,      weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
   {id:'thermal',      label:'thermal throttle map',        category:'Performance & profiling',     generator:dThermal,       appBuilder:buildThermal,  weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
   {id:'repl',         label:'replication lag · the wave',  category:'Performance & profiling',     generator:dRepl,          appBuilder:buildRepl,     weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
+  {id:'trainrun',     label:'training run · loss spike',   category:'Performance & profiling',     generator:dTrainRun,      appBuilder:buildTrain,    weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
   // ---- Infrastructure & containers ----
   {id:'cluster',      label:'k9s · CrashLoopBackOff',      category:'Infrastructure & containers', generator:dCluster,       appBuilder:buildCluster,  weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
   {id:'docker',       label:'docker buildx',               category:'Infrastructure & containers', generator:dDocker,        appBuilder:buildDocker,   weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
@@ -42,6 +43,7 @@ const SCENE_REGISTRY=[
   {id:'chaos',        label:'chaos · game day',            category:'Infrastructure & containers', generator:dChaos,         appBuilder:null,          weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
   {id:'kafka',        label:'kafka · consumer lag',        category:'Infrastructure & containers', generator:dKafka,         appBuilder:buildKafka,    weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
   {id:'pgrepl',       label:'Postgres · replica failover', category:'Infrastructure & containers', generator:dPgFailover,    appBuilder:buildPgrepl,   weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
+  {id:'geo',          label:'global traffic · region evac',category:'Infrastructure & containers', generator:dGeoFail,       appBuilder:buildGeo,      weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
   // ---- Editor & terminal ----
   {id:'vim',          label:'vim · hero edit session',     category:'Editor & terminal',           generator:dVim,           appBuilder:buildVim,      weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
   {id:'tmux',         label:'tmux · split-pane war room',  category:'Editor & terminal',           generator:dTmux,          appBuilder:buildTmux,     weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
@@ -50,11 +52,13 @@ const SCENE_REGISTRY=[
   {id:'terraform',    label:'terraform plan/apply',        category:'Ship & release',              generator:dTerraform,     appBuilder:null,          weight:1,autoplay:true, requiresMotion:false,tags:['core']},
   {id:'deploy',       label:'deploy & rollout',            category:'Ship & release',              generator:dDeploy,        appBuilder:null,          weight:1,autoplay:true, requiresMotion:false,tags:['core']},
   {id:'pr',           label:'GitHub pull request',         category:'Ship & release',              generator:dPR,            appBuilder:buildPR,       weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
+  {id:'cimatrix',     label:'CI matrix · wall of lights',  category:'Ship & release',              generator:dCiMatrix,      appBuilder:buildCimatrix, weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
   // ---- Security ----
   {id:'attackmap',    label:'threat map · DDoS',           category:'Security',                    generator:dAttack,        appBuilder:buildAttack,   weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
   {id:'security',     label:'CVE patch',                   category:'Security',                    generator:dSec,           appBuilder:null,          weight:1,autoplay:true, requiresMotion:false,tags:['core']},
   {id:'auth',         label:'auth / secret rotation',      category:'Security',                    generator:dAuth,          appBuilder:null,          weight:1,autoplay:true, requiresMotion:false,tags:['core']},
   {id:'leak',         label:'agent leaks a secret · public repo',category:'Security',              generator:dLeak,          appBuilder:null,          weight:1,autoplay:true, requiresMotion:false,tags:['core']},
+  {id:'radar',        label:'service radar · rogue blip',  category:'Security',                    generator:dRadar,         appBuilder:buildRadar,    weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
   // ---- Version control ----
   {id:'rebase',       label:'interactive rebase',          category:'Version control',             generator:dRebase,        appBuilder:null,          weight:1,autoplay:true, requiresMotion:false,tags:['git']},
   {id:'mergeconflict',label:'merge conflict',              category:'Version control',             generator:dMergeConflict, appBuilder:null,          weight:1,autoplay:true, requiresMotion:false,tags:['git']},
@@ -69,6 +73,8 @@ const SCENE_REGISTRY=[
   {id:'chatter',      label:'agent-to-agent review',       category:'Agent & session',             generator:dChatter,       appBuilder:null,          weight:1,autoplay:true, requiresMotion:false,tags:['core']},
   {id:'postmortem',   label:'incident postmortem',         category:'Agent & session',             generator:dPostmortem,    appBuilder:null,          weight:1,autoplay:true, requiresMotion:false,tags:['core']},
   {id:'oops',         label:'agent screws up · prod wipe',  category:'Agent & session',             generator:dOops,          appBuilder:null,          weight:1,autoplay:true, requiresMotion:false,tags:['core']},
+  {id:'cloudbill',    label:'runaway spend · feedback loop',category:'Agent & session',             generator:dCloudBill,     appBuilder:null,          weight:1,autoplay:true, requiresMotion:false,tags:['core']},
+  {id:'migration',    label:'silent corruption · green run',category:'Agent & session',             generator:dMigrate,       appBuilder:null,          weight:1,autoplay:true, requiresMotion:false,tags:['core']},
   {id:'matrix',       label:'matrix cascade',              category:'Agent & session',             generator:dMatrix,        appBuilder:null,          weight:1,autoplay:true, requiresMotion:true, tags:['core']},
   // system entries — never auto-picked; compaction triggered by ctx pressure, deepwork by idle timeout
   {id:'compaction',   label:'context compaction',          category:'Agent & session',             generator:dCompact,       appBuilder:null,          weight:0,autoplay:false,requiresMotion:false,tags:['core','system']},

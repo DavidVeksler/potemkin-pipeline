@@ -34,11 +34,15 @@ someone who has never once been on call. Here's the highlight reel:
 
 ## The full roster
 
-Two dozen-plus distinct dramas, each a tidy crisis → the-agent-acts → recovery arc
+Fifty-odd distinct dramas, each a tidy crisis → the-agent-acts → recovery arc
 that always, always ends in green. A sampling (the rest — vim hero sessions, a tmux
 war room, terraform plan/apply, an on-call page, DNS propagation, a chaos game-day,
 kafka consumer lag, a Postgres replica failover, a thermal-throttle map, a
-replication-lag wave — you'll meet by leaving it running):
+replication-lag wave, a training run whose loss curve spikes and visibly *rewinds*
+to a checkpoint, a service radar that catches a rogue blip, a global traffic map
+evacuating a browned-out region, a 40-shard CI matrix wall, a runaway-spend
+autoscaler loop with a live dollar counter, a migration that corrupts every row
+while every check stays green — you'll meet by leaving it running):
 
 <table>
 <tr>

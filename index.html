@@ -277,6 +277,22 @@ body.reduce #ovbanner{animation:none}
 #ovbox[data-variant=git] .ovtitle{color:color-mix(in srgb,var(--accent) 55%,var(--ok) 45%)}
 #ovbox[data-variant=incident]{border-color:color-mix(in srgb,var(--err) 70%,transparent)}
 #ovbox[data-variant=incident] .ovtitle{color:var(--err)}
+/* SEV-1 reveal: the box shakes once when a routine box is retitled into an incident */
+body:not(.reduce) #ovbox.shake{animation:ovshake .45s ease}
+@keyframes ovshake{
+  0%,100%{transform:translate(-50%,-50%)}
+  20%{transform:translate(calc(-50% - 8px),-50%)}
+  40%{transform:translate(calc(-50% + 7px),-50%)}
+  60%{transform:translate(calc(-50% - 4px),-50%)}
+  80%{transform:translate(calc(-50% + 2px),-50%)}
+}
+/* one big number the box updates in place (spend meter, row count) */
+#ovbox .ovstat{margin-top:10px; font-size:24px; font-weight:800; letter-spacing:.5px; color:var(--dim);
+  font-variant-numeric:tabular-nums; text-align:center; transition:color .3s ease}
+#ovbox .ovstat[data-tone=warn]{color:var(--warn)}
+#ovbox .ovstat[data-tone=err]{color:var(--err)}
+body:not(.reduce) #ovbox .ovstat[data-tone=err]{animation:budgetpulse 1s ease-in-out infinite}
+#ovbox .ovstat[data-tone=ok]{color:var(--ok)}
 #mxcanvas{position:absolute; inset:0; width:100%; height:100%; background:rgba(0,0,0,.55)}
 body:not(.reduce) #overlay.fadein{animation:ovfade .35s ease}
 @keyframes ovfade{from{opacity:0}to{opacity:1}}
@@ -644,6 +660,66 @@ body:not(.reduce) .pgr-row[data-state=promote]{animation:gpf 1.1s ease-in-out in
 .pgr-row[data-state=sync]{border-color:color-mix(in srgb,var(--warn) 35%,transparent)}
 .pgr-row[data-state=sync] .pgr-st{color:var(--warn)} .pgr-row[data-state=sync] .pgr-lag{color:var(--warn)}
 .pgr-cap{font-size:11px; color:var(--dim); text-align:center}
+/* training run (tensorboard) : live loss curve */
+#appwin[data-tool=trainrun]{width:min(760px,94vw)}
+.appbody.tb{display:flex; flex-direction:column; gap:9px}
+.tb-head{display:flex; align-items:baseline; gap:10px}
+.tb-ht{font-size:11px; color:var(--accent); font-weight:700; letter-spacing:.5px}
+.tb-step{margin-left:auto; font-size:11px; color:var(--fg); font-variant-numeric:tabular-nums}
+.tb-stats{display:grid; grid-template-columns:repeat(4,1fr); gap:8px}
+.tb-s{border:1px solid color-mix(in srgb,var(--dim) 28%,transparent); border-radius:6px; padding:5px 8px; background:color-mix(in srgb,var(--bg) 40%,transparent)}
+.tb-t{display:block; font-size:8.5px; color:var(--dim); text-transform:uppercase; letter-spacing:.5px}
+.tb-v{font-size:14px; font-weight:700; color:var(--ok); font-variant-numeric:tabular-nums; transition:color .3s ease}
+.tb-v[data-lvl=hi]{color:var(--err)}
+.tb-cv{width:100%; height:150px; display:block; border-radius:4px; border:1px solid color-mix(in srgb,var(--dim) 22%,transparent)}
+.tb-cap{font-size:11px; color:var(--dim); text-align:center}
+/* service radar (rotating sweep) */
+#appwin[data-tool=radar]{width:min(560px,94vw)}
+.appbody.rd{display:flex; flex-direction:column; gap:9px}
+.rd-head{display:flex; align-items:baseline; gap:10px}
+.rd-ht{font-size:11px; color:var(--accent); font-weight:700; letter-spacing:.5px}
+.rd-cnt{margin-left:auto; font-size:12px; color:var(--ok); font-weight:700; font-variant-numeric:tabular-nums}
+.rd-cv{width:100%; height:280px; display:block; border-radius:6px; background:color-mix(in srgb,#000 35%,var(--rail))}
+.rd-cap{font-size:11px; color:var(--dim); text-align:center}
+/* global traffic map (region failover) — rides on the .am threat-map layout */
+.appbody.geo .am-v{color:var(--ok)}
+.geo-arc{fill:none; stroke:var(--ok); stroke-width:.8; stroke-linecap:round; vector-effect:non-scaling-stroke; stroke-dasharray:4 18; opacity:.9}
+body:not(.reduce) .geo-arc{animation:amflow 1.4s linear infinite}
+.geo-arc.bg{stroke-dasharray:none; opacity:.22; stroke-width:.5; animation:none}
+.geo-arc.alt{stroke:var(--accent); opacity:0}
+.geo-arc.alt.bg{opacity:0}
+.geo-arc[data-state=down]{stroke:var(--err)}
+.geo-arc[data-state=off]{opacity:.05; animation:none}
+.geo-arc.alt[data-state=on]{opacity:.9}
+.geo-arc.alt.bg[data-state=on]{opacity:.22}
+.geo-dc[data-state=standby] .geo-dring{stroke:var(--dim); animation:none} .geo-dc[data-state=standby] .geo-ddot{fill:var(--dim)}
+.geo-src{fill:color-mix(in srgb,var(--fg) 55%,transparent)}
+.geo-dring{fill:none; stroke:var(--ok); stroke-width:.6; vector-effect:non-scaling-stroke}
+body:not(.reduce) .geo-dring{animation:ampulse 1.8s ease-in-out infinite}
+.geo-ddot{fill:var(--ok)}
+.geo-dlbl{fill:var(--dim); font-size:3.4px; font-family:inherit}
+.geo-dc[data-state=down] .geo-dring{stroke:var(--err)} .geo-dc[data-state=down] .geo-ddot{fill:var(--err)}
+.geo-dc[data-state=drained] .geo-dring{stroke:var(--dim); animation:none} .geo-dc[data-state=drained] .geo-ddot{fill:var(--dim)}
+.geo-dc[data-state=hot] .geo-dring{stroke:var(--accent)} .geo-dc[data-state=hot] .geo-ddot{fill:var(--accent)}
+/* CI test-matrix wall */
+#appwin[data-tool=cimatrix]{width:min(680px,94vw)}
+.appbody.cim{display:flex; flex-direction:column; gap:10px}
+.cim-head{display:flex; align-items:baseline; gap:10px}
+.cim-ht{font-size:11px; color:var(--accent); font-weight:700; letter-spacing:.5px}
+.cim-n{margin-left:auto; font-size:12px; color:var(--ok); font-weight:700; font-variant-numeric:tabular-nums}
+.cim-grid{display:grid; grid-template-columns:11ch repeat(var(--cols,8),1fr); gap:5px; align-items:center}
+.cim-lbl{font-size:9px; color:var(--dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.cim-c{aspect-ratio:1.7; border-radius:3px; display:flex; align-items:center; justify-content:center;
+  font-size:8px; color:color-mix(in srgb,var(--dim) 80%,transparent);
+  background:color-mix(in srgb,var(--dim) 10%,transparent); border:1px solid color-mix(in srgb,var(--dim) 22%,transparent);
+  transition:background .3s ease,border-color .3s ease,color .3s ease}
+.cim-c[data-state=run]{border-color:var(--accent); color:var(--accent); background:color-mix(in srgb,var(--accent) 12%,transparent)}
+body:not(.reduce) .cim-c[data-state=run]{animation:cimpulse 1s ease-in-out infinite}
+@keyframes cimpulse{0%,100%{opacity:.55}50%{opacity:1}}
+.cim-c[data-state=pass]{border-color:color-mix(in srgb,var(--ok) 55%,transparent); background:color-mix(in srgb,var(--ok) 26%,transparent); color:var(--ok); animation:none}
+.cim-c[data-state=fail]{border-color:var(--err); background:color-mix(in srgb,var(--err) 30%,transparent); color:#fff}
+body:not(.reduce) .cim-c[data-state=fail]{animation:gpf 1.1s ease-in-out infinite}
+.cim-cap{font-size:11px; color:var(--dim); text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
 /* latency heatmap (scrolling) */
 #appwin[data-tool=heatmap],#appwin[data-tool=cpuheat],#appwin[data-tool=thermal]{width:min(760px,94vw)}
 .appbody.heat{display:flex; flex-direction:column; gap:8px}
@@ -1497,7 +1573,14 @@ function renderOverlay(ev){
       if(!ovBox)return; ovBox.querySelector('.ovbody').appendChild(el('obl tone-'+(ev.tone||'fg'),ev.text)); break;
     }
     case 'retitle':{   // escalate the open box in place (e.g. a calm cleanup box turning red) — no second #ovbox
-      if(!ovBox)return; ovBox.querySelector('.ovtitle').textContent=ev.title; if(ev.variant)ovBox.dataset.variant=ev.variant; break;
+      if(!ovBox)return; ovBox.querySelector('.ovtitle').textContent=ev.title; if(ev.variant)ovBox.dataset.variant=ev.variant;
+      if(ev.variant==='incident'){ overlay.classList.add('anomaly'); if(!reduceFlash){ ovBox.classList.remove('shake'); void ovBox.offsetWidth; ovBox.classList.add('shake'); } }
+      break;
+    }
+    case 'boxstat':{   // one big number the box updates in place (spend meter, row count) — boxline appends, this overwrites
+      if(!ovBox)return;
+      let s=ovBox.querySelector('.ovstat'); if(!s){ s=el('ovstat'); ovBox.appendChild(s); }
+      s.textContent=ev.text; if(ev.tone)s.dataset.tone=ev.tone; break;
     }
     case 'bar':{
       if(!ovBox)return;
@@ -2089,6 +2172,171 @@ function buildMesh(body,ev){
   const cap=el('mesh-cap','7 services · mTLS · '+grp(ri(2000,9000))+' req/s'); cap.dataset.k='cap'; body.appendChild(cap);
 }
 
+/* --- training run (tensorboard) : a live loss curve that SPIKES, visibly REWINDS to a checkpoint, and resumes --- */
+function themeCol(v){ return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
+function buildTrain(body,ev){
+  body.classList.add('tb');
+  const head=el('tb-head'); head.appendChild(spn('tb-ht','TRAINING · '+ev.run+' · '+ev.model));
+  const st=spn('tb-step','step —'); st.dataset.k='step'; head.appendChild(st); body.appendChild(head);
+  const stats=el('tb-stats'), tiles={};
+  [['loss','loss'],['grad norm','grad'],['lr','lr'],['tok/s','tok']].forEach(([t,k])=>{
+    const s=el('tb-s'); s.appendChild(spn('tb-t',t)); const v=spn('tb-v','—'); v.dataset.k=k; s.appendChild(v); stats.appendChild(s); tiles[k]=v;
+  });
+  tiles.lr.textContent=pick(['3.0e-4','2.4e-4','1.8e-4','6.0e-5']);
+  body.appendChild(stats);
+  const cv=document.createElement('canvas'); cv.className='tb-cv'; body.appendChild(cv);
+  const cap=el('tb-cap','loss on trend · checkpoint every 1k steps'); cap.dataset.k='cap'; body.appendChild(cap);
+  liveState={kind:'train',last:0,cv,ctx:null,pts:[],max:150,ph:'train',loss:U(2.0,2.7),floor:U(1.05,1.3),step:ri(28000,90000),spikeAt:-1,rewindTo:-1,tiles,stEl:st,
+    cols:{ok:themeCol('--ok'),err:themeCol('--err'),acc:themeCol('--accent'),dim:themeCol('--dim')},
+    tick(ts){ if(ts-this.last<160)return; this.last=ts;
+      if(!this.ctx||this.cv.width===0){ this.cv.width=this.cv.clientWidth||680; this.cv.height=this.cv.clientHeight||150; this.ctx=this.cv.getContext('2d'); this.max=Math.max(70,(this.cv.width/5)|0); }
+      if(this.ph==='rewind'){                                              // the curve retracts right-to-left — the run is being rolled back
+        for(let i=0;i<4&&this.pts.length>this.rewindTo;i++){ this.pts.pop(); this.step-=24; }
+        if(this.pts.length<=this.rewindTo){ this.ph='train'; this.loss=this.pts[this.pts.length-1]||this.loss; }
+      } else {
+        if(this.ph==='spike') this.loss=this.loss>=8.2?7.4+Math.random()*1.8:this.loss*(1.08+Math.random()*0.14);   // divergence: compounding, ugly; thrashes near the top instead of flatlining
+        else this.loss=Math.max(this.floor,this.loss-(this.loss-this.floor)*0.014+(Math.random()-0.5)*0.03);
+        this.pts.push(this.loss); this.step+=8+((Math.random()*8)|0);
+        while(this.pts.length>this.max){ this.pts.shift(); if(this.spikeAt>=0)this.spikeAt--; }
+      }
+      this.paint(); this.hud();
+    },
+    hud(){ const sp=this.ph==='spike';
+      this.stEl.textContent='step '+grp(this.step);
+      this.tiles.loss.textContent=this.loss.toFixed(3); this.tiles.loss.dataset.lvl=sp?'hi':'';
+      const gn=sp?this.loss*(90+Math.random()*180):0.6+Math.random()*0.7;
+      this.tiles.grad.textContent=gn>=10?grp(gn):gn.toFixed(2); this.tiles.grad.dataset.lvl=sp?'hi':'';
+      this.tiles.tok.textContent=this.ph==='rewind'?'—':compactNum(38000+Math.random()*6000);
+    },
+    paint(){ const x=this.ctx,W=this.cv.width,H=this.cv.height; x.clearRect(0,0,W,H);
+      x.strokeStyle=this.cols.dim; x.globalAlpha=0.25;
+      for(let i=1;i<4;i++){ x.beginPath(); x.moveTo(0,H*i/4); x.lineTo(W,H*i/4); x.stroke(); }
+      x.globalAlpha=1;
+      if(this.pts.length<2)return;
+      let lo=Infinity,hi=-Infinity; this.pts.forEach(v=>{ if(v<lo)lo=v; if(v>hi)hi=v; });
+      const pad=(hi-lo)*0.15+0.02; lo-=pad; hi+=pad;
+      const px=i=>i/(this.max-1)*W, py=v=>H-(v-lo)/(hi-lo)*H;
+      x.beginPath(); x.moveTo(px(0),py(this.pts[0]));
+      for(let i=1;i<this.pts.length;i++) x.lineTo(px(i),py(this.pts[i]));
+      x.strokeStyle=this.ph==='spike'?this.cols.err:this.cols.ok; x.lineWidth=1.6; x.stroke();
+      x.lineTo(px(this.pts.length-1),H); x.lineTo(px(0),H); x.closePath();
+      x.globalAlpha=0.12; x.fillStyle=this.ph==='spike'?this.cols.err:this.cols.ok; x.fill(); x.globalAlpha=1; x.lineWidth=1;
+      if(this.spikeAt>=0&&this.spikeAt<this.pts.length){                    // dashed marker where the run went wrong
+        x.strokeStyle=this.cols.err; x.setLineDash([3,4]); x.globalAlpha=0.6;
+        x.beginPath(); x.moveTo(px(this.spikeAt),0); x.lineTo(px(this.spikeAt),H); x.stroke();
+        x.setLineDash([]); x.globalAlpha=1;
+      }
+    },
+    phase(p){
+      if(p==='spike'){ this.ph='spike'; this.spikeAt=this.pts.length; }
+      else if(p==='rewind'){ this.ph='rewind'; this.rewindTo=Math.max(4,this.spikeAt-6); }
+      else if(p==='recover'){ if(this.ph!=='rewind')this.ph='train'; this.spikeAt=-1; }
+    }
+  };
+}
+/* --- service radar : a rotating sweep over the service catalog; blips glow as the beam passes --- */
+function radarBlips(){
+  const names=shuffle(['api','auth','billing','search','ingest','cache','ledger','mesh-gw','worker','cron']).slice(0,ri(6,8));
+  return names.map(n=>({n,a:U(0,6.283),r:U(0.25,0.9)}));
+}
+function buildRadar(body,ev){
+  body.classList.add('rd');
+  const head=el('rd-head'); head.appendChild(spn('rd-ht','SERVICE RADAR · consul catalog'));
+  const cnt=spn('rd-cnt',ev.blips.length+' registered'); cnt.dataset.k='cnt'; head.appendChild(cnt); body.appendChild(head);
+  const cv=document.createElement('canvas'); cv.className='rd-cv'; body.appendChild(cv);
+  const cap=el('rd-cap','sweeping the mesh · all heartbeats green'); cap.dataset.k='cap'; body.appendChild(cap);
+  liveState={kind:'radar',last:0,cv,ctx:null,ang:0,blips:ev.blips.map(b=>({n:b.n,a:b.a,r:b.r,bright:0})),rogue:null,
+    cols:{ok:themeCol('--ok'),err:themeCol('--err'),acc:themeCol('--accent'),dim:themeCol('--dim')},
+    tick(ts){ if(ts-this.last<33)return; this.last=ts;
+      if(!this.ctx||this.cv.width===0){ this.cv.width=this.cv.clientWidth||500; this.cv.height=this.cv.clientHeight||280; this.ctx=this.cv.getContext('2d'); }
+      this.ang=(this.ang+(reduceMotion?0.016:0.05))%6.283;
+      const hit=b=>{ let d=this.ang-b.a; d-=Math.floor(d/6.283)*6.283; if(d<0.12)b.bright=1; else b.bright*=0.986; };
+      this.blips.forEach(hit);
+      if(this.rogue){ if(this.rogue.dying){ this.rogue.bright*=0.85; if(this.rogue.bright<0.02)this.rogue=null; } else { hit(this.rogue); this.rogue.bright=Math.max(this.rogue.bright,0.55); } }   // the villain smolders — never fades into the phosphor
+      this.paint();
+    },
+    paint(){ const x=this.ctx,W=this.cv.width,H=this.cv.height,cx=W/2,cy=H/2,R=Math.min(W,H)/2-8;
+      x.clearRect(0,0,W,H);
+      x.strokeStyle=this.cols.dim; x.globalAlpha=0.32;
+      [0.33,0.66,1].forEach(f=>{ x.beginPath(); x.arc(cx,cy,R*f,0,6.283); x.stroke(); });
+      x.beginPath(); x.moveTo(cx-R,cy); x.lineTo(cx+R,cy); x.moveTo(cx,cy-R); x.lineTo(cx,cy+R); x.stroke();
+      x.globalAlpha=1;
+      for(let i=0;i<26;i++){ const a=this.ang-i*0.022;                       // phosphor trail behind the beam
+        x.strokeStyle=this.cols.acc; x.globalAlpha=(1-i/26)*0.38;
+        x.beginPath(); x.moveTo(cx,cy); x.lineTo(cx+Math.cos(a)*R,cy+Math.sin(a)*R); x.stroke(); }
+      x.globalAlpha=1; x.font='8px ui-monospace,monospace';
+      const dot=(b,col,r0)=>{ if(b.bright<0.02)return;
+        const bx=cx+Math.cos(b.a)*b.r*R, by=cy+Math.sin(b.a)*b.r*R;
+        x.globalAlpha=Math.min(1,b.bright); x.fillStyle=col;
+        x.beginPath(); x.arc(bx,by,r0,0,6.283); x.fill();
+        if(b.bright>0.25) x.fillText(b.n,bx+6,by+3);
+        if(b.ring){ x.strokeStyle=col; x.setLineDash([3,3]); x.beginPath(); x.arc(bx,by,r0+6,0,6.283); x.stroke(); x.setLineDash([]); }
+        x.globalAlpha=1; };
+      this.blips.forEach(b=>dot(b,this.cols.ok,2.6));
+      if(this.rogue)dot(this.rogue,this.cols.err,3.4);
+    },
+    phase(p){
+      if(p==='rogue') this.rogue={n:'UNKNOWN',a:U(0,6.283),r:U(0.35,0.82),bright:1,ring:false,dying:false};
+      else if(p==='lock'&&this.rogue) this.rogue.ring=true;
+      else if(p==='purge'&&this.rogue) this.rogue.dying=true;
+    }
+  };
+}
+/* --- global traffic map (region failover) : reuses the threat-map landmass; arcs re-route live --- */
+function buildGeo(body,ev){
+  body.classList.add('am','geo');
+  const svg=svgEl('svg',{viewBox:'0 0 128 48',class:'am-map',preserveAspectRatio:'xMidYMid meet'});
+  const dg=svgEl('g',{class:'am-land'});
+  ATTACK_LAND.forEach((ranges,r)=>ranges.forEach(([a,b])=>{
+    for(let c=a;c<=b;c++){ const [x,y]=amXY(c,r); dg.appendChild(svgEl('circle',{cx:x,cy:y,r:0.6,class:'am-dot'})); }
+  }));
+  svg.appendChild(dg);
+  const [px,py]=amXY(ev.primary[0],ev.primary[1]), [qx,qy]=amXY(ev.secondary[0],ev.secondary[1]);
+  const ag=svgEl('g');
+  ev.sources.forEach((s,i)=>{
+    const [sx,sy]=amXY(s[0],s[1]);
+    const mk=(tx,ty,k,cls,delay)=>{
+      const dist=Math.hypot(tx-sx,ty-sy), mx=(sx+tx)/2, my=Math.min(sy,ty)-dist*0.42;
+      const d='M'+sx.toFixed(1)+' '+sy.toFixed(1)+' Q'+mx.toFixed(1)+' '+my.toFixed(1)+' '+tx.toFixed(1)+' '+ty.toFixed(1);
+      ag.appendChild(svgEl('path',{d:d,class:cls+' bg','data-k':k}));
+      const p=svgEl('path',{d:d,class:cls,'data-k':k}); p.style.animationDelay=delay; ag.appendChild(p);
+    };
+    mk(px,py,'ap','geo-arc',(i*0.19).toFixed(2)+'s');
+    mk(qx,qy,'as','geo-arc alt',(i*0.23).toFixed(2)+'s');
+    ag.appendChild(svgEl('circle',{cx:sx,cy:sy,r:1.1,class:'geo-src'}));
+  });
+  svg.appendChild(ag);
+  const dc=(x,y,k,name)=>{
+    const g=svgEl('g',{class:'geo-dc','data-k':k});
+    g.appendChild(svgEl('circle',{cx:x,cy:y,r:2.6,class:'geo-dring'}));
+    g.appendChild(svgEl('circle',{cx:x,cy:y,r:1.3,class:'geo-ddot'}));
+    const t=svgEl('text',{x:x,y:y-4.2,'text-anchor':'middle',class:'geo-dlbl'}); t.textContent=name;
+    g.appendChild(t); svg.appendChild(g);
+  };
+  dc(px,py,'tp',ev.pname); dc(qx,qy,'ts',ev.sname);
+  svg.querySelector('[data-k=ts]').dataset.state='standby';   // the failover DC sits dim until traffic arrives
+  body.appendChild(svg);
+  const st=el('am-stats');
+  function stat(t,k,v){ const s=el('am-s'); s.appendChild(spn('am-t',t)); const n=spn('am-v',v); n.dataset.k=k; s.appendChild(n); return s; }
+  st.appendChild(stat('ACTIVE','reg',ev.pname));
+  st.appendChild(stat('p50','p50',ri(28,44)+' ms'));
+  const cs=el('am-s am-grow'); const cap=spn('am-cap','anycast steering nominal'); cap.dataset.k='cap'; cs.appendChild(cap); st.appendChild(cs);
+  body.appendChild(st);
+}
+/* --- CI test-matrix wall : platforms × shards, a grid of lights that marches green --- */
+function buildCimatrix(body,ev){
+  body.classList.add('cim');
+  const N=ev.rows.length*ev.cols;
+  const head=el('cim-head'); head.appendChild(spn('cim-ht','TEST MATRIX · '+ev.rows.length+' platforms × '+ev.cols+' shards'));
+  const n=spn('cim-n','0/'+N); n.dataset.k='n'; head.appendChild(n); body.appendChild(head);
+  const grid=el('cim-grid'); grid.style.setProperty('--cols',ev.cols);
+  ev.rows.forEach((r,ri_)=>{
+    grid.appendChild(el('cim-lbl',r));
+    for(let c=0;c<ev.cols;c++){ const cell=el('cim-c',''+c); cell.dataset.k='c'+(ri_*ev.cols+c); cell.dataset.state='pending'; grid.appendChild(cell); }
+  });
+  body.appendChild(grid);
+  const cap=el('cim-cap','queueing runners…'); cap.dataset.k='cap'; body.appendChild(cap);
+}
 /* --- kafka consumer-group lag : a bar-per-partition live ticker (spike localizes to a few partitions) --- */
 const KAFKA_PARTS=12;
 function buildKafka(body,ev){
@@ -2800,6 +3048,85 @@ function* dLeak(){
   yield CNT('incidents',1);
   yield OV('close',{wait:U(900,1500)});
 }
+// third sibling: a runaway-spend feedback loop. the live dollar counter IS the drama (IDEAS ⭐ cloudbill).
+function* dCloudBill(){
+  yield OV('open',{type:'box'});
+  yield OV('box',{title:'⛁ autoscaling · tuning HPA target',variant:'context',wait:U(200,400)});  // routine knob-turn, like the cleanup box
+  yield TOOL('Edit','infra/k8s/hpa.yaml');
+  yield DIFF('-','targetCPUUtilizationPercentage: 65',{wait:U(80,160)});
+  yield DIFF('+','targetCPUUtilizationPercentage: 40   # headroom for the launch',{wait:U(80,160)});
+  yield OV('boxline',{text:'applied · watching replicas settle',tone:'dim',wait:U(400,700)});
+  yield OV('boxstat',{text:'spend  $12/hr',tone:'dim',wait:U(500,900)});
+  // the counter climbs like a slot machine while the agent calmly tunes something unrelated
+  const seq=[14,19,31,55,92,160,340,780,1400,2600,4800,9200];
+  const chat={2:'replicas 6 → 11 · CPU% falling, good',5:'hm — 40 nodes? the launch must be going well',8:'tuning the readiness probe while this settles'};
+  for(let i=0;i<seq.length;i++){
+    yield OV('boxstat',{text:'spend  $'+grp(seq[i])+'/hr',tone:i>6?'err':i>3?'warn':'dim',wait:U(260,520)});
+    if(chat[i]) yield L(chat[i],'dim',{wait:U(300,600)});
+  }
+  yield THINK();
+  yield L('wait.','warn',{wait:U(600,1100)});
+  beep('alert');
+  yield L('every scale-up lowers CPU% — which triggers another scale-up. the HPA and the cluster-autoscaler are feeding each other','err',{wait:U(1000,1700)});
+  yield OV('retitle',{title:'⛔ RUNAWAY SPEND · autoscaler feedback loop',variant:'incident',wait:U(250,500)});
+  yield OV('boxline',{text:ri(280,520)+' nodes · '+grp(ri(2000,9000))+' vCPUs · $9,200/hr and climbing',tone:'err',wait:U(500,900)});
+  yield TOOL('Bash','kubectl delete hpa api && kubectl scale deploy/api --replicas=12');
+  const steps=['cordoning surplus nodes','draining '+ri(260,500)+' nodes','terminating the spot fleet','spend falling'];
+  for(let i=0;i<steps.length;i++) yield OV('bar',{frac:(i+1)/steps.length,label:steps[i],wait:U(300,600)});
+  for(const v of [3100,940,180,31,14]) yield OV('boxstat',{text:'spend  $'+grp(v)+'/hr',tone:v>500?'warn':'ok',wait:U(280,520)});
+  yield OV('boxline',{text:'burned $'+grp(ri(900,6200))+' in '+ri(9,26)+'m · min-replica floor + spend alert wired ✔',tone:'warn',wait:U(600,1100)});
+  beep('ok');
+  yield L('✔ loop broken — the bill is a rounding error again. filing it under "load testing"','ok',{wait:U(700,1200)});
+  yield CNT('incidents',1);
+  yield OV('close',{wait:U(900,1500)});
+}
+// the scariest screw-up: the migration SUCCEEDS. every check green, every row wrong (IDEAS ⭐ migration).
+function* dMigrate(){
+  const n=ri(2_400_000,12_000_000);
+  const S=pick([
+    {up:'0042_normalize_emails.sql',
+     probe:'SELECT count(*) FROM users WHERE email LIKE \'%+%\'', out:'0 rows   (was '+grp(ri(40000,220000))+')',
+     sus:'the plus-addressing fixtures should have failed.',
+     bug:'the "normalize" regex ate plus-addressing — user+tag@ became usertag@ on every row. logins for 3% of users just broke',
+     hid:'unique-constraint checks passed — the mangled emails are still unique. just wrong'},
+    {up:'0043_backfill_timestamps.sql',
+     probe:'SELECT max(created_at) FROM events', out:(4+ri(0,3))+' hours in the future',
+     sus:'the timezone round-trip test should have failed.',
+     bug:'the backfill wrote naive timestamps as UTC — every event this year is shifted by one timezone',
+     hid:'monotonicity checks passed — everything is shifted by the SAME few hours'},
+    {up:'0044_dedup_uuid_keys.sql',
+     probe:'SELECT count(*) FROM orders o JOIN legacy_orders l ON l.id=o.id', out:'0 rows   (was 1.2M)',
+     sus:'the legacy-join test should have failed.',
+     bug:'the dedup lowercased every UUID — joins against the mixed-case legacy table now silently miss',
+     hid:'row counts matched exactly — nothing was deleted, only quietly unlinked'},
+  ]);
+  yield OV('open',{type:'box'});
+  yield OV('box',{title:'⛁ MIGRATION · '+S.up,variant:'deploy',wait:U(200,400)});
+  yield TOOL('Bash','migrate up db/migrations/'+S.up);
+  const steps=['acquiring advisory lock','rewriting '+compactNum(n)+' rows','rebuilding indexes','verifying constraints'];
+  for(let i=0;i<steps.length;i++) yield OV('bar',{frac:(i+1)/steps.length,label:steps[i],wait:U(260,520)});
+  yield OV('boxline',{text:'✔ migration green · '+grp(n)+' rows · 0 errors · '+ri(24,90)+'s',tone:'ok',wait:U(400,800)});
+  yield OV('boxline',{text:'tests passing · dashboards nominal · closing the ticket',tone:'dim',wait:U(600,1100)});
+  yield WAIT(U(700,1200));
+  yield THINK();
+  yield L('tests are still passing. all of them. …'+S.sus,'warn',{wait:U(900,1600)});
+  beep('alert');
+  yield TOOL('Bash','psql -c "'+S.probe+'"');
+  yield OUT(S.out,'dim',{wait:U(400,800)});
+  yield L(S.bug,'err',{wait:U(1000,1700)});
+  yield OV('retitle',{title:'⛔ SEV-1 · SILENT DATA CORRUPTION',variant:'incident',wait:U(250,500)});
+  yield OV('boxline',{text:grp(n)+' rows corrupted · every check green · the success metrics hid it',tone:'err',wait:U(500,900)});
+  yield OV('boxline',{text:'⚠ '+S.hid,tone:'warn',wait:U(700,1200)});
+  yield THINK();
+  // no clean restore for corruption-in-place — rebuild from the event log and audit
+  const steps2=['snapshotting the corrupted table','replaying the event log','backfilling '+compactNum(n)+' rows','diffing checksums'];
+  for(let i=0;i<steps2.length;i++) yield OV('bar',{frac:(i+1)/steps2.length,label:steps2[i],wait:U(300,620)});
+  yield OV('boxline',{text:'rebuilt from the log · '+grp(ri(40,900))+' pre-log rows unrecoverable · integrity audit scheduled',tone:'warn',wait:U(500,900)});
+  yield OV('boxline',{text:'new rule: migrations ship with a data-shape assertion, not just a row count ✔',tone:'ok',wait:U(500,900)});
+  beep('ok');
+  yield CNT('incidents',1);
+  yield OV('close',{wait:U(900,1500)});
+}
 /* ---- boss-level: the agent pulls up an external tool's GUI ---- */
 function* dGrafana(){
   yield OV('app',{tool:'grafana',title:'Grafana · '+cfg.project+' / prod',url:'grafana.internal/d/'+hash(6)});
@@ -3457,6 +3784,131 @@ function* dPgFailover(){
   yield WAIT(U(1200,1800));
   yield OV('close',{wait:U(700,1100)});
 }
+function* dTrainRun(){
+  const run=pick(['sft-nightly','rlhf-stage2','pretrain-v4','distill-8b','finetune-evals'])+'-'+hash(4);
+  const model=pick(['8B','27B','70B','120B-MoE']);
+  yield OV('app',{tool:'trainrun',title:'tensorboard · '+run,url:'tb.internal/'+run,run,model});
+  yield L('▌ Checking on the training run — loss has been on trend all night','accent',{wait:U(800,1200)});
+  yield WAIT(U(2400,3200));
+  beep('alert');
+  yield OV('livefx',{phase:'spike'});
+  yield WAIT(U(1400,2000));
+  const gn=grp(ri(200,900));
+  yield OV('appstep',{k:'cap',text:'⚠ LOSS SPIKE — grad norm '+gn+' · run diverging'});
+  yield L('⚠ loss diverging — grad norm exploded to '+gn+', a bad batch slipped past the filter','err',{wait:U(1000,1600)});
+  yield THINK();
+  yield L(pick(['A corrupted shard in the data mix — the loss never lies.','LR came out of the warmup restart too hot.','One expert went NaN and the router collapsed onto it.']),'warn',{wait:U(900,1500)});
+  yield TOOL('Bash','ckpt restore '+run+' --steps -2000 && train resume --skip-shard '+ri(100,999));
+  yield OUT('rewinding optimizer state · restoring EMA weights · resharding the loader','dim',{burst:true});
+  yield OV('livefx',{phase:'rewind'});
+  yield WAIT(U(2200,3000));
+  yield OV('livefx',{phase:'recover'});
+  yield OV('appstep',{k:'cap',text:'✓ resumed from checkpoint · bad shard quarantined · loss back on trend'});
+  beep('ok');
+  yield L('✔ training recovered — rewound 2k steps and the curve never knew','ok',{wait:U(1000,1600)});
+  yield CNT('incidents',1);
+  yield WAIT(U(1600,2200));
+  yield OV('close',{wait:U(700,1100)});
+}
+function* dRadar(){
+  const blips=radarBlips();
+  yield OV('app',{tool:'radar',title:'service radar · mesh discovery',url:'consul.internal/ui/services',blips});
+  yield L('▌ Sweeping the service catalog — every heartbeat accounted for','accent',{wait:U(800,1200)});
+  yield WAIT(U(2800,3600));
+  beep('alert');
+  yield OV('livefx',{phase:'rogue'});
+  const ip='10.0.'+ri(2,99)+'.'+ri(2,250)+':'+pick(['8080','9090','50051']);
+  yield OV('appstep',{k:'cnt',text:blips.length+' registered · 1 UNKNOWN'});
+  yield OV('appstep',{k:'cap',text:'⚠ unregistered endpoint '+ip+' answering on the mesh — no mTLS cert'});
+  yield L('⚠ rogue blip on the radar — something is taking traffic that is not in the catalog','err',{wait:U(1000,1600)});
+  yield THINK();
+  yield L(pick(['Fingerprinting the endpoint — the TLS handshake says it is one of ours.','Tracing the pod owner… it is an orphaned canary from a deploy that never cleaned up.','Cross-checking the deploy log — that is last week’s canary, still alive, still serving.']),'warn',{wait:U(900,1500)});
+  yield OV('livefx',{phase:'lock'});
+  yield TOOL('Bash','kubectl delete pod canary-'+hash(5)+' && consul services deregister --id '+hash(6));
+  yield OUT('connections drained · pod reaped · catalog reconciled','dim',{burst:true});
+  yield WAIT(U(1400,2000));
+  yield OV('livefx',{phase:'purge'});
+  yield OV('appstep',{k:'cnt',text:blips.length+' registered'});
+  yield OV('appstep',{k:'cap',text:'✓ catalog clean — every blip accounted for'});
+  beep('ok');
+  yield L('✔ rogue endpoint reaped — the radar sweeps clean again','ok',{wait:U(1000,1500)});
+  yield CNT('incidents',1);
+  yield WAIT(U(1600,2200));
+  yield OV('close',{wait:U(700,1100)});
+}
+function* dGeoFail(){
+  const R=shuffle([['us-east-1',[16,7]],['eu-west-1',[33,4]],['ap-south-1',[46,9]]]);
+  const P=R[0], S=R[1];
+  const allSrc=[[10,5],[20,13],[36,11],[51,6],[57,15],[48,3],[24,10],[41,6]];
+  const sources=shuffle(allSrc.slice()).slice(0,ri(5,7));
+  yield OV('app',{tool:'geo',title:'global traffic · anycast steering',url:'edge.internal/traffic',sources,primary:P[1],secondary:S[1],pname:P[0],sname:S[0]});
+  yield L('▌ Pulling up the global traffic map — all lanes green','accent',{wait:U(800,1200)});
+  yield OV('appstep',{k:'cap',text:sources.length+' POPs → '+P[0]+' · anycast steering nominal'});
+  yield WAIT(U(2000,2800));
+  beep('alert');
+  yield OV('appstep',{k:'ap',state:'down'});
+  yield OV('appstep',{k:'tp',state:'down'});
+  yield OV('appstep',{k:'p50',text:grp(ri(1400,3200))+' ms'});
+  yield OV('appstep',{k:'cap',text:'⚠ '+P[0]+' brownout — upstream transit flapping · packet loss '+ri(18,42)+'%'});
+  yield L('⚠ '+P[0]+' browning out — BGP flaps upstream, health checks failing across 3 AZs','err',{wait:U(1000,1600)});
+  yield THINK();
+  yield L(pick(['Not waiting on the transit provider — evacuating the region.','Failover budget says go. Steering traffic before the SLO burns.','The region will come back. The error budget won’t.']),'warn',{wait:U(900,1500)});
+  yield TOOL('Bash','anycastctl steer --from '+P[0]+' --to '+S[0]+' --weight 100 --drain');
+  yield OUT('withdrawing routes from '+P[0]+' · advertising '+S[0]+' · draining sticky sessions','dim',{burst:true});
+  yield WAIT(U(1100,1600));
+  yield OV('appstep',{k:'ap',state:'off'});
+  yield OV('appstep',{k:'as',state:'on'});
+  yield OV('appstep',{k:'tp',state:'drained'});
+  yield OV('appstep',{k:'ts',state:'hot'});
+  yield OV('appstep',{k:'reg',text:S[0]});
+  yield OV('appstep',{k:'p50',text:ri(52,88)+' ms'});
+  yield OV('appstep',{k:'cap',text:'✓ evacuated to '+S[0]+' · p50 +'+ri(9,24)+'ms · 0 dropped requests'});
+  beep('ok');
+  yield L('✔ region evacuated — the planet rerouted and nobody refreshed twice','ok',{wait:U(1000,1600)});
+  yield CNT('incidents',1);
+  yield WAIT(U(1400,2000));
+  yield OV('close',{wait:U(700,1100)});
+}
+function* dCiMatrix(){
+  const rows=['ubuntu-22.04','ubuntu-24.04','macos-14','windows-2022','alpine-3.19'];
+  const C=8, N=rows.length*C;
+  yield OV('app',{tool:'cimatrix',title:'CI · test matrix · '+cfg.project,url:'ci.internal/matrix/'+ri(1000,9999),rows,cols:C});
+  yield L('▌ Fanning out the test matrix — '+N+' shards across '+rows.length+' platforms','accent',{wait:U(600,1000)});
+  const order=shuffle(Array.from({length:N},(_,i)=>i));
+  yield OV('appstep',{k:'cap',text:'runners spinning up…'});
+  for(const i of order) yield OV('appstep',{k:'c'+i,state:'run',wait:U(30,110)});
+  yield OV('appstep',{k:'cap',text:'all '+N+' shards running · wall of lights'});
+  const fails=order.slice(0,ri(2,3));
+  const done=shuffle(order.slice());
+  let pass=0;
+  for(const i of done){
+    if(fails.includes(i)){
+      yield OV('appstep',{k:'c'+i,state:'fail',wait:U(80,200)});
+      beep('alert');
+      yield OV('appstep',{k:'cap',text:'✗ '+rows[(i/C)|0]+' · shard '+(i%C)+' — '+pick(ASSERT)});
+    } else {
+      pass++;
+      yield OV('appstep',{k:'c'+i,state:'pass',wait:U(50,160)});
+      yield OV('appstep',{k:'n',text:pass+'/'+N});
+    }
+  }
+  yield L('⚠ '+fails.length+' shards red — same test on every platform. That is a flake, not a bug','warn',{wait:U(900,1400)});
+  yield THINK();
+  yield TOOL('Bash','ci retry --failed --quarantine '+pick(['test_lease_renewal','test_clock_skew','test_retry_jitter','test_graceful_drain']));
+  for(const i of fails) yield OV('appstep',{k:'c'+i,state:'run',wait:U(300,600)});
+  for(const i of fails){
+    pass++;
+    yield OV('appstep',{k:'c'+i,state:'pass',wait:U(350,700)});
+    yield OV('appstep',{k:'n',text:pass+'/'+N});
+    beep('tick');
+  }
+  yield OV('appstep',{k:'cap',text:'✓ '+N+'/'+N+' green · 1 flaky test quarantined · '+U(3,9).toFixed(1)+'m wall clock'});
+  beep('deploy');
+  yield L('✔ matrix green — '+N+' shards, every platform, zero excuses','ok',{wait:U(800,1300)});
+  yield CNT('tests',N);
+  yield WAIT(U(1200,1800));
+  yield OV('close',{wait:U(700,1100)});
+}
 /* ---- git operations: wild source-control theater ---- */
 function* dRebase(){
   const n=ri(28,64), onto=pick(['main','origin/main','release/'+ri(2,5)+'.x']);
@@ -3725,6 +4177,7 @@ const SCENE_REGISTRY=[
   {id:'cpuheat',      label:'cpu · core pinned',           category:'Performance & profiling',     generator:dCpuheat,       appBuilder:buildCpu,      weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
   {id:'thermal',      label:'thermal throttle map',        category:'Performance & profiling',     generator:dThermal,       appBuilder:buildThermal,  weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
   {id:'repl',         label:'replication lag · the wave',  category:'Performance & profiling',     generator:dRepl,          appBuilder:buildRepl,     weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
+  {id:'trainrun',     label:'training run · loss spike',   category:'Performance & profiling',     generator:dTrainRun,      appBuilder:buildTrain,    weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
   // ---- Infrastructure & containers ----
   {id:'cluster',      label:'k9s · CrashLoopBackOff',      category:'Infrastructure & containers', generator:dCluster,       appBuilder:buildCluster,  weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
   {id:'docker',       label:'docker buildx',               category:'Infrastructure & containers', generator:dDocker,        appBuilder:buildDocker,   weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
@@ -3734,6 +4187,7 @@ const SCENE_REGISTRY=[
   {id:'chaos',        label:'chaos · game day',            category:'Infrastructure & containers', generator:dChaos,         appBuilder:null,          weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
   {id:'kafka',        label:'kafka · consumer lag',        category:'Infrastructure & containers', generator:dKafka,         appBuilder:buildKafka,    weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
   {id:'pgrepl',       label:'Postgres · replica failover', category:'Infrastructure & containers', generator:dPgFailover,    appBuilder:buildPgrepl,   weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
+  {id:'geo',          label:'global traffic · region evac',category:'Infrastructure & containers', generator:dGeoFail,       appBuilder:buildGeo,      weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
   // ---- Editor & terminal ----
   {id:'vim',          label:'vim · hero edit session',     category:'Editor & terminal',           generator:dVim,           appBuilder:buildVim,      weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
   {id:'tmux',         label:'tmux · split-pane war room',  category:'Editor & terminal',           generator:dTmux,          appBuilder:buildTmux,     weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
@@ -3742,11 +4196,13 @@ const SCENE_REGISTRY=[
   {id:'terraform',    label:'terraform plan/apply',        category:'Ship & release',              generator:dTerraform,     appBuilder:null,          weight:1,autoplay:true, requiresMotion:false,tags:['core']},
   {id:'deploy',       label:'deploy & rollout',            category:'Ship & release',              generator:dDeploy,        appBuilder:null,          weight:1,autoplay:true, requiresMotion:false,tags:['core']},
   {id:'pr',           label:'GitHub pull request',         category:'Ship & release',              generator:dPR,            appBuilder:buildPR,       weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
+  {id:'cimatrix',     label:'CI matrix · wall of lights',  category:'Ship & release',              generator:dCiMatrix,      appBuilder:buildCimatrix, weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
   // ---- Security ----
   {id:'attackmap',    label:'threat map · DDoS',           category:'Security',                    generator:dAttack,        appBuilder:buildAttack,   weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
   {id:'security',     label:'CVE patch',                   category:'Security',                    generator:dSec,           appBuilder:null,          weight:1,autoplay:true, requiresMotion:false,tags:['core']},
   {id:'auth',         label:'auth / secret rotation',      category:'Security',                    generator:dAuth,          appBuilder:null,          weight:1,autoplay:true, requiresMotion:false,tags:['core']},
   {id:'leak',         label:'agent leaks a secret · public repo',category:'Security',              generator:dLeak,          appBuilder:null,          weight:1,autoplay:true, requiresMotion:false,tags:['core']},
+  {id:'radar',        label:'service radar · rogue blip',  category:'Security',                    generator:dRadar,         appBuilder:buildRadar,    weight:1,autoplay:true, requiresMotion:false,tags:['boss']},
   // ---- Version control ----
   {id:'rebase',       label:'interactive rebase',          category:'Version control',             generator:dRebase,        appBuilder:null,          weight:1,autoplay:true, requiresMotion:false,tags:['git']},
   {id:'mergeconflict',label:'merge conflict',              category:'Version control',             generator:dMergeConflict, appBuilder:null,          weight:1,autoplay:true, requiresMotion:false,tags:['git']},
@@ -3761,6 +4217,8 @@ const SCENE_REGISTRY=[
   {id:'chatter',      label:'agent-to-agent review',       category:'Agent & session',             generator:dChatter,       appBuilder:null,          weight:1,autoplay:true, requiresMotion:false,tags:['core']},
   {id:'postmortem',   label:'incident postmortem',         category:'Agent & session',             generator:dPostmortem,    appBuilder:null,          weight:1,autoplay:true, requiresMotion:false,tags:['core']},
   {id:'oops',         label:'agent screws up · prod wipe',  category:'Agent & session',             generator:dOops,          appBuilder:null,          weight:1,autoplay:true, requiresMotion:false,tags:['core']},
+  {id:'cloudbill',    label:'runaway spend · feedback loop',category:'Agent & session',             generator:dCloudBill,     appBuilder:null,          weight:1,autoplay:true, requiresMotion:false,tags:['core']},
+  {id:'migration',    label:'silent corruption · green run',category:'Agent & session',             generator:dMigrate,       appBuilder:null,          weight:1,autoplay:true, requiresMotion:false,tags:['core']},
   {id:'matrix',       label:'matrix cascade',              category:'Agent & session',             generator:dMatrix,        appBuilder:null,          weight:1,autoplay:true, requiresMotion:true, tags:['core']},
   // system entries — never auto-picked; compaction triggered by ctx pressure, deepwork by idle timeout
   {id:'compaction',   label:'context compaction',          category:'Agent & session',             generator:dCompact,       appBuilder:null,          weight:0,autoplay:false,requiresMotion:false,tags:['core','system']},

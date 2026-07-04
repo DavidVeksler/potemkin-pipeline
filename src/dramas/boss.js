@@ -655,3 +655,128 @@ function* dPgFailover(){
   yield WAIT(U(1200,1800));
   yield OV('close',{wait:U(700,1100)});
 }
+function* dTrainRun(){
+  const run=pick(['sft-nightly','rlhf-stage2','pretrain-v4','distill-8b','finetune-evals'])+'-'+hash(4);
+  const model=pick(['8B','27B','70B','120B-MoE']);
+  yield OV('app',{tool:'trainrun',title:'tensorboard · '+run,url:'tb.internal/'+run,run,model});
+  yield L('▌ Checking on the training run — loss has been on trend all night','accent',{wait:U(800,1200)});
+  yield WAIT(U(2400,3200));
+  beep('alert');
+  yield OV('livefx',{phase:'spike'});
+  yield WAIT(U(1400,2000));
+  const gn=grp(ri(200,900));
+  yield OV('appstep',{k:'cap',text:'⚠ LOSS SPIKE — grad norm '+gn+' · run diverging'});
+  yield L('⚠ loss diverging — grad norm exploded to '+gn+', a bad batch slipped past the filter','err',{wait:U(1000,1600)});
+  yield THINK();
+  yield L(pick(['A corrupted shard in the data mix — the loss never lies.','LR came out of the warmup restart too hot.','One expert went NaN and the router collapsed onto it.']),'warn',{wait:U(900,1500)});
+  yield TOOL('Bash','ckpt restore '+run+' --steps -2000 && train resume --skip-shard '+ri(100,999));
+  yield OUT('rewinding optimizer state · restoring EMA weights · resharding the loader','dim',{burst:true});
+  yield OV('livefx',{phase:'rewind'});
+  yield WAIT(U(2200,3000));
+  yield OV('livefx',{phase:'recover'});
+  yield OV('appstep',{k:'cap',text:'✓ resumed from checkpoint · bad shard quarantined · loss back on trend'});
+  beep('ok');
+  yield L('✔ training recovered — rewound 2k steps and the curve never knew','ok',{wait:U(1000,1600)});
+  yield CNT('incidents',1);
+  yield WAIT(U(1600,2200));
+  yield OV('close',{wait:U(700,1100)});
+}
+function* dRadar(){
+  const blips=radarBlips();
+  yield OV('app',{tool:'radar',title:'service radar · mesh discovery',url:'consul.internal/ui/services',blips});
+  yield L('▌ Sweeping the service catalog — every heartbeat accounted for','accent',{wait:U(800,1200)});
+  yield WAIT(U(2800,3600));
+  beep('alert');
+  yield OV('livefx',{phase:'rogue'});
+  const ip='10.0.'+ri(2,99)+'.'+ri(2,250)+':'+pick(['8080','9090','50051']);
+  yield OV('appstep',{k:'cnt',text:blips.length+' registered · 1 UNKNOWN'});
+  yield OV('appstep',{k:'cap',text:'⚠ unregistered endpoint '+ip+' answering on the mesh — no mTLS cert'});
+  yield L('⚠ rogue blip on the radar — something is taking traffic that is not in the catalog','err',{wait:U(1000,1600)});
+  yield THINK();
+  yield L(pick(['Fingerprinting the endpoint — the TLS handshake says it is one of ours.','Tracing the pod owner… it is an orphaned canary from a deploy that never cleaned up.','Cross-checking the deploy log — that is last week’s canary, still alive, still serving.']),'warn',{wait:U(900,1500)});
+  yield OV('livefx',{phase:'lock'});
+  yield TOOL('Bash','kubectl delete pod canary-'+hash(5)+' && consul services deregister --id '+hash(6));
+  yield OUT('connections drained · pod reaped · catalog reconciled','dim',{burst:true});
+  yield WAIT(U(1400,2000));
+  yield OV('livefx',{phase:'purge'});
+  yield OV('appstep',{k:'cnt',text:blips.length+' registered'});
+  yield OV('appstep',{k:'cap',text:'✓ catalog clean — every blip accounted for'});
+  beep('ok');
+  yield L('✔ rogue endpoint reaped — the radar sweeps clean again','ok',{wait:U(1000,1500)});
+  yield CNT('incidents',1);
+  yield WAIT(U(1600,2200));
+  yield OV('close',{wait:U(700,1100)});
+}
+function* dGeoFail(){
+  const R=shuffle([['us-east-1',[16,7]],['eu-west-1',[33,4]],['ap-south-1',[46,9]]]);
+  const P=R[0], S=R[1];
+  const allSrc=[[10,5],[20,13],[36,11],[51,6],[57,15],[48,3],[24,10],[41,6]];
+  const sources=shuffle(allSrc.slice()).slice(0,ri(5,7));
+  yield OV('app',{tool:'geo',title:'global traffic · anycast steering',url:'edge.internal/traffic',sources,primary:P[1],secondary:S[1],pname:P[0],sname:S[0]});
+  yield L('▌ Pulling up the global traffic map — all lanes green','accent',{wait:U(800,1200)});
+  yield OV('appstep',{k:'cap',text:sources.length+' POPs → '+P[0]+' · anycast steering nominal'});
+  yield WAIT(U(2000,2800));
+  beep('alert');
+  yield OV('appstep',{k:'ap',state:'down'});
+  yield OV('appstep',{k:'tp',state:'down'});
+  yield OV('appstep',{k:'p50',text:grp(ri(1400,3200))+' ms'});
+  yield OV('appstep',{k:'cap',text:'⚠ '+P[0]+' brownout — upstream transit flapping · packet loss '+ri(18,42)+'%'});
+  yield L('⚠ '+P[0]+' browning out — BGP flaps upstream, health checks failing across 3 AZs','err',{wait:U(1000,1600)});
+  yield THINK();
+  yield L(pick(['Not waiting on the transit provider — evacuating the region.','Failover budget says go. Steering traffic before the SLO burns.','The region will come back. The error budget won’t.']),'warn',{wait:U(900,1500)});
+  yield TOOL('Bash','anycastctl steer --from '+P[0]+' --to '+S[0]+' --weight 100 --drain');
+  yield OUT('withdrawing routes from '+P[0]+' · advertising '+S[0]+' · draining sticky sessions','dim',{burst:true});
+  yield WAIT(U(1100,1600));
+  yield OV('appstep',{k:'ap',state:'off'});
+  yield OV('appstep',{k:'as',state:'on'});
+  yield OV('appstep',{k:'tp',state:'drained'});
+  yield OV('appstep',{k:'ts',state:'hot'});
+  yield OV('appstep',{k:'reg',text:S[0]});
+  yield OV('appstep',{k:'p50',text:ri(52,88)+' ms'});
+  yield OV('appstep',{k:'cap',text:'✓ evacuated to '+S[0]+' · p50 +'+ri(9,24)+'ms · 0 dropped requests'});
+  beep('ok');
+  yield L('✔ region evacuated — the planet rerouted and nobody refreshed twice','ok',{wait:U(1000,1600)});
+  yield CNT('incidents',1);
+  yield WAIT(U(1400,2000));
+  yield OV('close',{wait:U(700,1100)});
+}
+function* dCiMatrix(){
+  const rows=['ubuntu-22.04','ubuntu-24.04','macos-14','windows-2022','alpine-3.19'];
+  const C=8, N=rows.length*C;
+  yield OV('app',{tool:'cimatrix',title:'CI · test matrix · '+cfg.project,url:'ci.internal/matrix/'+ri(1000,9999),rows,cols:C});
+  yield L('▌ Fanning out the test matrix — '+N+' shards across '+rows.length+' platforms','accent',{wait:U(600,1000)});
+  const order=shuffle(Array.from({length:N},(_,i)=>i));
+  yield OV('appstep',{k:'cap',text:'runners spinning up…'});
+  for(const i of order) yield OV('appstep',{k:'c'+i,state:'run',wait:U(30,110)});
+  yield OV('appstep',{k:'cap',text:'all '+N+' shards running · wall of lights'});
+  const fails=order.slice(0,ri(2,3));
+  const done=shuffle(order.slice());
+  let pass=0;
+  for(const i of done){
+    if(fails.includes(i)){
+      yield OV('appstep',{k:'c'+i,state:'fail',wait:U(80,200)});
+      beep('alert');
+      yield OV('appstep',{k:'cap',text:'✗ '+rows[(i/C)|0]+' · shard '+(i%C)+' — '+pick(ASSERT)});
+    } else {
+      pass++;
+      yield OV('appstep',{k:'c'+i,state:'pass',wait:U(50,160)});
+      yield OV('appstep',{k:'n',text:pass+'/'+N});
+    }
+  }
+  yield L('⚠ '+fails.length+' shards red — same test on every platform. That is a flake, not a bug','warn',{wait:U(900,1400)});
+  yield THINK();
+  yield TOOL('Bash','ci retry --failed --quarantine '+pick(['test_lease_renewal','test_clock_skew','test_retry_jitter','test_graceful_drain']));
+  for(const i of fails) yield OV('appstep',{k:'c'+i,state:'run',wait:U(300,600)});
+  for(const i of fails){
+    pass++;
+    yield OV('appstep',{k:'c'+i,state:'pass',wait:U(350,700)});
+    yield OV('appstep',{k:'n',text:pass+'/'+N});
+    beep('tick');
+  }
+  yield OV('appstep',{k:'cap',text:'✓ '+N+'/'+N+' green · 1 flaky test quarantined · '+U(3,9).toFixed(1)+'m wall clock'});
+  beep('deploy');
+  yield L('✔ matrix green — '+N+' shards, every platform, zero excuses','ok',{wait:U(800,1300)});
+  yield CNT('tests',N);
+  yield WAIT(U(1200,1800));
+  yield OV('close',{wait:U(700,1100)});
+}

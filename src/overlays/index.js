@@ -522,6 +522,171 @@ function buildMesh(body,ev){
   const cap=el('mesh-cap','7 services · mTLS · '+grp(ri(2000,9000))+' req/s'); cap.dataset.k='cap'; body.appendChild(cap);
 }
 
+/* --- training run (tensorboard) : a live loss curve that SPIKES, visibly REWINDS to a checkpoint, and resumes --- */
+function themeCol(v){ return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
+function buildTrain(body,ev){
+  body.classList.add('tb');
+  const head=el('tb-head'); head.appendChild(spn('tb-ht','TRAINING · '+ev.run+' · '+ev.model));
+  const st=spn('tb-step','step —'); st.dataset.k='step'; head.appendChild(st); body.appendChild(head);
+  const stats=el('tb-stats'), tiles={};
+  [['loss','loss'],['grad norm','grad'],['lr','lr'],['tok/s','tok']].forEach(([t,k])=>{
+    const s=el('tb-s'); s.appendChild(spn('tb-t',t)); const v=spn('tb-v','—'); v.dataset.k=k; s.appendChild(v); stats.appendChild(s); tiles[k]=v;
+  });
+  tiles.lr.textContent=pick(['3.0e-4','2.4e-4','1.8e-4','6.0e-5']);
+  body.appendChild(stats);
+  const cv=document.createElement('canvas'); cv.className='tb-cv'; body.appendChild(cv);
+  const cap=el('tb-cap','loss on trend · checkpoint every 1k steps'); cap.dataset.k='cap'; body.appendChild(cap);
+  liveState={kind:'train',last:0,cv,ctx:null,pts:[],max:150,ph:'train',loss:U(2.0,2.7),floor:U(1.05,1.3),step:ri(28000,90000),spikeAt:-1,rewindTo:-1,tiles,stEl:st,
+    cols:{ok:themeCol('--ok'),err:themeCol('--err'),acc:themeCol('--accent'),dim:themeCol('--dim')},
+    tick(ts){ if(ts-this.last<160)return; this.last=ts;
+      if(!this.ctx||this.cv.width===0){ this.cv.width=this.cv.clientWidth||680; this.cv.height=this.cv.clientHeight||150; this.ctx=this.cv.getContext('2d'); this.max=Math.max(70,(this.cv.width/5)|0); }
+      if(this.ph==='rewind'){                                              // the curve retracts right-to-left — the run is being rolled back
+        for(let i=0;i<4&&this.pts.length>this.rewindTo;i++){ this.pts.pop(); this.step-=24; }
+        if(this.pts.length<=this.rewindTo){ this.ph='train'; this.loss=this.pts[this.pts.length-1]||this.loss; }
+      } else {
+        if(this.ph==='spike') this.loss=this.loss>=8.2?7.4+Math.random()*1.8:this.loss*(1.08+Math.random()*0.14);   // divergence: compounding, ugly; thrashes near the top instead of flatlining
+        else this.loss=Math.max(this.floor,this.loss-(this.loss-this.floor)*0.014+(Math.random()-0.5)*0.03);
+        this.pts.push(this.loss); this.step+=8+((Math.random()*8)|0);
+        while(this.pts.length>this.max){ this.pts.shift(); if(this.spikeAt>=0)this.spikeAt--; }
+      }
+      this.paint(); this.hud();
+    },
+    hud(){ const sp=this.ph==='spike';
+      this.stEl.textContent='step '+grp(this.step);
+      this.tiles.loss.textContent=this.loss.toFixed(3); this.tiles.loss.dataset.lvl=sp?'hi':'';
+      const gn=sp?this.loss*(90+Math.random()*180):0.6+Math.random()*0.7;
+      this.tiles.grad.textContent=gn>=10?grp(gn):gn.toFixed(2); this.tiles.grad.dataset.lvl=sp?'hi':'';
+      this.tiles.tok.textContent=this.ph==='rewind'?'—':compactNum(38000+Math.random()*6000);
+    },
+    paint(){ const x=this.ctx,W=this.cv.width,H=this.cv.height; x.clearRect(0,0,W,H);
+      x.strokeStyle=this.cols.dim; x.globalAlpha=0.25;
+      for(let i=1;i<4;i++){ x.beginPath(); x.moveTo(0,H*i/4); x.lineTo(W,H*i/4); x.stroke(); }
+      x.globalAlpha=1;
+      if(this.pts.length<2)return;
+      let lo=Infinity,hi=-Infinity; this.pts.forEach(v=>{ if(v<lo)lo=v; if(v>hi)hi=v; });
+      const pad=(hi-lo)*0.15+0.02; lo-=pad; hi+=pad;
+      const px=i=>i/(this.max-1)*W, py=v=>H-(v-lo)/(hi-lo)*H;
+      x.beginPath(); x.moveTo(px(0),py(this.pts[0]));
+      for(let i=1;i<this.pts.length;i++) x.lineTo(px(i),py(this.pts[i]));
+      x.strokeStyle=this.ph==='spike'?this.cols.err:this.cols.ok; x.lineWidth=1.6; x.stroke();
+      x.lineTo(px(this.pts.length-1),H); x.lineTo(px(0),H); x.closePath();
+      x.globalAlpha=0.12; x.fillStyle=this.ph==='spike'?this.cols.err:this.cols.ok; x.fill(); x.globalAlpha=1; x.lineWidth=1;
+      if(this.spikeAt>=0&&this.spikeAt<this.pts.length){                    // dashed marker where the run went wrong
+        x.strokeStyle=this.cols.err; x.setLineDash([3,4]); x.globalAlpha=0.6;
+        x.beginPath(); x.moveTo(px(this.spikeAt),0); x.lineTo(px(this.spikeAt),H); x.stroke();
+        x.setLineDash([]); x.globalAlpha=1;
+      }
+    },
+    phase(p){
+      if(p==='spike'){ this.ph='spike'; this.spikeAt=this.pts.length; }
+      else if(p==='rewind'){ this.ph='rewind'; this.rewindTo=Math.max(4,this.spikeAt-6); }
+      else if(p==='recover'){ if(this.ph!=='rewind')this.ph='train'; this.spikeAt=-1; }
+    }
+  };
+}
+/* --- service radar : a rotating sweep over the service catalog; blips glow as the beam passes --- */
+function radarBlips(){
+  const names=shuffle(['api','auth','billing','search','ingest','cache','ledger','mesh-gw','worker','cron']).slice(0,ri(6,8));
+  return names.map(n=>({n,a:U(0,6.283),r:U(0.25,0.9)}));
+}
+function buildRadar(body,ev){
+  body.classList.add('rd');
+  const head=el('rd-head'); head.appendChild(spn('rd-ht','SERVICE RADAR · consul catalog'));
+  const cnt=spn('rd-cnt',ev.blips.length+' registered'); cnt.dataset.k='cnt'; head.appendChild(cnt); body.appendChild(head);
+  const cv=document.createElement('canvas'); cv.className='rd-cv'; body.appendChild(cv);
+  const cap=el('rd-cap','sweeping the mesh · all heartbeats green'); cap.dataset.k='cap'; body.appendChild(cap);
+  liveState={kind:'radar',last:0,cv,ctx:null,ang:0,blips:ev.blips.map(b=>({n:b.n,a:b.a,r:b.r,bright:0})),rogue:null,
+    cols:{ok:themeCol('--ok'),err:themeCol('--err'),acc:themeCol('--accent'),dim:themeCol('--dim')},
+    tick(ts){ if(ts-this.last<33)return; this.last=ts;
+      if(!this.ctx||this.cv.width===0){ this.cv.width=this.cv.clientWidth||500; this.cv.height=this.cv.clientHeight||280; this.ctx=this.cv.getContext('2d'); }
+      this.ang=(this.ang+(reduceMotion?0.016:0.05))%6.283;
+      const hit=b=>{ let d=this.ang-b.a; d-=Math.floor(d/6.283)*6.283; if(d<0.12)b.bright=1; else b.bright*=0.986; };
+      this.blips.forEach(hit);
+      if(this.rogue){ if(this.rogue.dying){ this.rogue.bright*=0.85; if(this.rogue.bright<0.02)this.rogue=null; } else { hit(this.rogue); this.rogue.bright=Math.max(this.rogue.bright,0.55); } }   // the villain smolders — never fades into the phosphor
+      this.paint();
+    },
+    paint(){ const x=this.ctx,W=this.cv.width,H=this.cv.height,cx=W/2,cy=H/2,R=Math.min(W,H)/2-8;
+      x.clearRect(0,0,W,H);
+      x.strokeStyle=this.cols.dim; x.globalAlpha=0.32;
+      [0.33,0.66,1].forEach(f=>{ x.beginPath(); x.arc(cx,cy,R*f,0,6.283); x.stroke(); });
+      x.beginPath(); x.moveTo(cx-R,cy); x.lineTo(cx+R,cy); x.moveTo(cx,cy-R); x.lineTo(cx,cy+R); x.stroke();
+      x.globalAlpha=1;
+      for(let i=0;i<26;i++){ const a=this.ang-i*0.022;                       // phosphor trail behind the beam
+        x.strokeStyle=this.cols.acc; x.globalAlpha=(1-i/26)*0.38;
+        x.beginPath(); x.moveTo(cx,cy); x.lineTo(cx+Math.cos(a)*R,cy+Math.sin(a)*R); x.stroke(); }
+      x.globalAlpha=1; x.font='8px ui-monospace,monospace';
+      const dot=(b,col,r0)=>{ if(b.bright<0.02)return;
+        const bx=cx+Math.cos(b.a)*b.r*R, by=cy+Math.sin(b.a)*b.r*R;
+        x.globalAlpha=Math.min(1,b.bright); x.fillStyle=col;
+        x.beginPath(); x.arc(bx,by,r0,0,6.283); x.fill();
+        if(b.bright>0.25) x.fillText(b.n,bx+6,by+3);
+        if(b.ring){ x.strokeStyle=col; x.setLineDash([3,3]); x.beginPath(); x.arc(bx,by,r0+6,0,6.283); x.stroke(); x.setLineDash([]); }
+        x.globalAlpha=1; };
+      this.blips.forEach(b=>dot(b,this.cols.ok,2.6));
+      if(this.rogue)dot(this.rogue,this.cols.err,3.4);
+    },
+    phase(p){
+      if(p==='rogue') this.rogue={n:'UNKNOWN',a:U(0,6.283),r:U(0.35,0.82),bright:1,ring:false,dying:false};
+      else if(p==='lock'&&this.rogue) this.rogue.ring=true;
+      else if(p==='purge'&&this.rogue) this.rogue.dying=true;
+    }
+  };
+}
+/* --- global traffic map (region failover) : reuses the threat-map landmass; arcs re-route live --- */
+function buildGeo(body,ev){
+  body.classList.add('am','geo');
+  const svg=svgEl('svg',{viewBox:'0 0 128 48',class:'am-map',preserveAspectRatio:'xMidYMid meet'});
+  const dg=svgEl('g',{class:'am-land'});
+  ATTACK_LAND.forEach((ranges,r)=>ranges.forEach(([a,b])=>{
+    for(let c=a;c<=b;c++){ const [x,y]=amXY(c,r); dg.appendChild(svgEl('circle',{cx:x,cy:y,r:0.6,class:'am-dot'})); }
+  }));
+  svg.appendChild(dg);
+  const [px,py]=amXY(ev.primary[0],ev.primary[1]), [qx,qy]=amXY(ev.secondary[0],ev.secondary[1]);
+  const ag=svgEl('g');
+  ev.sources.forEach((s,i)=>{
+    const [sx,sy]=amXY(s[0],s[1]);
+    const mk=(tx,ty,k,cls,delay)=>{
+      const dist=Math.hypot(tx-sx,ty-sy), mx=(sx+tx)/2, my=Math.min(sy,ty)-dist*0.42;
+      const d='M'+sx.toFixed(1)+' '+sy.toFixed(1)+' Q'+mx.toFixed(1)+' '+my.toFixed(1)+' '+tx.toFixed(1)+' '+ty.toFixed(1);
+      ag.appendChild(svgEl('path',{d:d,class:cls+' bg','data-k':k}));
+      const p=svgEl('path',{d:d,class:cls,'data-k':k}); p.style.animationDelay=delay; ag.appendChild(p);
+    };
+    mk(px,py,'ap','geo-arc',(i*0.19).toFixed(2)+'s');
+    mk(qx,qy,'as','geo-arc alt',(i*0.23).toFixed(2)+'s');
+    ag.appendChild(svgEl('circle',{cx:sx,cy:sy,r:1.1,class:'geo-src'}));
+  });
+  svg.appendChild(ag);
+  const dc=(x,y,k,name)=>{
+    const g=svgEl('g',{class:'geo-dc','data-k':k});
+    g.appendChild(svgEl('circle',{cx:x,cy:y,r:2.6,class:'geo-dring'}));
+    g.appendChild(svgEl('circle',{cx:x,cy:y,r:1.3,class:'geo-ddot'}));
+    const t=svgEl('text',{x:x,y:y-4.2,'text-anchor':'middle',class:'geo-dlbl'}); t.textContent=name;
+    g.appendChild(t); svg.appendChild(g);
+  };
+  dc(px,py,'tp',ev.pname); dc(qx,qy,'ts',ev.sname);
+  svg.querySelector('[data-k=ts]').dataset.state='standby';   // the failover DC sits dim until traffic arrives
+  body.appendChild(svg);
+  const st=el('am-stats');
+  function stat(t,k,v){ const s=el('am-s'); s.appendChild(spn('am-t',t)); const n=spn('am-v',v); n.dataset.k=k; s.appendChild(n); return s; }
+  st.appendChild(stat('ACTIVE','reg',ev.pname));
+  st.appendChild(stat('p50','p50',ri(28,44)+' ms'));
+  const cs=el('am-s am-grow'); const cap=spn('am-cap','anycast steering nominal'); cap.dataset.k='cap'; cs.appendChild(cap); st.appendChild(cs);
+  body.appendChild(st);
+}
+/* --- CI test-matrix wall : platforms × shards, a grid of lights that marches green --- */
+function buildCimatrix(body,ev){
+  body.classList.add('cim');
+  const N=ev.rows.length*ev.cols;
+  const head=el('cim-head'); head.appendChild(spn('cim-ht','TEST MATRIX · '+ev.rows.length+' platforms × '+ev.cols+' shards'));
+  const n=spn('cim-n','0/'+N); n.dataset.k='n'; head.appendChild(n); body.appendChild(head);
+  const grid=el('cim-grid'); grid.style.setProperty('--cols',ev.cols);
+  ev.rows.forEach((r,ri_)=>{
+    grid.appendChild(el('cim-lbl',r));
+    for(let c=0;c<ev.cols;c++){ const cell=el('cim-c',''+c); cell.dataset.k='c'+(ri_*ev.cols+c); cell.dataset.state='pending'; grid.appendChild(cell); }
+  });
+  body.appendChild(grid);
+  const cap=el('cim-cap','queueing runners…'); cap.dataset.k='cap'; body.appendChild(cap);
+}
 /* --- kafka consumer-group lag : a bar-per-partition live ticker (spike localizes to a few partitions) --- */
 const KAFKA_PARTS=12;
 function buildKafka(body,ev){

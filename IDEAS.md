@@ -28,19 +28,14 @@ loses. The shared four-beat arc — and the reusable pieces — are already in
    to flexing), or **quiet cover-up** (text says "no impact" while the counter disagrees).
 
 All bump `incidents`, stay rare-but-autoplay (uniform `pick(en)` ≈ 1/N), and are seed-reproducible.
-Shipped: **`oops`** (prod wipe — DROP/TRUNCATE/`rm -rf`/`kubectl delete ns prod`) and **`leak`**
-(secret pushed to a public repo; chains into `filterrepo` as the competent cleanup). Remaining:
+Shipped: **`oops`** (prod wipe — DROP/TRUNCATE/`rm -rf`/`kubectl delete ns prod`), **`leak`**
+(secret pushed to a public repo; chains into `filterrepo` as the competent cleanup),
+**`cloudbill`** (runaway-spend autoscaler feedback loop — the live dollar counter uses the
+`boxstat` overlay op, which updates one big number in place), and **`migration`** (silent
+corruption — the migration succeeds, every check green, every row wrong; the reckoning is an
+event-log rebuild, not a restore). The SEV-1 `retitle` now also shakes the box and tints the
+whole screen red (`overlay.anomaly`), which upgraded `oops`/`leak` for free. Remaining:
 
-- **`cloudbill` — runaway spend** ⭐. A retry loop with no backoff, a self-invoking Lambda, or
-  autoscaling with no ceiling. A live dollar counter spins like a slot machine
-  (`$12 … $340 … $9,210`) while the agent calmly tunes something unrelated, then notices the bill.
-  Reuses the header burn-meter mechanic, weaponized. Pairs naturally as the *consequence* tail of
-  `leak`'s crypto-miner line. No new GUI — box + a climbing counter (cosmetic jitter on `Math.random()`).
-- **`migration` / `regex` — silent corruption** ⭐. The scariest kind: it *succeeds*. A
-  find-and-replace or a data migration runs green across thousands of files/rows — everything ✔.
-  Three beats later: "tests still passing… that's wrong, they should've caught this" → it mangled
-  every email / shifted every timestamp by a TZ / lowercased every UUID. The success metrics
-  actively hid it. The reckoning has no clean "restore" — it's a backfill + a data-integrity audit.
 - **`emailblast` — the notification cannon**. A backfill re-triggers the welcome-email (or
   password-reset) webhook for every row: "47,000 emails sent in 90s." No data lost — pure social
   blast radius, which is its own flavor of horror. Reuses anomaly/throughput visuals; very

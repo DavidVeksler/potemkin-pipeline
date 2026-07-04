@@ -273,3 +273,82 @@ function* dLeak(){
   yield CNT('incidents',1);
   yield OV('close',{wait:U(900,1500)});
 }
+// third sibling: a runaway-spend feedback loop. the live dollar counter IS the drama (IDEAS ⭐ cloudbill).
+function* dCloudBill(){
+  yield OV('open',{type:'box'});
+  yield OV('box',{title:'⛁ autoscaling · tuning HPA target',variant:'context',wait:U(200,400)});  // routine knob-turn, like the cleanup box
+  yield TOOL('Edit','infra/k8s/hpa.yaml');
+  yield DIFF('-','targetCPUUtilizationPercentage: 65',{wait:U(80,160)});
+  yield DIFF('+','targetCPUUtilizationPercentage: 40   # headroom for the launch',{wait:U(80,160)});
+  yield OV('boxline',{text:'applied · watching replicas settle',tone:'dim',wait:U(400,700)});
+  yield OV('boxstat',{text:'spend  $12/hr',tone:'dim',wait:U(500,900)});
+  // the counter climbs like a slot machine while the agent calmly tunes something unrelated
+  const seq=[14,19,31,55,92,160,340,780,1400,2600,4800,9200];
+  const chat={2:'replicas 6 → 11 · CPU% falling, good',5:'hm — 40 nodes? the launch must be going well',8:'tuning the readiness probe while this settles'};
+  for(let i=0;i<seq.length;i++){
+    yield OV('boxstat',{text:'spend  $'+grp(seq[i])+'/hr',tone:i>6?'err':i>3?'warn':'dim',wait:U(260,520)});
+    if(chat[i]) yield L(chat[i],'dim',{wait:U(300,600)});
+  }
+  yield THINK();
+  yield L('wait.','warn',{wait:U(600,1100)});
+  beep('alert');
+  yield L('every scale-up lowers CPU% — which triggers another scale-up. the HPA and the cluster-autoscaler are feeding each other','err',{wait:U(1000,1700)});
+  yield OV('retitle',{title:'⛔ RUNAWAY SPEND · autoscaler feedback loop',variant:'incident',wait:U(250,500)});
+  yield OV('boxline',{text:ri(280,520)+' nodes · '+grp(ri(2000,9000))+' vCPUs · $9,200/hr and climbing',tone:'err',wait:U(500,900)});
+  yield TOOL('Bash','kubectl delete hpa api && kubectl scale deploy/api --replicas=12');
+  const steps=['cordoning surplus nodes','draining '+ri(260,500)+' nodes','terminating the spot fleet','spend falling'];
+  for(let i=0;i<steps.length;i++) yield OV('bar',{frac:(i+1)/steps.length,label:steps[i],wait:U(300,600)});
+  for(const v of [3100,940,180,31,14]) yield OV('boxstat',{text:'spend  $'+grp(v)+'/hr',tone:v>500?'warn':'ok',wait:U(280,520)});
+  yield OV('boxline',{text:'burned $'+grp(ri(900,6200))+' in '+ri(9,26)+'m · min-replica floor + spend alert wired ✔',tone:'warn',wait:U(600,1100)});
+  beep('ok');
+  yield L('✔ loop broken — the bill is a rounding error again. filing it under "load testing"','ok',{wait:U(700,1200)});
+  yield CNT('incidents',1);
+  yield OV('close',{wait:U(900,1500)});
+}
+// the scariest screw-up: the migration SUCCEEDS. every check green, every row wrong (IDEAS ⭐ migration).
+function* dMigrate(){
+  const n=ri(2_400_000,12_000_000);
+  const S=pick([
+    {up:'0042_normalize_emails.sql',
+     probe:'SELECT count(*) FROM users WHERE email LIKE \'%+%\'', out:'0 rows   (was '+grp(ri(40000,220000))+')',
+     sus:'the plus-addressing fixtures should have failed.',
+     bug:'the "normalize" regex ate plus-addressing — user+tag@ became usertag@ on every row. logins for 3% of users just broke',
+     hid:'unique-constraint checks passed — the mangled emails are still unique. just wrong'},
+    {up:'0043_backfill_timestamps.sql',
+     probe:'SELECT max(created_at) FROM events', out:(4+ri(0,3))+' hours in the future',
+     sus:'the timezone round-trip test should have failed.',
+     bug:'the backfill wrote naive timestamps as UTC — every event this year is shifted by one timezone',
+     hid:'monotonicity checks passed — everything is shifted by the SAME few hours'},
+    {up:'0044_dedup_uuid_keys.sql',
+     probe:'SELECT count(*) FROM orders o JOIN legacy_orders l ON l.id=o.id', out:'0 rows   (was 1.2M)',
+     sus:'the legacy-join test should have failed.',
+     bug:'the dedup lowercased every UUID — joins against the mixed-case legacy table now silently miss',
+     hid:'row counts matched exactly — nothing was deleted, only quietly unlinked'},
+  ]);
+  yield OV('open',{type:'box'});
+  yield OV('box',{title:'⛁ MIGRATION · '+S.up,variant:'deploy',wait:U(200,400)});
+  yield TOOL('Bash','migrate up db/migrations/'+S.up);
+  const steps=['acquiring advisory lock','rewriting '+compactNum(n)+' rows','rebuilding indexes','verifying constraints'];
+  for(let i=0;i<steps.length;i++) yield OV('bar',{frac:(i+1)/steps.length,label:steps[i],wait:U(260,520)});
+  yield OV('boxline',{text:'✔ migration green · '+grp(n)+' rows · 0 errors · '+ri(24,90)+'s',tone:'ok',wait:U(400,800)});
+  yield OV('boxline',{text:'tests passing · dashboards nominal · closing the ticket',tone:'dim',wait:U(600,1100)});
+  yield WAIT(U(700,1200));
+  yield THINK();
+  yield L('tests are still passing. all of them. …'+S.sus,'warn',{wait:U(900,1600)});
+  beep('alert');
+  yield TOOL('Bash','psql -c "'+S.probe+'"');
+  yield OUT(S.out,'dim',{wait:U(400,800)});
+  yield L(S.bug,'err',{wait:U(1000,1700)});
+  yield OV('retitle',{title:'⛔ SEV-1 · SILENT DATA CORRUPTION',variant:'incident',wait:U(250,500)});
+  yield OV('boxline',{text:grp(n)+' rows corrupted · every check green · the success metrics hid it',tone:'err',wait:U(500,900)});
+  yield OV('boxline',{text:'⚠ '+S.hid,tone:'warn',wait:U(700,1200)});
+  yield THINK();
+  // no clean restore for corruption-in-place — rebuild from the event log and audit
+  const steps2=['snapshotting the corrupted table','replaying the event log','backfilling '+compactNum(n)+' rows','diffing checksums'];
+  for(let i=0;i<steps2.length;i++) yield OV('bar',{frac:(i+1)/steps2.length,label:steps2[i],wait:U(300,620)});
+  yield OV('boxline',{text:'rebuilt from the log · '+grp(ri(40,900))+' pre-log rows unrecoverable · integrity audit scheduled',tone:'warn',wait:U(500,900)});
+  yield OV('boxline',{text:'new rule: migrations ship with a data-shape assertion, not just a row count ✔',tone:'ok',wait:U(500,900)});
+  beep('ok');
+  yield CNT('incidents',1);
+  yield OV('close',{wait:U(900,1500)});
+}
