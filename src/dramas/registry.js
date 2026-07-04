@@ -75,6 +75,7 @@ const SCENE_REGISTRY=[
   {id:'oops',         label:'agent screws up · prod wipe',  category:'Agent & session',             generator:dOops,          appBuilder:null,          weight:1,autoplay:true, requiresMotion:false,tags:['core']},
   {id:'cloudbill',    label:'runaway spend · feedback loop',category:'Agent & session',             generator:dCloudBill,     appBuilder:null,          weight:1,autoplay:true, requiresMotion:false,tags:['core']},
   {id:'migration',    label:'silent corruption · green run',category:'Agent & session',             generator:dMigrate,       appBuilder:null,          weight:1,autoplay:true, requiresMotion:false,tags:['core']},
+  {id:'emailblast',   label:'notification cannon · 47k sent',category:'Agent & session',            generator:dEmailBlast,    appBuilder:null,          weight:1,autoplay:true, requiresMotion:false,tags:['core']},
   {id:'matrix',       label:'matrix cascade',              category:'Agent & session',             generator:dMatrix,        appBuilder:null,          weight:1,autoplay:true, requiresMotion:true, tags:['core']},
   // system entries — never auto-picked; compaction triggered by ctx pressure, deepwork by idle timeout
   {id:'compaction',   label:'context compaction',          category:'Agent & session',             generator:dCompact,       appBuilder:null,          weight:0,autoplay:false,requiresMotion:false,tags:['core','system']},

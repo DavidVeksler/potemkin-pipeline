@@ -33,14 +33,12 @@ Shipped: **`oops`** (prod wipe — DROP/TRUNCATE/`rm -rf`/`kubectl delete ns pro
 **`cloudbill`** (runaway-spend autoscaler feedback loop — the live dollar counter uses the
 `boxstat` overlay op, which updates one big number in place), and **`migration`** (silent
 corruption — the migration succeeds, every check green, every row wrong; the reckoning is an
-event-log rebuild, not a restore). The SEV-1 `retitle` now also shakes the box and tints the
-whole screen red (`overlay.anomaly`), which upgraded `oops`/`leak` for free. Remaining:
+event-log rebuild, not a restore). Also shipped: **`emailblast`** (the notification cannon —
+a backfill's `--emit-events` re-fires the welcome-email webhook per row; the `boxstat` counter
+climbs to "240,000 emails sent"; no data lost, pure social blast radius). The SEV-1 `retitle`
+now also shakes the box and tints the whole screen red (`overlay.anomaly`), which upgraded
+`oops`/`leak` for free. Remaining:
 
-- **`emailblast` — the notification cannon**. A backfill re-triggers the welcome-email (or
-  password-reset) webhook for every row: "47,000 emails sent in 90s." No data lost — pure social
-  blast radius, which is its own flavor of horror. Reuses anomaly/throughput visuals; very
-  real-feeling, the lightest-touch of the set. Reckoning: "paused the webhook · drafting the
-  'please ignore that' apology" (cover-up-adjacent and funny).
 - **`wrongwindow` — the fat-finger** (low priority — partly covered by `oops`'s `kubectl delete ns prod`
   "kubectx still pointed at prod" beat). Right command, wrong place: `terraform destroy` against prod
   thinking it's staging, `git push --force` to `main`, restart the wrong cluster. The tell is a single

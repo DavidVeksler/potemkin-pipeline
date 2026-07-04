@@ -352,3 +352,31 @@ function* dMigrate(){
   yield CNT('incidents',1);
   yield OV('close',{wait:U(900,1500)});
 }
+// fourth sibling: the notification cannon — no data lost, pure social blast radius (IDEAS emailblast).
+function* dEmailBlast(){
+  const kind=pick([['welcome email','user.created'],['password-reset email','auth.reset_requested'],['"your invoice is ready" email','billing.invoice_created']]);
+  const total=ri(28000,240000);
+  yield OV('open',{type:'box'});
+  yield OV('box',{title:'⏵ backfill · user profile enrichment',variant:'context',wait:U(200,400)});
+  yield TOOL('Bash','backfill run --table users --emit-events');
+  const steps=['scanning rows','enriching profiles','writing back','emitting events'];
+  for(let i=0;i<steps.length;i++) yield OV('bar',{frac:(i+1)/steps.length,label:steps[i],wait:U(260,520)});
+  yield OV('boxline',{text:'✔ backfill complete · '+grp(total)+' rows · 0 errors',tone:'ok',wait:U(450,800)});
+  yield WAIT(U(500,900));
+  yield THINK();
+  yield L('why is the '+kind[1]+' topic moving…','warn',{wait:U(700,1200)});
+  beep('alert');
+  yield L('--emit-events replayed the write for every row. and every write fires the '+kind[0]+' webhook.','err',{wait:U(900,1600)});
+  yield OV('retitle',{title:'⛔ NOTIFICATION CANNON · '+kind[1],variant:'incident',wait:U(250,500)});
+  for(const f of [0.04,0.11,0.23,0.42,0.66,0.87,1]) yield OV('boxstat',{text:grp(Math.round(total*f))+' emails sent',tone:f>0.5?'err':'warn',wait:U(240,480)});
+  yield OV('boxline',{text:grp(total)+' '+kind[0]+'s in '+ri(60,140)+'s · deliverability paging · support queue igniting',tone:'err',wait:U(600,1100)});
+  yield TOOL('Bash','kafka-topics --pause '+kind[1]+' && webhookctl drain --dead-letter');
+  yield OV('boxline',{text:'webhook paused · '+grp(ri(4000,60000))+' unsent stopped in the dead-letter queue',tone:'warn',wait:U(500,900)});
+  yield THINK();
+  yield L('no data lost. no data even wrong. everyone just… heard from us. drafting the apology.','dim',{wait:U(900,1500)});
+  yield TOOL('Write','ops/comms/please-ignore-that-email.md');
+  yield OV('boxline',{text:'apology drafted · suppression list backfilled · rate limit added to the cannon ✔',tone:'ok',wait:U(500,900)});
+  beep('ok');
+  yield CNT('incidents',1);
+  yield OV('close',{wait:U(900,1500)});
+}
