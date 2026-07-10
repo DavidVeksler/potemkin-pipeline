@@ -1,10 +1,20 @@
 # Potemkin Pipeline
 
+**A fake AI coding agent screensaver.** Offline, single-file, installable PWA —
+zero dependencies, zero real code, 100% convincing from across the room.
+
+[![Live demo](https://img.shields.io/badge/demo-live-brightgreen)](https://davidveksler.github.io/potemkin-pipeline/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-yellow.svg)](LICENSE)
+[![PWA installable](https://img.shields.io/badge/PWA-installable-blue)](#install)
+[![Zero dependencies](https://img.shields.io/badge/dependencies-zero-informational)](#under-the-hood)
+[![No build tooling](https://img.shields.io/badge/build-awk%20script-lightgrey)](#build)
+
 An offline, single-file browser app that simulates the theater of an autonomous
 AI coding agent at work — streaming tool calls, second-guessing itself, fixing
 bugs it invented moments earlier, shipping to prod, and surviving the occasional
 boss-level **drama** (a runaway process on a critical box, a flailing CI pipeline,
-a flame graph, a btop meltdown, a volumetric DDoS).
+a flame graph, a btop meltdown, a volumetric DDoS). Think *hacker-typer*, but for
+vibe-coding an AI agent instead of hammering a keyboard.
 
 It does not write any code. It performs the *idea* of writing code — the way a
 community-theater actor performs the idea of brain surgery. Every counter, graph,
@@ -30,7 +40,7 @@ Every so often the agent hits a "boss" — a production crisis that pops a full-
 overlay, panics convincingly for a few seconds, then resolves it with the calm of
 someone who has never once been on call. Here's the highlight reel:
 
-![Boss drama slideshow](assets/slideshow.gif)
+![Slideshow of Potemkin Pipeline boss dramas: GPU throttling, service mesh failures, Kubernetes crash loops, and other fake production incidents resolved live](assets/slideshow.gif)
 
 ## The full roster
 
@@ -46,32 +56,32 @@ while every check stays green — you'll meet by leaving it running):
 
 <table>
 <tr>
-<td width="50%"><img src="assets/attackmap.gif" width="100%"><br><sub><b>🌍 Threat map</b> — a volumetric DDoS converges on the edge WAF; the agent null-routes the offending ASNs.</sub></td>
-<td width="50%"><img src="assets/gpu.gif" width="100%"><br><sub><b>🎛️ GPU farm</b> — an H200 overheats and throttles; the training shard rebalances across the cluster.</sub></td>
+<td width="50%"><img src="assets/attackmap.gif" width="100%" alt="Threat map drama: a volumetric DDoS converges on the edge WAF and the agent null-routes the offending ASNs"><br><sub><b>🌍 Threat map</b> — a volumetric DDoS converges on the edge WAF; the agent null-routes the offending ASNs.</sub></td>
+<td width="50%"><img src="assets/gpu.gif" width="100%" alt="GPU farm drama: an H200 overheats and throttles, then the training shard rebalances across the cluster"><br><sub><b>🎛️ GPU farm</b> — an H200 overheats and throttles; the training shard rebalances across the cluster.</sub></td>
 </tr>
 <tr>
-<td width="50%"><img src="assets/mesh.gif" width="100%"><br><sub><b>🛰️ Service mesh</b> — a circuit breaker trips an edge red; bad endpoints are ejected and traffic flows again.</sub></td>
-<td width="50%"><img src="assets/heatmap.gif" width="100%"><br><sub><b>🔥 Latency heatmap</b> — the p99.9 tail blows out while p50 stays flat, then cools after a hedging fix.</sub></td>
+<td width="50%"><img src="assets/mesh.gif" width="100%" alt="Service mesh drama: a circuit breaker trips an edge red, bad endpoints are ejected and traffic flows again"><br><sub><b>🛰️ Service mesh</b> — a circuit breaker trips an edge red; bad endpoints are ejected and traffic flows again.</sub></td>
+<td width="50%"><img src="assets/heatmap.gif" width="100%" alt="Latency heatmap drama: the p99.9 tail blows out while p50 stays flat, then cools after a hedging fix"><br><sub><b>🔥 Latency heatmap</b> — the p99.9 tail blows out while p50 stays flat, then cools after a hedging fix.</sub></td>
 </tr>
 <tr>
-<td width="50%"><img src="assets/btop.gif" width="100%"><br><sub><b>📊 btop meltdown</b> — a runaway process pins several cores; resolved via <code>kill -9</code> and pure confidence.</sub></td>
-<td width="50%"><img src="assets/sql.gif" width="100%"><br><sub><b>🗄️ Slow query</b> — <code>EXPLAIN ANALYZE</code> reveals a seq scan; a concurrent index makes it 172× faster.</sub></td>
+<td width="50%"><img src="assets/btop.gif" width="100%" alt="btop meltdown drama: a runaway process pins several CPU cores, resolved with kill -9 and pure confidence"><br><sub><b>📊 btop meltdown</b> — a runaway process pins several cores; resolved via <code>kill -9</code> and pure confidence.</sub></td>
+<td width="50%"><img src="assets/sql.gif" width="100%" alt="Slow SQL query drama: EXPLAIN ANALYZE reveals a sequential scan, a concurrent index makes it 172x faster"><br><sub><b>🗄️ Slow query</b> — <code>EXPLAIN ANALYZE</code> reveals a seq scan; a concurrent index makes it 172× faster.</sub></td>
 </tr>
 <tr>
-<td width="50%"><img src="assets/trace.gif" width="100%"><br><sub><b>🔍 Distributed trace</b> — a Jaeger trace pins a slow serialize span; streaming the encoder cuts tail latency.</sub></td>
-<td width="50%"><img src="assets/flame.gif" width="100%"><br><sub><b>🔥 Flame graph</b> — pprof shows a hot <code>json.Marshal</code> path; a <code>sync.Pool</code> rewrite lands ~4× faster.</sub></td>
+<td width="50%"><img src="assets/trace.gif" width="100%" alt="Distributed trace drama: a Jaeger trace pins a slow serialize span, streaming the encoder cuts tail latency"><br><sub><b>🔍 Distributed trace</b> — a Jaeger trace pins a slow serialize span; streaming the encoder cuts tail latency.</sub></td>
+<td width="50%"><img src="assets/flame.gif" width="100%" alt="Flame graph drama: pprof shows a hot json.Marshal path, a sync.Pool rewrite lands about 4x faster"><br><sub><b>🔥 Flame graph</b> — pprof shows a hot <code>json.Marshal</code> path; a <code>sync.Pool</code> rewrite lands ~4× faster.</sub></td>
 </tr>
 <tr>
-<td width="50%"><img src="assets/grafana.gif" width="100%"><br><sub><b>📈 Grafana SLO</b> — the error rate breaches the SLO; scaling the deployment pulls it back into the green.</sub></td>
-<td width="50%"><img src="assets/cluster.gif" width="100%"><br><sub><b>☸️ Cluster</b> — a pod hits <code>CrashLoopBackOff</code>; a rollout restart reschedules it healthy.</sub></td>
+<td width="50%"><img src="assets/grafana.gif" width="100%" alt="Grafana SLO drama: the error rate breaches the SLO, scaling the deployment pulls it back into the green"><br><sub><b>📈 Grafana SLO</b> — the error rate breaches the SLO; scaling the deployment pulls it back into the green.</sub></td>
+<td width="50%"><img src="assets/cluster.gif" width="100%" alt="Kubernetes cluster drama: a pod hits CrashLoopBackOff, a rollout restart reschedules it healthy"><br><sub><b>☸️ Cluster</b> — a pod hits <code>CrashLoopBackOff</code>; a rollout restart reschedules it healthy.</sub></td>
 </tr>
 <tr>
-<td width="50%"><img src="assets/pipeline.gif" width="100%"><br><sub><b>🔧 CI/CD pipeline</b> — build → test → scan → canary → deploy marches green and ships to prod.</sub></td>
-<td width="50%"><img src="assets/load.gif" width="100%"><br><sub><b>🚦 Load test</b> — k6 ramps virtual users to a sustained peak rps at a healthy p95 with zero errors.</sub></td>
+<td width="50%"><img src="assets/pipeline.gif" width="100%" alt="CI/CD pipeline drama: build, test, scan, canary, and deploy all march green and ship to prod"><br><sub><b>🔧 CI/CD pipeline</b> — build → test → scan → canary → deploy marches green and ships to prod.</sub></td>
+<td width="50%"><img src="assets/load.gif" width="100%" alt="Load test drama: k6 ramps virtual users to a sustained peak RPS at a healthy p95 with zero errors"><br><sub><b>🚦 Load test</b> — k6 ramps virtual users to a sustained peak rps at a healthy p95 with zero errors.</sub></td>
 </tr>
 <tr>
-<td width="50%"><img src="assets/pr.gif" width="100%"><br><sub><b>🔀 Pull request</b> — every check goes green and the PR merges into <code>main</code> with zero review comments.</sub></td>
-<td width="50%"><img src="assets/docker.gif" width="100%"><br><sub><b>🐳 Docker build</b> — a multi-stage <code>buildx</code> runs layer by layer and pushes to the registry.</sub></td>
+<td width="50%"><img src="assets/pr.gif" width="100%" alt="Pull request drama: every check goes green and the PR merges into main with zero review comments"><br><sub><b>🔀 Pull request</b> — every check goes green and the PR merges into <code>main</code> with zero review comments.</sub></td>
+<td width="50%"><img src="assets/docker.gif" width="100%" alt="Docker build drama: a multi-stage buildx run proceeds layer by layer and pushes to the registry"><br><sub><b>🐳 Docker build</b> — a multi-stage <code>buildx</code> runs layer by layer and pushes to the registry.</sub></td>
 </tr>
 </table>
 
@@ -212,3 +222,7 @@ on a second monitor):
 A service worker (`sw.js`) precaches the app, so once installed it runs fully offline. The
 PWA bits live as sibling files next to `index.html`; the app itself stays a single inlined
 file. Opening the raw `index.html` over `file://` skips the service worker and works as before.
+
+## License
+
+[MIT](LICENSE) — do whatever you want with it.
